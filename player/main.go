@@ -290,7 +290,7 @@ func main() {
 		}
 	}()
 
-	if err := sdl.Init(sdl.INIT_VIDEO | sdl.INIT_AUDIO | sdl.INIT_JOYSTICK | sdl.INIT_GAMECONTROLLER); err != nil {
+	if err := sdl.Init(sdl.INIT_VIDEO | sdl.INIT_JOYSTICK | sdl.INIT_GAMECONTROLLER); err != nil {
 		fmt.Println("Error initializing SDL:", err)
 		os.Exit(1)
 	}
