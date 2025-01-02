@@ -279,7 +279,7 @@ func getTextDimensions(font *ttf.Font, text string) (int32, int32) {
 }
 
 func main() {
-	if err := sdl.Init(sdl.INIT_EVERYTHING); err != nil {
+	if err := sdl.Init(sdl.INIT_VIDEO | sdl.INIT_GAMECONTROLLER | sdl.INIT_HAPTIC | sdl.INIT_JOYSTICK | sdl.INIT_AUDIO); err != nil {
 		fmt.Println("Error initializing SDL:", err)
 		os.Exit(1)
 	}
@@ -319,6 +319,17 @@ func main() {
 		os.Exit(1)
 	}
 	defer renderer.Destroy()
+
+	mapping1 := "030000005e0400008e02000014010000,X360 Controller,a:b0,b:b1,back:b6,dpdown:h0.4,dpleft:h0.8,dpright:h0.2,dpup:h0.1,guide:b8,leftshoulder:b4,leftstick:b9,lefttrigger:a2,leftx:a0,lefty:a1,rightshoulder:b5,rightstick:b10,righttrigger:a5,rightx:a3,righty:a4,start:b7,x:b2,y:b3,platform:Linux,"
+	mapping2 := "0000000058626f782047616d65706100,Xbox Gamepad (userspace driver),platform:Linux,a:b0,b:b1,x:b2,y:b3,start:b7,back:b6,guide:b8,dpup:h0.1,dpdown:h0.4,dpleft:h0.8,dpright:h0.2,leftshoulder:b4,rightshoulder:b5,lefttrigger:a5,righttrigger:a4,leftstick:b9,rightstick:b10,leftx:a0,lefty:a1,rightx:a2,righty:a3,"
+
+	if sdl.GameControllerAddMapping(mapping1) == -1 {
+		fmt.Println("Failed to add controller mapping: %s\n", sdl.GetError())
+	}
+
+	if sdl.GameControllerAddMapping(mapping2) == -1 {
+		fmt.Println("Failed to add controller mapping: %s\n", sdl.GetError())
+	}
 
 	if sdl.NumJoysticks() > 0 {
 		if controller := sdl.GameControllerOpen(0); controller != nil {

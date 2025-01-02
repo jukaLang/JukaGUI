@@ -167,6 +167,7 @@ pre {
 
 .text-content {
     flex-grow: 1;
+    font-weight: 900;
 }
 
 .remove-button {
