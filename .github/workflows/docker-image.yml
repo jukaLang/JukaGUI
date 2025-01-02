@@ -21,24 +21,25 @@ jobs:
       - name: Check out the repo
         uses: actions/checkout@v4
 
-      - name: Create Tag
+      - name: Create Tag on Ubuntu
         id: create_tag
+        run: |
+          timestamp=$(date +%Y%m%d%H%M%S)
+          tag=JukaGUI-$timestamp
+          echo "tag_name=$tag" >> $GITHUB_ENV
+          echo "::set-output name=tag_name::$tag"
+          
+      - name: Set Tag using GitHub Script
+        id: set_tag
         uses: actions/github-script@v5
         with:
           script: |
-            const timestamp = new Date().toISOString().replace(/[-:]/g, '').replace(/\..+/, '');
-            const tag = `JukaGUI-${timestamp}`;
             await github.rest.git.createRef({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              ref: `refs/tags/${tag}`,
+              ref: `refs/tags/${process.env.tag_name}`,
               sha: context.sha,
             });
-            return { tag: tag };
-
-      - name: Set Output Tag Name
-        id: set_tag_name
-        run: echo "tag_name=${{ steps.create_tag.outputs.tag }}" >> $GITHUB_ENV
 
   build-and-publish-ubuntu:
     name: Build and Publish (Ubuntu)
