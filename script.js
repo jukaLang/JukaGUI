@@ -29,25 +29,26 @@ function updateCanvasSize() {
 }
 
 function updateScenes() {
-    canvas.innerHTML = '';
-    if (scenes[currentScene]) {
-        scenes[currentScene].forEach(el => {
-            canvas.appendChild(el);
-        });
+    // Save current elements to the current scene
+    if (!scenes[currentScene]) {
+        scenes[currentScene] = [];
     }
+    scenes[currentScene] = Array.from(canvas.children).map(el => el.cloneNode(true));
+    console.log(`Scene ${currentScene} updated with elements:`, scenes[currentScene]);
+
+    // Clear the canvas
+    canvas.innerHTML = '';
+
+    // Re-render elements for the current scene
+    scenes[currentScene].forEach(el => {
+        canvas.appendChild(el);
+    });
+    
+    // Update font sizes if necessary
     updateElementFontSizes();
 }
 
 
-
-function loadScene(sceneName) {
-    canvas.innerHTML = '';
-    scenes[sceneName].forEach(el => {
-        const clonedEl = el.cloneNode(true);
-        setupElementEvents(clonedEl);
-        canvas.appendChild(clonedEl);
-    });
-}
 
 function changeScene() {
     updateScenes();
@@ -56,6 +57,20 @@ function changeScene() {
     updateElementFontSizes();
     updateVariableText();
 }
+
+function loadScene(sceneName) {
+    canvas.innerHTML = '';
+    if (scenes[sceneName]) {
+        scenes[sceneName].forEach(el => {
+            const clonedEl = el.cloneNode(true);
+            setupElementEvents(clonedEl);
+            canvas.appendChild(clonedEl);
+        });
+    } else {
+        console.error(`Scene ${sceneName} not found`);
+    }
+}
+
 
 function addScene() {
     const newSceneName = 'Scene ' + (Object.keys(scenes).length + 1);
@@ -450,21 +465,22 @@ function addElement(type, x, y) {
     removeButton.classList.add('remove-button');
     el.appendChild(removeButton);
 
-removeButton.addEventListener('click', (event) => {
-    event.stopPropagation();
-    const parent = el.parentNode;
-    parent.removeChild(el);
-    const sceneElements = scenes[currentScene];
-    const elementIndex = sceneElements.indexOf(el);
-    if (elementIndex > -1) {
-        sceneElements.splice(elementIndex, 1);
-    }
-});
-
+    removeButton.addEventListener('click', (event) => {
+        event.stopPropagation();
+        const parent = el.parentNode;
+        parent.removeChild(el);
+        const sceneElements = scenes[currentScene];
+        const elementIndex = sceneElements.indexOf(el);
+        if (elementIndex > -1) {
+            sceneElements.splice(elementIndex, 1);
+        }
+    });
 
     setupElementEvents(el); // Ensure events are set up
 
+    // Append element to canvas and update scenes
     canvas.appendChild(el);
+    updateScenes();
     return el;
 }
 

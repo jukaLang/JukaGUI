@@ -190,3 +190,21 @@ pre {
     pointer-events: auto; /* Ensure the remove button remains clickable */
 }
 
+.contribute-banner {
+    margin-top: 20px;
+    padding: 10px;
+    background-color: #6200ea;
+    color: #fff;
+    text-align: center;
+    border-radius: 4px;
+}
+
+.contribute-banner a {
+    color: #03dac5;
+    text-decoration: none;
+    font-weight: 700;
+}
+
+.contribute-banner a:hover {
+    text-decoration: underline;
+}
