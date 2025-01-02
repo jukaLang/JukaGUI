@@ -1,4 +1,4 @@
-name: Build and Test on Windows
+name: Cross-Compile macOS to Windows
 
 on:
   push:
@@ -9,56 +9,39 @@ permissions:
   contents: write
 
 jobs:
-  build-windows:
-    runs-on: windows-latest
+  cross-compile:
+    runs-on: macos-latest
     steps:
       - name: Check out the repo
         uses: actions/checkout@v4
 
+      - name: Install Homebrew
+        run: |
+          /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+
       - name: Install MinGW
-        run: choco install mingw --version=8.1.0
+        run: brew install mingw-w64
 
       - name: Download and Install SDL2
         run: |
-          # Set up directories
-          if (-Not (Test-Path -Path 'C:\mingw64\include\SDL2')) { New-Item -ItemType Directory -Path 'C:\mingw64\include\SDL2' }
-          if (-Not (Test-Path -Path 'C:\mingw64\lib')) { New-Item -ItemType Directory -Path 'C:\mingw64\lib' }
-
           # Download SDL2 development libraries
-          Invoke-WebRequest -Uri https://github.com/libsdl-org/SDL/releases/download/release-2.30.11/SDL2-devel-2.30.11-mingw.zip -OutFile SDL2.zip
-          7z x SDL2.zip -oSDL2
-
-          # Copy headers and libs to appropriate directories
-          xcopy SDL2\SDL2-2.30.11\x86_64-w64-mingw32\include\SDL2 C:\mingw64\include\SDL2 /E /I /Y
-          xcopy SDL2\SDL2-2.30.11\x86_64-w64-mingw32\lib C:\mingw64\lib /E /I /Y
+          curl -LO https://www.libsdl.org/release/SDL2-devel-2.30.11-mingw.tar.gz
+          tar -xzf SDL2-devel-2.30.11-mingw.tar.gz
+          sudo cp -r SDL2-2.30.11/x86_64-w64-mingw32 /usr/local/Cellar/mingw-w64/$(brew info --json=v1 mingw-w64 | jq -r '.[0].versions.stable')/toolchain-x86_64/
 
       - name: Download and Install SDL2_image
         run: |
           # Download SDL2_image development libraries
-          Invoke-WebRequest -Uri https://github.com/libsdl-org/SDL_image/releases/download/release-2.8.4/SDL2_image-devel-2.8.4-mingw.zip -OutFile SDL2_image.zip
-          7z x SDL2_image.zip -oSDL2_image
-
-          # Copy headers and libs to appropriate directories
-          xcopy SDL2_image\SDL2_image-2.8.4\x86_64-w64-mingw32\include\SDL2 C:\mingw64\include\SDL2 /E /I /Y
-          xcopy SDL2_image\SDL2_image-2.8.4\x86_64-w64-mingw32\lib C:\mingw64\lib /E /I /Y
+          curl -LO https://github.com/libsdl-org/SDL_image/releases/download/release-2.8.4/SDL2_image-devel-2.8.4-mingw.tar.gz
+          tar -xzf SDL2_image-devel-2.8.4-mingw.tar.gz
+          sudo cp -r SDL2_image-2.8.4/x86_64-w64-mingw32 /usr/local/Cellar/mingw-w64/$(brew info --json=v1 mingw-w64 | jq -r '.[0].versions.stable')/toolchain-x86_64/
 
       - name: Download and Install SDL2_ttf
         run: |
           # Download SDL2_ttf development libraries
-          Invoke-WebRequest -Uri https://github.com/libsdl-org/SDL_ttf/releases/download/release-2.22.0/SDL2_ttf-devel-2.22.0-mingw.zip -OutFile SDL2_ttf.zip
-          7z x SDL2_ttf.zip -oSDL2_ttf
-
-          # Copy headers and libs to appropriate directories
-          xcopy SDL2_ttf\SDL2_ttf-2.22.0\x86_64-w64-mingw32\include\SDL2 C:\mingw64\include\SDL2 /E /I /Y
-          xcopy SDL2_ttf\SDL2_ttf-2.22.0\x86_64-w64-mingw32\lib C:\mingw64\lib /E /I /Y
-
-      - name: Add MinGW and SDL2 to PATH
-        run: echo "C:\mingw64\bin" >> $GITHUB_PATH
-
-      - name: Verify SDL2 Installation
-        run: |
-          dir C:\mingw64\include\SDL2
-          dir C:\mingw64\lib
+          curl -LO https://github.com/libsdl-org/SDL_ttf/releases/download/release-2.22.0/SDL2_ttf-devel-2.22.0-mingw.tar.gz
+          tar -xzf SDL2_ttf-devel-2.22.0-mingw.tar.gz
+          sudo cp -r SDL2_ttf-2.22.0/x86_64-w64-mingw32 /usr/local/Cellar/mingw-w64/$(brew info --json=v1 mingw-w64 | jq -r '.[0].versions.stable')/toolchain-x86_64/
 
       - name: Set up Go
         uses: actions/setup-go@v2
@@ -75,26 +58,19 @@ jobs:
 
       - name: Verify Compiler
         run: |
-          gcc --version
-          g++ --version
-
-      - name: Verify Environment Variables
-        run: |
-          echo "CGO_CFLAGS: $env:CGO_CFLAGS"
-          echo "CGO_LDFLAGS: $env:CGO_LDFLAGS"
+          x86_64-w64-mingw32-gcc --version
+          x86_64-w64-mingw32-g++ --version
 
       - name: Build Package
         env:
-          CC: "gcc"
-          CXX: "g++"
-          CGO_CFLAGS: "-IC:/mingw64/include/SDL2"
-          CGO_LDFLAGS: "-LC:/mingw64/lib"
+          CC: "x86_64-w64-mingw32-gcc"
+          CXX: "x86_64-w64-mingw32-g++"
+          CGO_ENABLED: 1
+          GOOS: "windows"
+          CGO_CFLAGS: "-I/usr/local/Cellar/mingw-w64/$(brew info --json=v1 mingw-w64 | jq -r '.[0].versions.stable')/toolchain-x86_64/x86_64-w64-mingw32/include -D_REENTRANT"
+          CGO_LDFLAGS: "-L/usr/local/Cellar/mingw-w64/$(brew info --json=v1 mingw-w64 | jq -r '.[0].versions.stable')/toolchain-x86_64/x86_64-w64-mingw32/lib -lSDL2"
         run: |
           mkdir -p ../JukaGUI-Trimui-Windows
           cd player
-          echo "CC: $env:CC"
-          echo "CXX: $env:CXX"
-          echo "CGO_CFLAGS: $env:CGO_CFLAGS"
-          echo "CGO_LDFLAGS: $env:CGO_LDFLAGS"
           go build -o ../JukaGUI-Trimui-Windows/JukaGUI.exe ./
           echo "Build completed."
