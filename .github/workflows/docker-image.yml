@@ -13,10 +13,11 @@ permissions:
 
 jobs:
   create-tag:
-    name: Create Tag
+    name: Create Tag and Release
     runs-on: ubuntu-latest
     outputs:
       tag_name: ${{ steps.generate_tag.outputs.tag_name }}
+      upload_url: ${{ steps.create_release.outputs.upload_url }}
     steps:
       - name: Check out the repo
         uses: actions/checkout@v4
@@ -41,8 +42,8 @@ jobs:
             })
 
       - name: Create Release
-        uses: actions/create-release@v1
         id: create_release
+        uses: actions/create-release@v1
         with:
           tag_name: ${{ steps.generate_tag.outputs.tag_name }}
           release_name: ${{ steps.generate_tag.outputs.tag_name }}
@@ -58,6 +59,7 @@ jobs:
       image: anibaldeboni/trimui-smart-pro-toolchain:latest
     env: 
       TAG_NAME: ${{ needs.create-tag.outputs.tag_name }}
+      UPLOAD_URL: ${{ needs.create-tag.outputs.upload_url }}
     steps:
       - name: Debug TAG_NAME
         run: |
@@ -181,7 +183,7 @@ jobs:
       - name: Upload Release Assets
         uses: actions/upload-release-asset@v1
         with:
-          upload_url: ${{ needs.create-tag.outputs.tag_name }}
+          upload_url: ${{ needs.create-tag.outputs.upload_url }}
           asset_path: ./JukaGUI-Trimui.zip
           asset_name: JukaGUI-Trimui.zip
           asset_content_type: application/zip
@@ -193,6 +195,7 @@ jobs:
     needs: create-tag
     env: 
       TAG_NAME: ${{ needs.create-tag.outputs.tag_name }}
+      UPLOAD_URL: ${{ needs.create-tag.outputs.upload_url }}
     steps:
       - name: Check out the repo
         uses: actions/checkout@v4
@@ -283,7 +286,7 @@ jobs:
       - name: Upload Release Assets
         uses: actions/upload-release-asset@v1
         with:
-          upload_url: ${{ needs.create-tag.outputs.tag_name }}
+          upload_url: ${{ needs.create-tag.outputs.upload_url }}
           asset_path: ./JukaGUI-Trimui-Windows.zip
           asset_name: JukaGUI-Trimui-Windows.zip
           asset_content_type: application/zip
