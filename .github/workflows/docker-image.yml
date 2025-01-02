@@ -25,9 +25,9 @@ jobs:
       - name: Set up MinGW directories
         run: |
           MINGW_DIR=$(brew --prefix mingw-w64)/toolchain-x86_64
-          mkdir -p $MINGW_DIR/bin
-          mkdir -p $MINGW_DIR/include
-          mkdir -p $MINGW_DIR/lib
+          mkdir -p $MINGW_DIR/x86_64-w64-mingw32/bin
+          mkdir -p $MINGW_DIR/x86_64-w64-mingw32/include
+          mkdir -p $MINGW_DIR/x86_64-w64-mingw32/lib
 
       - name: Download and Install SDL2
         run: |
@@ -35,7 +35,7 @@ jobs:
           curl -LO https://www.libsdl.org/release/SDL2-devel-2.30.11-mingw.tar.gz
           tar -xzf SDL2-devel-2.30.11-mingw.tar.gz
           MINGW_DIR=$(brew --prefix mingw-w64)/toolchain-x86_64
-          sudo cp -r SDL2-2.30.11/x86_64-w64-mingw32/* $MINGW_DIR/
+          sudo cp -r SDL2-2.30.11/x86_64-w64-mingw32/* $MINGW_DIR/x86_64-w64-mingw32/
 
       - name: Download and Install SDL2_image
         run: |
@@ -43,7 +43,7 @@ jobs:
           curl -LO https://github.com/libsdl-org/SDL_image/releases/download/release-2.8.4/SDL2_image-devel-2.8.4-mingw.tar.gz
           tar -xzf SDL2_image-devel-2.8.4-mingw.tar.gz
           MINGW_DIR=$(brew --prefix mingw-w64)/toolchain-x86_64
-          sudo cp -r SDL2_image-2.8.4/x86_64-w64-mingw32/* $MINGW_DIR/
+          sudo cp -r SDL2_image-2.8.4/x86_64-w64-mingw32/* $MINGW_DIR/x86_64-w64-mingw32/
 
       - name: Download and Install SDL2_ttf
         run: |
@@ -51,7 +51,7 @@ jobs:
           curl -LO https://github.com/libsdl-org/SDL_ttf/releases/download/release-2.22.0/SDL2_ttf-devel-2.22.0-mingw.tar.gz
           tar -xzf SDL2_ttf-devel-2.22.0-mingw.tar.gz
           MINGW_DIR=$(brew --prefix mingw-w64)/toolchain-x86_64
-          sudo cp -r SDL2_ttf-2.22.0/x86_64-w64-mingw32/* $MINGW_DIR/
+          sudo cp -r SDL2_ttf-2.22.0/x86_64-w64-mingw32/* $MINGW_DIR/x86_64-w64-mingw32/
 
       - name: Set up Go
         uses: actions/setup-go@v2
@@ -79,14 +79,14 @@ jobs:
           GOARCH: "amd64"
           GOOS: "windows"
           MINGW_DIR: $(brew --prefix mingw-w64)/toolchain-x86_64
-          CGO_CFLAGS: "-I${MINGW_DIR}/include -D_REENTRANT"
-          CGO_LDFLAGS: "-L${MINGW_DIR}/lib -lSDL2"
+          CGO_CFLAGS: "-I$(brew --prefix mingw-w64)/toolchain-x86_64/x86_64-w64-mingw32/include -D_REENTRANT"
+          CGO_LDFLAGS: "-L$(brew --prefix mingw-w64)/toolchain-x86_64/x86_64-w64-mingw32/lib -lSDL2"
         run: |
           mkdir -p ../JukaGUI-Trimui-Windows
           cd player
-          echo "CC: $env:CC"
-          echo "CXX: $env:CXX"
-          echo "CGO_CFLAGS: $env:CGO_CFLAGS"
-          echo "CGO_LDFLAGS: $env:CGO_LDFLAGS"
+          echo "CC: $CC"
+          echo "CXX: $CXX"
+          echo "CGO_CFLAGS: $CGO_CFLAGS"
+          echo "CGO_LDFLAGS: $CGO_LDFLAGS"
           go build -o ../JukaGUI-Trimui-Windows/JukaGUI.exe ./
           echo "Build completed."
