@@ -46,6 +46,8 @@ jobs:
   build-and-publish-ubuntu:
     runs-on: ubuntu-latest
     needs: create-tag
+    container:
+      image: anibaldeboni/trimui-smart-pro-toolchain:latest
     env: 
       TAG_NAME: ${{ needs.create-tag.outputs.tag_name }}
     steps:
@@ -236,8 +238,9 @@ jobs:
           Invoke-WebRequest -Uri https://github.com/libsdl-org/SDL_ttf/releases/download/release-2.22.0/SDL2_ttf-devel-2.22.0-mingw.zip -OutFile SDL2_ttf.zip
           7z x SDL2_image.zip -oSDL2_image
           7z x SDL2_ttf.zip -oSDL2_ttf
-          xcopy SDL2_image\x86_64-w64-mingw32 C:\tools\mingw64 /E /I /Y
-          xcopy SDL2_ttf\x86_64-w64-mingw32 C:\tools\mingw64 /E /I /Y
+          xcopy SDL2_image\SDL2_image-2.8.4\x86_64-w64-mingw32 C:\tools\mingw64 /E /I /Y
+          xcopy SDL2_ttf\SDL2_ttf-2.22.0\x86_64-w64-mingw32 C:\tools\mingw64 /E /I /Y
+
 
       - name: Set up Go
         uses: actions/setup-go@v2
