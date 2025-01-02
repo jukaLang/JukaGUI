@@ -15,8 +15,10 @@ jobs:
       - name: Check out the repo
         uses: actions/checkout@v4
 
-      - name: Install MinGW
-        run: choco install mingw --version=8.1.0
+      - name: Download and Install MinGW
+        run: |
+          Invoke-WebRequest -Uri "https://github.com/niXman/mingw-builds-binaries/releases/download/12.2.0-rt_v10-rev2/x86_64-12.2.0-release-win32-seh-rt_v10-rev2.7z" -OutFile mingw.7z
+          7z x mingw.7z -oC:\mingw64
 
       - name: Download and Install SDL2
         run: |
@@ -29,16 +31,32 @@ jobs:
           7z x SDL2.zip -oSDL2
 
           # Copy headers and libs to appropriate directories
-          xcopy SDL2\SDL2-2.0.14\x86_64-w64-mingw32\include\SDL2 C:\mingw64\include\SDL2 /E /I /Y
-          xcopy SDL2\SDL2-2.0.14\x86_64-w64-mingw32\lib C:\mingw64\lib /E /I /Y
+          xcopy SDL2\SDL2-2.0.14\x86_64-w64-mingw32\include\SDL2 C:\mingw64\mingw64\x86_64-w64-mingw32\include\SDL2 /E /I /Y
+          xcopy SDL2\SDL2-2.0.14\x86_64-w64-mingw32\lib C:\mingw64\mingw64\x86_64-w64-mingw32\lib /E /I /Y
+
+          # Download SDL_image, SDL_mixer, and SDL_ttf
+          Invoke-WebRequest -Uri https://www.libsdl.org/projects/SDL_image/release/SDL2_image-devel-2.0.5-mingw.zip -OutFile SDL2_image.zip
+          Invoke-WebRequest -Uri https://www.libsdl.org/projects/SDL_mixer/release/SDL2_mixer-devel-2.0.4-mingw.zip -OutFile SDL2_mixer.zip
+          Invoke-WebRequest -Uri https://www.libsdl.org/projects/SDL_ttf/release/SDL2_ttf-devel-2.0.15-mingw.zip -OutFile SDL2_ttf.zip
+          7z x SDL2_image.zip -oSDL2_image
+          7z x SDL2_mixer.zip -oSDL2_mixer
+          7z x SDL2_ttf.zip -oSDL2_ttf
+
+          # Copy SDL_image, SDL_mixer, and SDL_ttf headers and libs
+          xcopy SDL2_image\SDL2_image-2.0.5\x86_64-w64-mingw32\include\SDL2 C:\mingw64\mingw64\x86_64-w64-mingw32\include\SDL2 /E /I /Y
+          xcopy SDL2_image\SDL2_image-2.0.5\x86_64-w64-mingw32\lib C:\mingw64\mingw64\x86_64-w64-mingw32\lib /E /I /Y
+          xcopy SDL2_mixer\SDL2_mixer-2.0.4\x86_64-w64-mingw32\include\SDL2 C:\mingw64\mingw64\x86_64-w64-mingw32\include\SDL2 /E /I /Y
+          xcopy SDL2_mixer\SDL2_mixer-2.0.4\x86_64-w64-mingw32\lib C:\mingw64\mingw64\x86_64-w64-mingw32\lib /E /I /Y
+          xcopy SDL2_ttf\SDL2_ttf-2.0.15\x86_64-w64-mingw32\include\SDL2 C:\mingw64\mingw64\x86_64-w64-mingw32\include\SDL2 /E /I /Y
+          xcopy SDL2_ttf\SDL2_ttf-2.0.15\x86_64-w64-mingw32\lib C:\mingw64\mingw64\x86_64-w64-mingw32\lib /E /I /Y
 
       - name: Add MinGW and SDL2 to PATH
-        run: echo "C:\mingw64\bin" >> $GITHUB_PATH
+        run: echo "C:\mingw64\mingw64\x86_64-w64-mingw32\bin" >> $GITHUB_PATH
 
       - name: Verify SDL2 Installation
         run: |
-          dir C:\mingw64\include\SDL2
-          dir C:\mingw64\lib
+          dir C:\mingw64\mingw64\x86_64-w64-mingw32\include\SDL2
+          dir C:\mingw64\mingw64\x86_64-w64-mingw32\lib
 
       - name: Set up Go
         uses: actions/setup-go@v2
@@ -65,8 +83,8 @@ jobs:
 
       - name: Build Package
         env:
-          CGO_CFLAGS: "-IC:/mingw64/include/SDL2"
-          CGO_LDFLAGS: "-LC:/mingw64/lib"
+          CGO_CFLAGS: "-IC:/mingw64/mingw64/x86_64-w64-mingw32/include/SDL2"
+          CGO_LDFLAGS: "-LC:/mingw64/mingw64/x86_64-w64-mingw32/lib"
         run: |
           mkdir -p ../JukaGUI-Trimui-Windows
           cd player
