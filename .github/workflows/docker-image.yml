@@ -147,12 +147,15 @@ jobs:
           cp player/JukaPlayer.png JukaGUI-Trimui/
           zip -r JukaGUI-Trimui.zip JukaGUI-Trimui/
   
-
+      - name: Set up GitHub CLI
+        uses: actions/setup-gh@v1
+        
       - name: Upload Release Assets
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           gh release upload ${{ needs.create-tag.outputs.tag_name }} JukaGUI-Trimui.zip
+
 
   build-and-publish-windows:
     name: Build and Publish (Windows)
@@ -175,12 +178,12 @@ jobs:
 
       - name: Download and Install SDL_image, SDL_mixer, SDL_ttf
         run: |
-          wget https://github.com/libsdl-org/SDL_image/releases/download/release-2.0.5/SDL2_image-devel-2.0.5-mingw.zip
-          wget https://github.com/libsdl-org/SDL_mixer/releases/download/release-2.0.4/SDL2_mixer-devel-2.0.4-mingw.zip
-          wget https://github.com/libsdl-org/SDL_ttf/releases/download/release-2.0.15/SDL2_ttf-devel-2.0.15-mingw.zip
-          7z x SDL2_image-devel-2.0.5-mingw.zip -oSDL2_image
-          7z x SDL2_mixer-devel-2.0.4-mingw.zip -oSDL2_mixer
-          7z x SDL2_ttf-devel-2.0.15-mingw.zip -oSDL2_ttf
+          Invoke-WebRequest -Uri https://github.com/libsdl-org/SDL_image/releases/download/release-2.0.5/SDL2_image-devel-2.0.5-mingw.zip -OutFile SDL2_image.zip
+          Invoke-WebRequest -Uri https://github.com/libsdl-org/SDL_mixer/releases/download/release-2.0.4/SDL2_mixer-devel-2.0.4-mingw.zip -OutFile SDL2_mixer.zip
+          Invoke-WebRequest -Uri https://github.com/libsdl-org/SDL_ttf/releases/download/release-2.0.15/SDL2_ttf-devel-2.0.15-mingw.zip -OutFile SDL2_ttf.zip
+          Expand-Archive -Path SDL2_image.zip -DestinationPath SDL2_image
+          Expand-Archive -Path SDL2_mixer.zip -DestinationPath SDL2_mixer
+          Expand-Archive -Path SDL2_ttf.zip -DestinationPath SDL2_ttf
           xcopy SDL2_image\x86_64-w64-mingw32 C:\tools\mingw64 /E /I /Y
           xcopy SDL2_mixer\x86_64-w64-mingw32 C:\tools\mingw64 /E /I /Y
           xcopy SDL2_ttf\x86_64-w64-mingw32 C:\tools\mingw64 /E /I /Y
@@ -210,9 +213,11 @@ jobs:
           cd ..
           zip -r JukaGUI-Trimui-Windows.zip JukaGUI-Trimui-Windows/
 
+      - name: Set up GitHub CLI
+        uses: actions/setup-gh@v1
+        
       - name: Upload Release Assets
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           gh release upload ${{ needs.create-tag.outputs.tag_name }} JukaGUI-Trimui-Windows.zip
-      
