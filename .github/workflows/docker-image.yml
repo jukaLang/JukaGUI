@@ -55,8 +55,8 @@ jobs:
       TAG_NAME: ${{ needs.create-tag.outputs.tag_name }}
     steps:
       - name: Debug TAG_NAME
-        run: echo "Debug TAG_NAME: ${TAG_NAME}"
-
+        run: 
+          echo "Debug TAG_NAME: ${TAG_NAME}"
       - name: Check Tag Name Variable
         run: |
           if [ -z "${TAG_NAME}" ]; then
@@ -203,7 +203,8 @@ jobs:
     steps:
       - name: Debug TAG_NAME
         shell: pwsh
-        run: echo "Debug TAG_NAME: $env:TAG_NAME"
+        run: |
+          echo "Debug TAG_NAME: $env:TAG_NAME"
 
       - name: Check Tag Name Variable
         shell: pwsh
