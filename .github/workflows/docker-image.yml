@@ -61,21 +61,19 @@ jobs:
     name: Build and Publish (Ubuntu)
     runs-on: ubuntu-latest
     needs: create-tag
-    env: 
+    env:
       TAG_NAME: ${{ needs.create-tag.outputs.tag_name }}
     container:
       image: anibaldeboni/trimui-smart-pro-toolchain:latest
     steps:
       - name: Check Tag Name Variable
         run: |
-          if [ -z "${TAG_NAME}" ]; then
+          if [ -z "${env.TAG_NAME}" ]; then
             echo "TAG_NAME variable does not exist. Exiting."
             exit 1
           else
             echo "TAG_NAME variable exists: ${TAG_NAME}"
           fi
-        env:
-          TAG_NAME: ${{ needs.create-tag.outputs.tag_name }}
     
       - name: Check out the repo
         uses: actions/checkout@v4
@@ -221,8 +219,6 @@ jobs:
           } else {
             Write-Output "TAG_NAME variable exists: $env:TAG_NAME"
           }
-        env:
-          TAG_NAME: ${{ needs.create-tag.outputs.tag_name }}
     
     
       - name: Check out the repo
