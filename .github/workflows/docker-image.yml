@@ -34,16 +34,11 @@ jobs:
               ref: `refs/tags/${tag}`,
               sha: context.sha,
             });
-            return tag;
+            return { tag: tag };
 
       - name: Set Output Tag Name
         id: set_tag_name
-        run: |
-          echo "tag_name=${{ steps.create_tag.outputs.tag }}" >> $GITHUB_ENV
-          echo "::set-output name=tag_name::${{ steps.create_tag.outputs.tag }}"
-
-      - name: Log Tag Name
-        run: echo "Tag name is ${{ steps.set_tag_name.outputs.tag_name }}"
+        run: echo "tag_name=${{ steps.create_tag.outputs.tag }}" >> $GITHUB_ENV
 
   build-and-publish-ubuntu:
     name: Build and Publish (Ubuntu)
