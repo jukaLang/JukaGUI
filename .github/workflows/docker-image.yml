@@ -29,6 +29,10 @@ jobs:
           echo "tag_name=$tag" >> $GITHUB_ENV
           echo "::set-output name=tag_name::$tag"
 
+      - name: Set Output for Tag Name
+        id: set_tag_name
+        run: echo "tag_name=${{ env.tag_name }}" >> $GITHUB_ENV
+
       - name: Check if Tag Exists
         id: check_tag
         run: |
@@ -51,6 +55,7 @@ jobs:
               ref: `refs/tags/${process.env.tag_name}`,
               sha: context.sha,
             })
+
 
   build-and-publish-ubuntu:
     name: Build and Publish (Ubuntu)
