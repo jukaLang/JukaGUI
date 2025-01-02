@@ -1,0 +1,102 @@
+{
+  "title": "test",
+  "author": "ass",
+  "description": "assdasd",
+  "variables": {
+    "buttonColor": {
+      "r": 255,
+      "g": 0,
+      "b": 0
+    },
+    "labelColor": {
+      "r": 255,
+      "g": 255,
+      "b": 255
+    },
+    "backgroundImage": "",
+    "fonts": {
+      "title": "Roboto-Black.ttf",
+      "big": "Roboto-Black.ttf",
+      "medium": "Roboto-Black.ttf",
+      "small": "Roboto-Black.ttf"
+    },
+    "fontSizes": {
+      "title": 120,
+      "big": 36,
+      "medium": 24,
+      "small": 18
+    }
+  },
+  "scenes": [
+    {
+      "name": "Scene 1",
+      "background": "",
+      "elements": [
+        {
+          "type": "image",
+          "text": "Image",
+          "color": "#000000",
+          "x": 4,
+          "y": 0,
+          "font": "medium",
+          "trigger": null,
+          "triggerTarget": null,
+          "triggerValue": null,
+          "image": "background.jpg",
+          "width": "408",
+          "height": "186"
+        },
+        {
+          "type": "button",
+          "text": "go to scene2",
+          "color": "#000000",
+          "x": 509,
+          "y": 98,
+          "font": "title",
+          "bgColor": "#ffffff",
+          "trigger": "change_scene",
+          "triggerTarget": "Scene 2",
+          "triggerValue": "null",
+          "image": null,
+          "width": "",
+          "height": ""
+        },
+        {
+          "type": "label",
+          "text": "Label",
+          "color": "#000000",
+          "x": 476,
+          "y": 251,
+          "font": "medium",
+          "trigger": null,
+          "triggerTarget": null,
+          "triggerValue": null,
+          "image": null,
+          "width": "",
+          "height": ""
+        }
+      ]
+    },
+    {
+      "name": "Scene 2",
+      "background": "",
+      "elements": [
+        {
+          "type": "button",
+          "text": "Exit",
+          "color": "#000000",
+          "x": 535,
+          "y": 161,
+          "font": "title",
+          "bgColor": "#ffffff",
+          "trigger": "exit",
+          "triggerTarget": "null",
+          "triggerValue": "null",
+          "image": null,
+          "width": "",
+          "height": ""
+        }
+      ]
+    }
+  ]
+}

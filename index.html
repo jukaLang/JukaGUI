@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JukaGUI Generator</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto:wght@900&display=swap">
+</head>
+<body>
+    <h1>JukaGUI Generator</h1>
+    <p>1. Move elements to screen and double click to rename.<br>
+          You can resize image with right click.<br/>
+       2. Once ready, click "Create JukaApp" which will download jukaconfig.json.<br>
+       3. Download JukaGUI-Trimui.zip template at <a href="https://github.com/jukaLang/JukaGUI/releases">JukaGUI releases</a>.<br>
+       4. Extract template and combine it with jukaconfig.json.<br>
+       5. Put the folder under Apps on SD card.<br>
+       <b>NOTE:</b> If images are used, make sure to combine them with the template.<br/>
+<label for="loadFile">Load jukaconfig.json:</label>
+<input type="file" id="loadFile" accept=".json"></input>
+
+    </p>
+    <div class="input-box">
+        <label for="title">Title:</label>
+        <input type="text" id="title" placeholder="Enter title">
+        <label for="author">Author:</label>
+        <input type="text" id="author" placeholder="Enter author">
+        <label for="description">Description:</label>
+        <input type="text" id="description" placeholder="Enter description">
+    </div>
+    <!-- Font Size Controls -->
+    <div class="font-size-controls">
+        <label for="titleSize">Title Size:</label>
+        <input type="number" id="titleSize" value="48">
+        <label for="bigSize">Big Size:</label>
+        <input type="number" id="bigSize" value="36">
+        <label for="mediumSize">Medium Size:</label>
+        <input type="number" id="mediumSize" value="24">
+        <label for="smallSize">Small Size:</label>
+        <input type="number" id="smallSize" value="18">
+    </div>
+    <div class="background-controls">
+        <label for="canvasSize">Device:</label>
+        <select id="canvasSize">
+            <option value="1280x720">TSP (1280 x 720)</option>
+            <option value="1024x768">Brick (1024 x 768)</option>
+        </select>
+        <label for="backgroundFile">&nbsp;&nbsp;&nbsp;Change Background:</label>
+        <input type="file" id="backgroundFile" accept="image/*">
+    </div>
+    <div class="container">
+        <div class="scene-controls">
+            <button onclick="addScene()">Add Scene</button>
+            <select id="sceneSelector" onchange="changeScene()"></select>
+            <button onclick="renameScene()">Rename Scene</button>
+        </div>
+        <div class="variable-controls">
+            <button onclick="addVariable()">Add Variable</button>
+            <select id="variableSelector" onchange="changeVariable()"></select>
+            <button onclick="renameVariable()">Rename Variable</button>
+        </div>
+        <div class="toolbar">
+            <div class="element" draggable="true" data-type="button">Button</div>
+            <div class="element" draggable="true" data-type="label">Label</div>
+            <div class="element" draggable="true" data-type="image">Image</div>
+        </div>
+        <div class="color-controls">
+            <!-- Color Picker for Modifying Text Color -->
+            <label for="colorPicker" class="control-label">Font Color:</label>
+            <input type="color" id="colorPicker" class="color-picker" value="#000000" style="display:none;" />
+            <!-- Background Color Picker for Buttons -->
+            <label for="bgColorPicker" class="control-label">Background Color:</label>
+            <input type="color" id="bgColorPicker" class="bg-color-picker" value="#ffffff" style="display:none;" />
+            <!-- Font Size Picker -->
+            <label for="fontSizePicker" class="control-label">Text Size:</label>
+            <select id="fontSizePicker" class="font-size-picker" style="display:none;">
+                <option value="title">Title</option>
+                <option value="big">Big</option>
+                <option value="medium">Medium</option>
+                <option value="small">Small</option>
+            </select>
+            <!-- Trigger Selector for Buttons -->
+            <label for="triggerSelector" class="control-label">Trigger:</label>
+            <select id="triggerSelector" class="trigger-selector" style="display:none;">
+                <option value="">None</option>
+                <option value="change_scene">Change Scene</option>
+                <option value="exit">Exit</option>
+                <option value="external_app">Trigger External App</option>
+                <option value="set_variable">Set Variable</option>
+            </select>
+            <!-- Scene Selector for Change Scene Trigger -->
+            <select id="sceneChangeSelector" class="scene-change-selector" style="display:none;">
+                <!-- This will be populated dynamically with scene names -->
+            </select>
+            <!-- External App Path Input -->
+            <input type="text" id="externalAppPath" class="external-app-path" placeholder="Enter path to external app" style="display:none;">
+            <!-- Variable Selector for Set Variable Trigger -->
+            <select id="variableChangeSelector" class="variable-change-selector" style="display:none;">
+                <!-- This will be populated dynamically with variables -->
+            </select>
+            <!-- Variable Value Input for Set Variable Trigger -->
+            <input type="text" id="variableChangeValue" class="variable-change-value" placeholder="Enter new variable value" style="display:none;">
+        </div>
+        <div class="canvas" id="canvas"></div>
+    </div>
+    <button class="create-button" onclick="createJukaApp()">Create JukaApp</button>
+    <pre id="output"></pre>
+
+    <script src="script.js"></script>
+</body>
+</html>

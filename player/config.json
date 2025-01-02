@@ -1,0 +1,6 @@
+{
+    "label":	"JukaPlayer",
+    "icon":	"JukaPlayer.png",
+    "launch":	"launch.sh",
+    "description":	"JukaPlayer by JukaLang.com"
+}

@@ -1,0 +1,190 @@
+name: Build and Release
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+jobs:
+  create-tag:
+    name: Create Tag
+    runs-on: ubuntu-latest
+    outputs:
+      tag_name: ${{ steps.create_tag.outputs.tag }}
+    steps:
+      - name: Create Tag
+        id: create_tag
+        uses: actions/github-script@v5
+        with:
+          script: |
+            const timestamp = new Date().toISOString().replace(/[-:]/g, '').replace(/\..+/, '');
+            const tag = `release-${timestamp}`;
+            await github.rest.git.createRef({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              ref: `refs/tags/${tag}`,
+              sha: context.sha,
+            });
+            return tag;
+
+  build-and-publish-ubuntu:
+    name: Build and Publish (Ubuntu)
+    runs-on: ubuntu-latest
+    needs: create-tag
+    container:
+      image: anibaldeboni/trimui-smart-pro-toolchain:latest
+    steps:
+      - name: Check out the repo
+        uses: actions/checkout@v4
+
+      - name: Download and Install ARM Libraries
+        run: |
+          mkdir -p ${SYSROOT}/usr/lib
+          mkdir -p ${SYSROOT}/usr/include
+
+          # Download and install zlib 1.3.1
+          wget https://zlib.net/zlib-1.3.1.tar.gz
+          tar -xzf zlib-1.3.1.tar.gz
+          cd zlib-1.3.1
+          ./configure --prefix=${SYSROOT}/usr
+          make
+          make install
+          cd ..
+
+          # Download and install libpng 1.6.37
+          wget https://download.sourceforge.net/libpng/libpng-1.6.37.tar.gz
+          tar -xzf libpng-1.6.37.tar.gz
+          cd libpng-1.6.37
+          ./configure --host=aarch64-linux-gnu --prefix=${SYSROOT}/usr
+          make
+          make install
+          cd ..
+
+          # Download and install libjpeg
+          wget http://www.ijg.org/files/jpegsrc.v9d.tar.gz
+          tar -xzf jpegsrc.v9d.tar.gz
+          cd jpeg-9d
+          ./configure --host=aarch64-linux-gnu --prefix=${SYSROOT}/usr
+          make
+          make install
+          cd ..
+
+          # Download and install libbz2
+          wget https://sourceware.org/pub/bzip2/bzip2-1.0.8.tar.gz
+          tar -xzf bzip2-1.0.8.tar.gz
+          cd bzip2-1.0.8
+          make CC="aarch64-linux-gnu-gcc" AR="aarch64-linux-gnu-ar" RANLIB="aarch64-linux-gnu-ranlib" libbz2.a
+          cp libbz2.a ${SYSROOT}/usr/lib/
+          cp bzlib.h ${SYSROOT}/usr/include/
+          cd ..
+
+          # Download and install libtiff
+          wget http://download.osgeo.org/libtiff/tiff-4.0.9.tar.gz
+          tar -xzf tiff-4.0.9.tar.gz
+          cd tiff-4.0.9
+          if [ -f config/config.sub ]; then sed -i 's/| x86_64)/| x86_64| aarch64)/' config/config.sub; fi
+          ./configure --host=aarch64-linux-gnu --prefix=${SYSROOT}/usr
+          make
+          make install
+          cd ..
+
+          # Download and install libwebp
+          wget https://storage.googleapis.com/downloads.webmproject.org/releases/webp/libwebp-1.0.0.tar.gz
+          tar -xzf libwebp-1.0.0.tar.gz
+          cd libwebp-1.0.0
+          if [ -f config/config.sub ]; then sed -i 's/| x86_64)/| x86_64| aarch64)/' config/config.sub; fi
+          ./configure --host=aarch64-linux-gnu --prefix=${SYSROOT}/usr
+          make
+          make install
+          cd ..
+
+          export SYSROOT=/usr/local/aarch64-linux-gnu-7.5.0-linaro/sysroot
+          export CC="aarch64-linux-gnu-gcc --sysroot=${SYSROOT}"
+          export CXX="aarch64-linux-gnu-g++ --sysroot=${SYSROOT}"
+          export CGO_ENABLED=1
+          export GOARCH=arm64
+          export GOOS=linux
+          export CGO_CFLAGS="-I${SYSROOT}/usr/include -I/usr/aarch64-linux-gnu/include -I/usr/aarch64-linux-gnu/include/SDL2 -I/usr/include/SDL2 -D_REENTRANT"
+          export CGO_LDFLAGS="-L${SYSROOT}/usr/lib -L/usr/lib/aarch64-linux-gnu -lSDL2_image -lSDL2_ttf -lSDL2 -lpng -ltiff -lwebp -lfreetype -ljpeg -lz -lbz2 -ldl -lpthread -lm"
+          ln -s ${SYSROOT}/lib/libpthread.so.0 /usr/lib/libpthread.so.0
+          ln -s ${SYSROOT}/usr/lib/libpthread_nonshared.a /usr/lib/libpthread_nonshared.a
+
+      - name: Install Dependencies
+        run: |
+          cd player
+          GOPROXY=https://proxy.golang.org,direct
+          go mod tidy
+
+      - name: Build Package
+        run: |
+          mkdir -p ../JukaGUI-Trimui
+          cd player
+          echo "Building package..."
+          # [Your existing script here]
+          echo "Build completed."
+
+      - name: Package Artifacts
+        run: |
+          cp player/jukaconfig.json JukaGUI-Trimui/
+          cp player/Roboto-Black.ttf JukaGUI-Trimui/
+          cp player/launch.sh JukaGUI-Trimui/
+          cp player/config.json JukaGUI-Trimui/
+          cp player/background.jpg JukaGUI-Trimui/
+          cp player/JukaPlayer.png JukaGUI-Trimui/
+          zip -r JukaGUI-Trimui.zip JukaGUI-Trimui/
+  
+
+      - name: Upload Release Assets
+        uses: softprops/action-gh-release@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          files: ./JukaGUI-Trimui.zip
+          tag_name: ${{ needs.create-tag.outputs.tag_name }}
+
+  build-and-publish-windows:
+    name: Build and Publish (Windows)
+    runs-on: windows-latest
+    needs: create-tag
+    steps:
+      - name: Check out the repo
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v2
+        with:
+          go-version: '1.16'
+
+      - name: Install Dependencies
+        run: |
+          cd player
+          go mod tidy
+
+      - name: Build Package
+        run: |
+          mkdir -p ../JukaGUI-Trimui-Windows
+          cd player
+          echo "Building package..."
+          go build -o ../JukaGUI-Trimui-Windows/JukaGUI.exe ./
+          echo "Build completed."
+
+      - name: Package Artifacts
+        run: |
+          cd player
+          cp jukaconfig.json Roboto-Black.ttf background.jpg SDL2.dll SDL2_image.dll SDL2_ttf.dll ../JukaGUI-Trimui-Windows/
+          cd ..
+          zip -r JukaGUI-Trimui-Windows.zip JukaGUI-Trimui-Windows/
+
+      - name: Upload Release Assets
+        uses: softprops/action-gh-release@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          files: ./JukaGUI-Trimui-Windows.zip
+          tag_name: ${{ needs.create-tag.outputs.tag_name }}
