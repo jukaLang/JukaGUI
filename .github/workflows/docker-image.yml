@@ -147,14 +147,13 @@ jobs:
           cp player/JukaPlayer.png JukaGUI-Trimui/
           zip -r JukaGUI-Trimui.zip JukaGUI-Trimui/
   
-      - name: Set up GitHub CLI
-        uses: actions/setup-gh@v1
-        
       - name: Upload Release Assets
+        uses: softprops/action-gh-release@v2
+        with:
+          files: ./JukaGUI-Trimui.zip
+          tag_name: ${{ needs.create-tag.outputs.tag_name }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          gh release upload ${{ needs.create-tag.outputs.tag_name }} JukaGUI-Trimui.zip
 
 
   build-and-publish-windows:
@@ -213,11 +212,11 @@ jobs:
           cd ..
           zip -r JukaGUI-Trimui-Windows.zip JukaGUI-Trimui-Windows/
 
-      - name: Set up GitHub CLI
-        uses: actions/setup-gh@v1
-        
       - name: Upload Release Assets
+        uses: softprops/action-gh-release@v2
+        with:
+          files: ./JukaGUI-Trimui-Windows.zip
+          tag_name: ${{ needs.create-tag.outputs.tag_name }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          gh release upload ${{ needs.create-tag.outputs.tag_name }} JukaGUI-Trimui-Windows.zip
+    
