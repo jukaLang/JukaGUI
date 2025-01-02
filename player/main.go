@@ -3,7 +3,9 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"os"
+	"runtime/debug"
 	"strconv"
 	"strings"
 
@@ -279,7 +281,16 @@ func getTextDimensions(font *ttf.Font, text string) (int32, int32) {
 }
 
 func main() {
-	if err := sdl.Init(sdl.INIT_VIDEO | sdl.INIT_GAMECONTROLLER | sdl.INIT_HAPTIC | sdl.INIT_JOYSTICK | sdl.INIT_AUDIO); err != nil {
+	defer func() {
+		if r := recover(); r != nil {
+			log.Printf("Unhandled error: %v\n", r)
+			log.Println("Stack trace:")
+			debug.PrintStack()
+			os.Exit(-1)
+		}
+	}()
+
+	if err := sdl.Init(sdl.INIT_VIDEO | sdl.INIT_AUDIO | sdl.INIT_JOYSTICK | sdl.INIT_GAMECONTROLLER); err != nil {
 		fmt.Println("Error initializing SDL:", err)
 		os.Exit(1)
 	}
@@ -291,7 +302,7 @@ func main() {
 	}
 	defer ttf.Quit()
 
-	if err := img.Init(img.INIT_PNG); err != nil {
+	if err := img.Init(img.INIT_PNG | img.INIT_JPG | img.INIT_TIF); err != nil {
 		fmt.Println("Error initializing IMG:", err)
 		os.Exit(1)
 	}
@@ -364,7 +375,7 @@ func main() {
 			case *sdl.QuitEvent: // Use pointer receiver
 				running = false
 			case *sdl.MouseButtonEvent: // Use pointer receiver
-				fmt.Printf("Mouse event")
+				//fmt.Printf("Mouse event")
 				if e.Button == sdl.BUTTON_LEFT {
 					mouseX := int(e.X)
 					mouseY := int(e.Y)
@@ -374,7 +385,7 @@ func main() {
 						if element.Type == "button" &&
 							mouseX > int(element.X)-50 && mouseX < int(element.X)+50 &&
 							mouseY > int(element.Y)-25 && mouseY < int(element.Y)+25 {
-							fmt.Println("Button clicked:", element.Text)
+							//fmt.Println("Button clicked:", element.Text)
 							handleTrigger(config, element)
 						}
 					}
@@ -390,8 +401,8 @@ func main() {
 						triggerSelectedElement(config)
 					}
 				}
-			default:
-				fmt.Printf("Unhandled event: %T\n", event)
+				//default:
+				//fmt.Printf("Unhandled event: %T\n", event)
 			}
 		}
 
@@ -413,13 +424,13 @@ func moveSelection(config *Config, direction int) {
 	for elements[selectedButtonIndex].Type != "button" {
 		selectedButtonIndex = (selectedButtonIndex + direction + numElements) % numElements
 	}
-	fmt.Println("Selected button index:", selectedButtonIndex)
+	//fmt.Println("Selected button index:", selectedButtonIndex)
 }
 
 func triggerSelectedElement(config *Config) {
 	selectedElement := config.Scenes[currentSceneIndex].Elements[selectedButtonIndex]
 	if selectedElement.Type == "button" {
-		fmt.Println("Triggering selected button:", selectedElement.Text)
+		//fmt.Println("Triggering selected button:", selectedElement.Text)
 		handleTrigger(config, selectedElement)
 	}
 }
@@ -429,33 +440,33 @@ func handleTrigger(config *Config, element Element) {
 		return
 	}
 
-	fmt.Println("Handling trigger for element:", element.Text)
+	//fmt.Println("Handling trigger for element:", element.Text)
 	switch element.Trigger {
 	case "exit":
-		fmt.Println("Exiting the application.")
+		//fmt.Println("Exiting the application.")
 		os.Exit(0)
 	case "change_scene":
 		if element.TriggerTarget != "" {
-			fmt.Println("Changing scene to:", element.TriggerTarget)
+			//fmt.Println("Changing scene to:", element.TriggerTarget)
 			for i, scene := range config.Scenes {
 				if scene.Name == element.TriggerTarget {
 					currentSceneIndex = i
 					selectedButtonIndex = 0
-					fmt.Println("Scene changed to:", element.TriggerTarget)
+					//fmt.Println("Scene changed to:", element.TriggerTarget)
 					break
 				}
 			}
 		}
 	case "set_variable":
 		if element.TriggerTarget != "" && element.TriggerValue != "" {
-			fmt.Println("Setting variable", element.TriggerTarget, "to", element.TriggerValue)
+			//fmt.Println("Setting variable", element.TriggerTarget, "to", element.TriggerValue)
 			setConfigVariable(config, element.TriggerTarget, element.TriggerValue)
 		}
 	}
 }
 
 func setConfigVariable(config *Config, variableName, value string) {
-	fmt.Println("Setting configuration variable:", variableName, "to", value)
+	//fmt.Println("Setting configuration variable:", variableName, "to", value)
 	switch variableName {
 	case "buttonColor":
 		colorParts := strings.Split(value, ",")
