@@ -230,7 +230,7 @@ jobs:
         run: |
           Invoke-WebRequest -Uri https://github.com/libsdl-org/SDL/releases/download/release-2.30.11/SDL2-devel-2.30.11-mingw.zip -OutFile SDL2.zip
           7z x SDL2.zip -oSDL2
-          xcopy SDL2\SDL2-2.30.11\x86_64-w64-mingw32 C:\tools\mingw64 /E /I /Y
+          xcopy SDL2\SDL2-2.30.11\x86_64-w64-mingw32 C:\tools\mingw64\x86_64-w64-mingw32 /E /I /Y
 
       - name: Download and Install SDL_image and SDL_ttf
         run: |
@@ -238,8 +238,8 @@ jobs:
           Invoke-WebRequest -Uri https://github.com/libsdl-org/SDL_ttf/releases/download/release-2.22.0/SDL2_ttf-devel-2.22.0-mingw.zip -OutFile SDL2_ttf.zip
           7z x SDL2_image.zip -oSDL2_image
           7z x SDL2_ttf.zip -oSDL2_ttf
-          xcopy SDL2_image\SDL2_image-2.8.4\x86_64-w64-mingw32 C:\tools\mingw64 /E /I /Y
-          xcopy SDL2_ttf\SDL2_ttf-2.22.0\x86_64-w64-mingw32 C:\tools\mingw64 /E /I /Y
+          xcopy SDL2_image\SDL2_image-2.8.4\x86_64-w64-mingw32 C:\tools\mingw64\x86_64-w64-mingw32 /E /I /Y
+          xcopy SDL2_ttf\SDL2_ttf-2.22.0\x86_64-w64-mingw32 C:\tools\mingw64\x86_64-w64-mingw32 /E /I /Y
 
 
       - name: Set up Go
