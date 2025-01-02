@@ -64,6 +64,11 @@ jobs:
           gcc --version
           g++ --version
 
+      - name: Verify Environment Variables
+        run: |
+          echo "CGO_CFLAGS: $env:CGO_CFLAGS"
+          echo "CGO_LDFLAGS: $env:CGO_LDFLAGS"
+
       - name: Build Package
         env:
           CGO_CFLAGS: -IC:/tools/mingw64/x86_64-w64-mingw32/include/SDL2
@@ -71,5 +76,7 @@ jobs:
         run: |
           mkdir -p ../JukaGUI-Trimui-Windows
           cd player
+          echo "CGO_CFLAGS: $env:CGO_CFLAGS"
+          echo "CGO_LDFLAGS: $env:CGO_LDFLAGS"
           go build -o ../JukaGUI-Trimui-Windows/JukaGUI.exe ./
           echo "Build completed."
