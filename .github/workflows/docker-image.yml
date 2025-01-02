@@ -15,12 +15,6 @@ jobs:
       - name: Check out the repo
         uses: actions/checkout@v4
 
-      - name: Uninstall Previous MinGW Versions
-        run: |
-          choco uninstall mingw --all-versions --yes
-          Remove-Item -Recurse -Force C:\Program Files\mingw-w64
-        shell: pwsh
-
       - name: Install MinGW
         run: choco install mingw --version=8.1.0
 
