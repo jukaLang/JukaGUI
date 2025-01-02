@@ -16,7 +16,7 @@ jobs:
     name: Create Tag
     runs-on: ubuntu-latest
     outputs:
-      tag_name: ${{ steps.create_tag.outputs.tag }}
+      tag_name: ${{ steps.set_tag_name.outputs.tag_name }}
     steps:
       - name: Check out the repo
         uses: actions/checkout@v4
@@ -36,8 +36,12 @@ jobs:
             });
             return tag;
 
-      - name: Output Tag Name
-        run: echo "tag_name=JukaGUI-${timestamp}" >> $GITHUB_ENV
+      - name: Set Output Tag Name
+        id: set_tag_name
+        run: |
+          echo "tag_name=${{ steps.create_tag.outputs.tag }}" >> $GITHUB_ENV
+          echo "::set-output name=tag_name::${{ steps.create_tag.outputs.tag }}"
+
 
   build-and-publish-ubuntu:
     name: Build and Publish (Ubuntu)
@@ -153,6 +157,9 @@ jobs:
           cp player/JukaPlayer.png JukaGUI-Trimui/
           zip -r JukaGUI-Trimui.zip JukaGUI-Trimui/
   
+      - name: Confirm Tag Name
+        run: echo "Tag name is ${{ env.tag_name }}"
+  
       - name: Create Release
         uses: actions/create-release@v1
         id: create_release
@@ -217,18 +224,18 @@ jobs:
         run: |
           mkdir -p ../JukaGUI-Trimui-Windows
           cd player
-          set CGO_CFLAGS=-IC:/tools/mingw64/x86_64-w64-mingw32/include/SDL2
-          set CGO_LDFLAGS=-LC:/tools/mingw64/x86_64-w64-mingw32/lib
+          $env:CGO_CFLAGS="-IC:/tools/mingw64/x86_64-w64-mingw32/include/SDL2"
+          $env:CGO_LDFLAGS="-LC:/tools/mingw64/x86_64-w64-mingw32/lib"
           go build -o ../JukaGUI-Trimui-Windows/JukaGUI.exe ./
           echo "Build completed."
-
-          - name: Package Artifacts
-          run: |
-            cd player
-            cp jukaconfig.json Roboto-Black.ttf background.jpg SDL2.dll SDL2_image.dll SDL2_ttf.dll ../JukaGUI-Trimui-Windows/
-            cd ..
-            zip -r JukaGUI-Trimui-Windows.zip JukaGUI-Trimui-Windows/
   
+      - name: Package Artifacts
+        run: |
+          cd player
+          cp jukaconfig.json Roboto-Black.ttf background.jpg SDL2.dll SDL2_image.dll SDL2_ttf.dll ../JukaGUI-Trimui-Windows/
+          cd ..
+          zip -r JukaGUI-Trimui-Windows.zip JukaGUI-Trimui-Windows/
+
       - name: Create Release
         uses: actions/create-release@v1
         id: create_release
