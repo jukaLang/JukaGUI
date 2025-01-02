@@ -21,8 +21,8 @@ jobs:
       - name: Download and Install SDL2
         run: |
           # Set up directories
-          mkdir -p C:\mingw64\include\SDL2
-          mkdir -p C:\mingw64\lib
+          if (-Not (Test-Path -Path 'C:\mingw64\include\SDL2')) { New-Item -ItemType Directory -Path 'C:\mingw64\include\SDL2' }
+          if (-Not (Test-Path -Path 'C:\mingw64\lib')) { New-Item -ItemType Directory -Path 'C:\mingw64\lib' }
 
           # Download SDL2 development libraries
           Invoke-WebRequest -Uri https://github.com/libsdl-org/SDL/releases/download/release-2.30.11/SDL2-devel-2.30.11-mingw.zip -OutFile SDL2.zip
