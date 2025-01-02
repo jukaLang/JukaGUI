@@ -85,11 +85,15 @@ jobs:
 
       - name: Build Package
         env:
+          CC: "gcc"
+          CXX: "g++"
           CGO_CFLAGS: "-IC:/mingw64/include/SDL2"
           CGO_LDFLAGS: "-LC:/mingw64/lib"
         run: |
           mkdir -p ../JukaGUI-Trimui-Windows
           cd player
+          echo "CC: $env:CC"
+          echo "CXX: $env:CXX"
           echo "CGO_CFLAGS: $env:CGO_CFLAGS"
           echo "CGO_LDFLAGS: $env:CGO_LDFLAGS"
           go build -o ../JukaGUI-Trimui-Windows/JukaGUI.exe ./
