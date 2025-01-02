@@ -164,10 +164,35 @@ jobs:
       - name: Check out the repo
         uses: actions/checkout@v4
 
+      - name: Install mingw-w64
+        run: |
+          choco install mingw --version=8.1.0
+          echo "::add-path::C:/tools/mingw64/bin"
+          refreshenv
+
+      - name: Download and Install SDL2
+        run: |
+          wget https://github.com/libsdl-org/SDL/releases/download/release-2.0.16/SDL2-devel-2.0.16-mingw.zip
+          7z x SDL2-devel-2.0.16-mingw.zip -oSDL2
+          xcopy SDL2\SDL2-2.0.16\x86_64-w64-mingw32 C:\tools\mingw64 /E /I /Y
+          set PATH=C:\tools\mingw64\bin;%PATH%
+
+      - name: Download and Install SDL_image, SDL_mixer, SDL_ttf
+        run: |
+          wget https://github.com/libsdl-org/SDL_image/releases/download/release-2.0.5/SDL2_image-devel-2.0.5-mingw.zip
+          wget https://github.com/libsdl-org/SDL_mixer/releases/download/release-2.0.4/SDL2_mixer-devel-2.0.4-mingw.zip
+          wget https://github.com/libsdl-org/SDL_ttf/releases/download/release-2.0.15/SDL2_ttf-devel-2.0.15-mingw.zip
+          7z x SDL2_image-devel-2.0.5-mingw.zip -oSDL2_image
+          7z x SDL2_mixer-devel-2.0.4-mingw.zip -oSDL2_mixer
+          7z x SDL2_ttf-devel-2.0.15-mingw.zip -oSDL2_ttf
+          xcopy SDL2_image\x86_64-w64-mingw32 C:\tools\mingw64 /E /I /Y
+          xcopy SDL2_mixer\x86_64-w64-mingw32 C:\tools\mingw64 /E /I /Y
+          xcopy SDL2_ttf\x86_64-w64-mingw32 C:\tools\mingw64 /E /I /Y
+
       - name: Set up Go
         uses: actions/setup-go@v2
         with:
-          go-version: '1.16'
+          go-version: '1.23'
 
       - name: Install Dependencies
         run: |
