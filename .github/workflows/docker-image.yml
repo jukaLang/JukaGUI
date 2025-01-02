@@ -15,35 +15,21 @@ jobs:
       - name: Check out the repo
         uses: actions/checkout@v4
 
-      - name: Install 7z
-        run: choco install 7zip
+      - name: Install choco
+        run: choco install msys2
 
-      - name: Install mingw-w64
+      - name: Setup MSYS2
         run: |
-          choco install mingw --version=8.1.0
-          echo "C:/tools/mingw64/bin" >> $GITHUB_PATH
-          # Verify installation
-          mingw32-make --version
-
-      - name: Download and Install SDL2
-        run: |
-          Invoke-WebRequest -Uri https://github.com/libsdl-org/SDL/releases/download/release-2.30.11/SDL2-devel-2.30.11-mingw.zip -OutFile SDL2.zip
-          7z x SDL2.zip -oSDL2
-          xcopy SDL2\SDL2-2.30.11\x86_64-w64-mingw32\* C:\tools\mingw64\ /E /I /Y
-
-      - name: Download and Install SDL_image and SDL_ttf
-        run: |
-          Invoke-WebRequest -Uri https://github.com/libsdl-org/SDL_image/releases/download/release-2.8.4/SDL2_image-devel-2.8.4-mingw.zip -OutFile SDL2_image.zip
-          Invoke-WebRequest -Uri https://github.com/libsdl-org/SDL_ttf/releases/download/release-2.22.0/SDL2_ttf-devel-2.22.0-mingw.zip -OutFile SDL2_ttf.zip
-          7z x SDL2_image.zip -oSDL2_image
-          7z x SDL2_ttf.zip -oSDL2_ttf
-          xcopy SDL2_image\SDL2_image-2.8.4\x86_64-w64-mingw32\* C:\tools\mingw64\ /E /I /Y
-          xcopy SDL2_ttf\SDL2_ttf-2.22.0\x86_64-w64-mingw32\* C:\tools\mingw64\ /E /I /Y
+          C:\tools\msys64\msys2_shell.cmd -defterm -here -no-start -mingw64 -c "pacman -Syu --noconfirm"
+          C:\tools\msys64\msys2_shell.cmd -defterm -here -no-start -mingw64 -c "pacman -Syu --noconfirm"
+          C:\tools\msys64\msys2_shell.cmd -defterm -here -no-start -mingw64 -c "pacman -S mingw-w64-x86_64-SDL2 mingw-w64-x86_64-SDL2_image mingw-w64-x86_64-SDL2_ttf --noconfirm"
+          echo "C:\tools\msys64\mingw64\bin" >> $GITHUB_PATH
 
       - name: Verify SDL2 Installation
+        shell: cmd
         run: |
-          dir C:\tools\mingw64\include\SDL2
-          dir C:\tools\mingw64\lib
+          dir C:\tools\msys64\mingw64\include\SDL2
+          dir C:\tools\msys64\mingw64\lib
 
       - name: Set up Go
         uses: actions/setup-go@v2
@@ -71,8 +57,8 @@ jobs:
 
       - name: Build Package
         env:
-          CGO_CFLAGS: -IC:/tools/mingw64/x86_64-w64-mingw32/include/SDL2
-          CGO_LDFLAGS: -LC:/tools/mingw64/x86_64-w64-mingw32/lib
+          CGO_CFLAGS: -IC:/tools/msys64/mingw64/include/SDL2
+          CGO_LDFLAGS: -LC:/tools/msys64/mingw64/lib
         run: |
           mkdir -p ../JukaGUI-Trimui-Windows
           cd player
