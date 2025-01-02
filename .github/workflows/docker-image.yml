@@ -76,6 +76,7 @@ jobs:
           CC: "x86_64-w64-mingw32-gcc"
           CXX: "x86_64-w64-mingw32-g++"
           CGO_ENABLED: 1
+          GOARCH: "amd64"
           GOOS: "windows"
           MINGW_DIR: $(brew --prefix mingw-w64)/toolchain-x86_64
           CGO_CFLAGS: "-I${MINGW_DIR}/include -D_REENTRANT"
@@ -83,5 +84,9 @@ jobs:
         run: |
           mkdir -p ../JukaGUI-Trimui-Windows
           cd player
+          echo "CC: $env:CC"
+          echo "CXX: $env:CXX"
+          echo "CGO_CFLAGS: $env:CGO_CFLAGS"
+          echo "CGO_LDFLAGS: $env:CGO_LDFLAGS"
           go build -o ../JukaGUI-Trimui-Windows/JukaGUI.exe ./
           echo "Build completed."
