@@ -408,7 +408,6 @@ func main() {
 
 		renderScene(renderer, config, config.Scenes[currentSceneIndex])
 		renderer.Present()
-		sdl.Delay(16)
 	}
 }
 
