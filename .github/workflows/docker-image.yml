@@ -138,6 +138,7 @@ jobs:
 
       - name: Package Artifacts
         run: |
+          mkdir -p JukaGUI-Trimui
           cp player/jukaconfig.json JukaGUI-Trimui/
           cp player/Roboto-Black.ttf JukaGUI-Trimui/
           cp player/launch.sh JukaGUI-Trimui/
