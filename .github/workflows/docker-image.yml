@@ -42,6 +42,8 @@ jobs:
           echo "tag_name=${{ steps.create_tag.outputs.tag }}" >> $GITHUB_ENV
           echo "::set-output name=tag_name::${{ steps.create_tag.outputs.tag }}"
 
+      - name: Log Tag Name
+        run: echo "Tag name is ${{ steps.set_tag_name.outputs.tag_name }}"
 
   build-and-publish-ubuntu:
     name: Build and Publish (Ubuntu)
@@ -181,7 +183,6 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-
   build-and-publish-windows:
     name: Build and Publish (Windows)
     runs-on: windows-latest
@@ -228,13 +229,16 @@ jobs:
           $env:CGO_LDFLAGS="-LC:/tools/mingw64/x86_64-w64-mingw32/lib"
           go build -o ../JukaGUI-Trimui-Windows/JukaGUI.exe ./
           echo "Build completed."
-  
+
       - name: Package Artifacts
         run: |
           cd player
           cp jukaconfig.json Roboto-Black.ttf background.jpg SDL2.dll SDL2_image.dll SDL2_ttf.dll ../JukaGUI-Trimui-Windows/
           cd ..
           zip -r JukaGUI-Trimui-Windows.zip JukaGUI-Trimui-Windows/
+
+      - name: Confirm Tag Name
+        run: echo "Tag name is ${{ env.tag_name }}"
 
       - name: Create Release
         uses: actions/create-release@v1
@@ -256,3 +260,4 @@ jobs:
           asset_content_type: application/zip
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    
