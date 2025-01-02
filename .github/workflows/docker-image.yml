@@ -281,14 +281,14 @@ jobs:
           cd player
           cp jukaconfig.json Roboto-Black.ttf background.jpg SDL2.dll SDL2_image.dll SDL2_ttf.dll ../JukaGUI-Trimui-Windows/
           cd ..
-          zip -r JukaGUI-Trimui-Windows.zip JukaGUI-Trimui-Windows/
+          zip -r JukaGUI-Windows.zip JukaGUI-Trimui-Windows/
 
       - name: Upload Release Assets
         uses: actions/upload-release-asset@v1
         with:
           upload_url: ${{ needs.create-tag.outputs.upload_url }}
-          asset_path: ./JukaGUI-Trimui-Windows.zip
-          asset_name: JukaGUI-Trimui-Windows.zip
+          asset_path: ./JukaGUI-Windows.zip
+          asset_name: JukaGUI-Windows.zip
           asset_content_type: application/zip
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -1,6 +1,6 @@
 # JukaGUI
 
-[![Netlify Status](https://api.netlify.com/api/v1/badges/dea0cf4b-3799-41d9-8f2a-b4fd2a270b15/deploy-status)](https://app.netlify.com/sites/jukagenerator/deploys)
+[![Netlify Status](https://api.netlify.com/api/v1/badges/dea0cf4b-3799-41d9-8f2a-b4fd2a270b15/deploy-status)](https://generate.jukalang.com)
 
 **Juka GUI Creator**
 

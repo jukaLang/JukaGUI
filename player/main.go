@@ -217,27 +217,48 @@ func renderScene(renderer *sdl.Renderer, config *Config, sceneConfig SceneConfig
 			fontCache[element.Font] = font
 		}
 
-		// Calculate text dimensions
-		textWidth, textHeight := getTextDimensions(font, element.Text)
-		width := textWidth + 20   // Add padding to text width
-		height := textHeight + 10 // Add padding to text height
+		if element.Type == "image" && element.Image != "" {
+			imageTexture, err := img.LoadTexture(renderer, element.Image)
+			if err == nil {
+				defer imageTexture.Destroy()
+				width, err := strconv.Atoi(element.Width)
+				if err != nil {
+					width = 0 // Default width if conversion fails
+				}
+				height, err := strconv.Atoi(element.Height)
+				if err != nil {
+					height = 0 // Default height if conversion fails
+				}
+				imageRect := sdl.Rect{X: element.X, Y: element.Y, W: int32(width), H: int32(height)}
+				renderer.Copy(imageTexture, nil, &imageRect)
+			}
+		} else {
+			// Calculate text dimensions
+			textWidth, textHeight := getTextDimensions(font, element.Text)
+			width := textWidth + 20   // Add padding to text width
+			height := textHeight + 10 // Add padding to text height
 
-		// Override width and height if specified
-		if element.Width != "" {
-			w, _ := strconv.Atoi(element.Width)
-			width = int32(w)
+			// Override width and height if specified
+			if element.Width != "" {
+				w, err := strconv.Atoi(element.Width)
+				if err == nil {
+					width = int32(w)
+				}
+			}
+			if element.Height != "" {
+				h, err := strconv.Atoi(element.Height)
+				if err == nil {
+					height = int32(h)
+				}
+			}
+
+			// Render button background or label background
+			renderer.SetDrawColor(bgColor.R, bgColor.G, bgColor.B, bgColor.A)
+			renderer.FillRect(&sdl.Rect{X: element.X, Y: element.Y, W: width, H: height})
+
+			// Render button text or label text
+			renderText(renderer, font, element.Text, color, element.X+width/2, element.Y+height/2)
 		}
-		if element.Height != "" {
-			h, _ := strconv.Atoi(element.Height)
-			height = int32(h)
-		}
-
-		// Render button background
-		renderer.SetDrawColor(bgColor.R, bgColor.G, bgColor.B, bgColor.A)
-		renderer.FillRect(&sdl.Rect{X: element.X - width/2, Y: element.Y - height/2, W: width, H: height})
-
-		// Render button text
-		renderText(renderer, font, element.Text, color, element.X, element.Y)
 	}
 
 	for _, font := range fontCache {
@@ -315,7 +336,6 @@ func main() {
 		for event := sdl.PollEvent(); event != nil; event = sdl.PollEvent() {
 			switch e := event.(type) {
 			case *sdl.KeyboardEvent: // Use pointer receiver
-				fmt.Printf("Keyboard Event: Type: %d, Keysym: %+v, State: %d\n", e.Type, e.Keysym, e.State)
 				if e.Type == sdl.KEYDOWN {
 					switch e.Keysym.Sym {
 					case sdl.K_UP, sdl.K_w:
@@ -334,7 +354,7 @@ func main() {
 				running = false
 			case *sdl.MouseButtonEvent: // Use pointer receiver
 				fmt.Printf("Mouse event")
-				if e.Button == 1 {
+				if e.Button == sdl.BUTTON_LEFT {
 					mouseX := int(e.X)
 					mouseY := int(e.Y)
 

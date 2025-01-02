@@ -66,13 +66,15 @@
         </div>
         <div class="color-controls">
             <!-- Color Picker for Modifying Text Color -->
-            <label for="colorPicker" class="control-label">Font Color:</label>
+            <label for="colorPicker" class="control-label" style="display:none;">Font Color:</label>
             <input type="color" id="colorPicker" class="color-picker" value="#000000" style="display:none;" />
             <!-- Background Color Picker for Buttons -->
-            <label for="bgColorPicker" class="control-label">Background Color:</label>
+            <label for="bgColorPicker" class="control-label" style="display:none;">Background Color:</label>
             <input type="color" id="bgColorPicker" class="bg-color-picker" value="#ffffff" style="display:none;" />
+
+
             <!-- Font Size Picker -->
-            <label for="fontSizePicker" class="control-label">Text Size:</label>
+            <label for="fontSizePicker" class="control-label" style="display:none;">Text Size:</label>
             <select id="fontSizePicker" class="font-size-picker" style="display:none;">
                 <option value="title">Title</option>
                 <option value="big">Big</option>
@@ -80,7 +82,7 @@
                 <option value="small">Small</option>
             </select>
             <!-- Trigger Selector for Buttons -->
-            <label for="triggerSelector" class="control-label">Trigger:</label>
+            <label for="triggerSelector" class="control-label" style="display:none;">Trigger:</label>
             <select id="triggerSelector" class="trigger-selector" style="display:none;">
                 <option value="">None</option>
                 <option value="change_scene">Change Scene</option>
