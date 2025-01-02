@@ -55,7 +55,7 @@ jobs:
       TAG_NAME: ${{ needs.create-tag.outputs.tag_name }}
     steps:
       - name: Debug TAG_NAME
-        run: 
+        run: |
           echo "Debug TAG_NAME: ${TAG_NAME}"
       - name: Check Tag Name Variable
         run: |
