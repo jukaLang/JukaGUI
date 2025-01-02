@@ -171,8 +171,8 @@ jobs:
 
       - name: Download and Install SDL2
         run: |
-          wget https://github.com/libsdl-org/SDL/releases/download/release-2.0.16/SDL2-devel-2.0.16-mingw.zip
-          7z x SDL2-devel-2.0.16-mingw.zip -oSDL2
+          Invoke-WebRequest -Uri https://github.com/libsdl-org/SDL/releases/download/release-2.0.16/SDL2-devel-2.0.16-mingw.zip -OutFile SDL2.zip
+          Expand-Archive -Path SDL2.zip -DestinationPath SDL2
           xcopy SDL2\SDL2-2.0.16\x86_64-w64-mingw32 C:\tools\mingw64 /E /I /Y
 
       - name: Download and Install SDL_image, SDL_mixer, SDL_ttf
