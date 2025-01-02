@@ -22,26 +22,36 @@ jobs:
       - name: Install MinGW
         run: brew install mingw-w64
 
+      - name: Set up MinGW directories
+        run: |
+          MINGW_DIR=$(brew --prefix mingw-w64)/toolchain-x86_64
+          mkdir -p $MINGW_DIR/bin
+          mkdir -p $MINGW_DIR/include
+          mkdir -p $MINGW_DIR/lib
+
       - name: Download and Install SDL2
         run: |
           # Download SDL2 development libraries
           curl -LO https://www.libsdl.org/release/SDL2-devel-2.30.11-mingw.tar.gz
           tar -xzf SDL2-devel-2.30.11-mingw.tar.gz
-          sudo cp -r SDL2-2.30.11/x86_64-w64-mingw32 /usr/local/Cellar/mingw-w64/$(brew info --json=v1 mingw-w64 | jq -r '.[0].versions.stable')/toolchain-x86_64/
+          MINGW_DIR=$(brew --prefix mingw-w64)/toolchain-x86_64
+          sudo cp -r SDL2-2.30.11/x86_64-w64-mingw32/* $MINGW_DIR/
 
       - name: Download and Install SDL2_image
         run: |
           # Download SDL2_image development libraries
           curl -LO https://github.com/libsdl-org/SDL_image/releases/download/release-2.8.4/SDL2_image-devel-2.8.4-mingw.tar.gz
           tar -xzf SDL2_image-devel-2.8.4-mingw.tar.gz
-          sudo cp -r SDL2_image-2.8.4/x86_64-w64-mingw32 /usr/local/Cellar/mingw-w64/$(brew info --json=v1 mingw-w64 | jq -r '.[0].versions.stable')/toolchain-x86_64/
+          MINGW_DIR=$(brew --prefix mingw-w64)/toolchain-x86_64
+          sudo cp -r SDL2_image-2.8.4/x86_64-w64-mingw32/* $MINGW_DIR/
 
       - name: Download and Install SDL2_ttf
         run: |
           # Download SDL2_ttf development libraries
           curl -LO https://github.com/libsdl-org/SDL_ttf/releases/download/release-2.22.0/SDL2_ttf-devel-2.22.0-mingw.tar.gz
           tar -xzf SDL2_ttf-devel-2.22.0-mingw.tar.gz
-          sudo cp -r SDL2_ttf-2.22.0/x86_64-w64-mingw32 /usr/local/Cellar/mingw-w64/$(brew info --json=v1 mingw-w64 | jq -r '.[0].versions.stable')/toolchain-x86_64/
+          MINGW_DIR=$(brew --prefix mingw-w64)/toolchain-x86_64
+          sudo cp -r SDL2_ttf-2.22.0/x86_64-w64-mingw32/* $MINGW_DIR/
 
       - name: Set up Go
         uses: actions/setup-go@v2
@@ -67,8 +77,9 @@ jobs:
           CXX: "x86_64-w64-mingw32-g++"
           CGO_ENABLED: 1
           GOOS: "windows"
-          CGO_CFLAGS: "-I/usr/local/Cellar/mingw-w64/$(brew info --json=v1 mingw-w64 | jq -r '.[0].versions.stable')/toolchain-x86_64/x86_64-w64-mingw32/include -D_REENTRANT"
-          CGO_LDFLAGS: "-L/usr/local/Cellar/mingw-w64/$(brew info --json=v1 mingw-w64 | jq -r '.[0].versions.stable')/toolchain-x86_64/x86_64-w64-mingw32/lib -lSDL2"
+          MINGW_DIR: $(brew --prefix mingw-w64)/toolchain-x86_64
+          CGO_CFLAGS: "-I${MINGW_DIR}/include -D_REENTRANT"
+          CGO_LDFLAGS: "-L${MINGW_DIR}/lib -lSDL2"
         run: |
           mkdir -p ../JukaGUI-Trimui-Windows
           cd player
