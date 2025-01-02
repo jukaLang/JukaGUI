@@ -18,6 +18,9 @@ jobs:
     outputs:
       tag_name: ${{ steps.create_tag.outputs.tag }}
     steps:
+      - name: Check out the repo
+        uses: actions/checkout@v4
+
       - name: Create Tag
         id: create_tag
         uses: actions/github-script@v5
@@ -32,6 +35,9 @@ jobs:
               sha: context.sha,
             });
             return tag;
+
+      - name: Output Tag Name
+        run: echo "::set-output name=tag_name::${{ steps.create_tag.outputs.tag }}"
 
   build-and-publish-ubuntu:
     name: Build and Publish (Ubuntu)
@@ -171,20 +177,17 @@ jobs:
 
       - name: Download and Install SDL2
         run: |
-          Invoke-WebRequest -Uri https://github.com/libsdl-org/SDL/releases/download/release-2.0.16/SDL2-devel-2.0.16-mingw.zip -OutFile SDL2.zip
+          Invoke-WebRequest -Uri https://github.com/libsdl-org/SDL/releases/download/release-2.30.11/SDL2-devel-2.30.11-mingw.zip -OutFile SDL2.zip
           Expand-Archive -Path SDL2.zip -DestinationPath SDL2
-          xcopy SDL2\SDL2-2.0.16\x86_64-w64-mingw32 C:\tools\mingw64 /E /I /Y
-
-      - name: Download and Install SDL_image, SDL_mixer, SDL_ttf
+          xcopy SDL2\SDL2-2.30.11\x86_64-w64-mingw32 C:\tools\mingw64 /E /I /Y
+  
+      - name: Download and Install SDL_image and SDL_ttf
         run: |
-          Invoke-WebRequest -Uri https://github.com/libsdl-org/SDL_image/releases/download/release-2.0.5/SDL2_image-devel-2.0.5-mingw.zip -OutFile SDL2_image.zip
-          Invoke-WebRequest -Uri https://github.com/libsdl-org/SDL_mixer/releases/download/release-2.0.4/SDL2_mixer-devel-2.0.4-mingw.zip -OutFile SDL2_mixer.zip
-          Invoke-WebRequest -Uri https://github.com/libsdl-org/SDL_ttf/releases/download/release-2.0.15/SDL2_ttf-devel-2.0.15-mingw.zip -OutFile SDL2_ttf.zip
+          Invoke-WebRequest -Uri https://github.com/libsdl-org/SDL_image/releases/download/release-2.8.4/SDL2_image-devel-2.8.4-mingw.zip -OutFile SDL2_image.zip
+          Invoke-WebRequest -Uri https://github.com/libsdl-org/SDL_ttf/releases/download/release-2.22.0/SDL2_ttf-devel-2.22.0-mingw.zip -OutFile SDL2_ttf.zip
           Expand-Archive -Path SDL2_image.zip -DestinationPath SDL2_image
-          Expand-Archive -Path SDL2_mixer.zip -DestinationPath SDL2_mixer
           Expand-Archive -Path SDL2_ttf.zip -DestinationPath SDL2_ttf
           xcopy SDL2_image\x86_64-w64-mingw32 C:\tools\mingw64 /E /I /Y
-          xcopy SDL2_mixer\x86_64-w64-mingw32 C:\tools\mingw64 /E /I /Y
           xcopy SDL2_ttf\x86_64-w64-mingw32 C:\tools\mingw64 /E /I /Y
 
       - name: Set up Go
