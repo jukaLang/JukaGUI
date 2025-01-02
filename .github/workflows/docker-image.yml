@@ -251,6 +251,12 @@ jobs:
           MINGW_DIR=$(brew --prefix mingw-w64)/toolchain-x86_64
           sudo cp -r SDL2_ttf-2.22.0/x86_64-w64-mingw32/* $MINGW_DIR/x86_64-w64-mingw32/
 
+      - name: Copy DLLs to project directory
+        run: |
+          cp $MINGW_DIR/x86_64-w64-mingw32/bin/SDL2.dll player/
+          cp $MINGW_DIR/x86_64-w64-mingw32/bin/SDL2_image.dll player/
+          cp $MINGW_DIR/x86_64-w64-mingw32/bin/SDL2_ttf.dll player/
+
       - name: Set up Go
         uses: actions/setup-go@v2
         with:
