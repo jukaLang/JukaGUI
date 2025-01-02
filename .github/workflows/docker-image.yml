@@ -19,17 +19,16 @@ jobs:
         run: choco install msys2
 
       - name: Setup MSYS2
-        shell: msys2 {0}
         run: |
-          pacman -Syu --noconfirm
-          pacman -Syu --noconfirm
-          pacman -S mingw-w64-x86_64-SDL2 mingw-w64-x86_64-SDL2_image mingw-w64-x86_64-SDL2_ttf --noconfirm
+          C:\tools\msys64\usr\bin\bash.exe -lc "pacman -Syu --noconfirm"
+          C:\tools\msys64\usr\bin\bash.exe -lc "pacman -Syu --noconfirm"
+          C:\tools\msys64\usr\bin\bash.exe -lc "pacman -S mingw-w64-x86_64-SDL2 mingw-w64-x86_64-SDL2_image mingw-w64-x86_64-SDL2_ttf --noconfirm"
+        shell: cmd
 
       - name: Add MSYS2 to PATH
         run: echo "C:\tools\msys64\mingw64\bin" >> $GITHUB_PATH
 
       - name: Verify SDL2 Installation
-        shell: cmd
         run: |
           dir C:\tools\msys64\mingw64\include\SDL2
           dir C:\tools\msys64\mingw64\lib
@@ -40,7 +39,6 @@ jobs:
           go-version: '1.23'
 
       - name: Install Dependencies
-        shell: msys2 {0}
         run: |
           cd player
           go mod tidy
@@ -62,7 +60,6 @@ jobs:
         env:
           CGO_CFLAGS: "-IC:/tools/msys64/mingw64/include/SDL2"
           CGO_LDFLAGS: "-LC:/tools/msys64/mingw64/lib"
-        shell: msys2 {0}
         run: |
           mkdir -p ../JukaGUI-Trimui-Windows
           cd player
