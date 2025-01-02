@@ -60,10 +60,13 @@ jobs:
         env:
           CGO_CFLAGS: "-IC:/tools/msys64/mingw64/include/SDL2"
           CGO_LDFLAGS: "-LC:/tools/msys64/mingw64/lib"
+        shell: cmd
         run: |
           mkdir -p ../JukaGUI-Trimui-Windows
           cd player
-          echo "CGO_CFLAGS: $env:CGO_CFLAGS"
-          echo "CGO_LDFLAGS: $env:CGO_LDFLAGS"
+          set "CGO_CFLAGS=-IC:/tools/msys64/mingw64/include/SDL2"
+          set "CGO_LDFLAGS=-LC:/tools/msys64/mingw64/lib"
+          echo "CGO_CFLAGS: %CGO_CFLAGS%"
+          echo "CGO_LDFLAGS: %CGO_LDFLAGS%"
           go build -o ../JukaGUI-Trimui-Windows/JukaGUI.exe ./
           echo "Build completed."
