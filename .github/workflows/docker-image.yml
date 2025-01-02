@@ -41,6 +41,9 @@ jobs:
               sha: context.sha,
             });
 
+      - name: Confirm Tag Name
+        run: echo "Created tag name is ${{ env.tag_name }}"
+
   build-and-publish-ubuntu:
     name: Build and Publish (Ubuntu)
     runs-on: ubuntu-latest
@@ -155,15 +158,16 @@ jobs:
           cp player/JukaPlayer.png JukaGUI-Trimui/
           zip -r JukaGUI-Trimui.zip JukaGUI-Trimui/
   
+
       - name: Confirm Tag Name
-        run: echo "Tag name is ${{ env.tag_name }}"
+        run: echo "Tag name is ${{ needs.create-tag.outputs.tag_name }}"
   
       - name: Create Release
         uses: actions/create-release@v1
         id: create_release
         with:
-          tag_name: ${{ env.tag_name }}
-          release_name: ${{ env.tag_name }}
+          tag_name: ${{ needs.create-tag.outputs.tag_name }}
+          release_name: ${{ needs.create-tag.outputs.tag_name }}
           draft: false
           prerelease: false
         env:
@@ -225,7 +229,7 @@ jobs:
           $env:CGO_LDFLAGS="-LC:/tools/mingw64/x86_64-w64-mingw32/lib"
           go build -o ../JukaGUI-Trimui-Windows/JukaGUI.exe ./
           echo "Build completed."
-
+  
       - name: Package Artifacts
         run: |
           cd player
@@ -234,14 +238,14 @@ jobs:
           zip -r JukaGUI-Trimui-Windows.zip JukaGUI-Trimui-Windows/
 
       - name: Confirm Tag Name
-        run: echo "Tag name is ${{ env.tag_name }}"
+        run: echo "Tag name is ${{ needs.create-tag.outputs.tag_name }}"
 
       - name: Create Release
         uses: actions/create-release@v1
         id: create_release
         with:
-          tag_name: ${{ env.tag_name }}
-          release_name: ${{ env.tag_name }}
+          tag_name: ${{ needs.create-tag.outputs.tag_name }}
+          release_name: ${{ needs.create-tag.outputs.tag_name }}
           draft: false
           prerelease: false
         env:
@@ -256,4 +260,3 @@ jobs:
           asset_content_type: application/zip
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-    
