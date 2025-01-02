@@ -69,7 +69,9 @@ jobs:
             echo "Tag does not exist. Exiting."
             exit 1
           fi
-
+        env:
+          TAG_NAME: ${{ needs.create-tag.outputs.tag_name }}
+      
       - name: Check out the repo
         uses: actions/checkout@v4
 
@@ -206,14 +208,17 @@ jobs:
       TAG_NAME: ${{ needs.create-tag.outputs.tag_name }}
     steps:
       - name: Check Tag Exists
+        shell: pwsh
         run: |
-          if git rev-parse "refs/tags/${{ env.TAG_NAME }}" >/dev/null 2>&1; then
-            echo "Tag exists."
-          else
-            echo "Tag does not exist. Exiting."
+          if (git rev-parse "refs/tags/${{ env.TAG_NAME }}" -eq $null) {
+            Write-Output "Tag does not exist. Exiting."
             exit 1
-          fi
-
+          } else {
+            Write-Output "Tag exists."
+          }
+        env:
+          TAG_NAME: ${{ needs.create-tag.outputs.tag_name }}
+    
       - name: Check out the repo
         uses: actions/checkout@v4
 
