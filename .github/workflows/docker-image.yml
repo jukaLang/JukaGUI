@@ -1,10 +1,7 @@
-name: Build and Release
+name: Build and Test on Windows
 
 on:
   push:
-    branches:
-      - main
-  pull_request:
     branches:
       - main
 
@@ -12,207 +9,9 @@ permissions:
   contents: write
 
 jobs:
-  create-tag:
-    name: Create Tag
-    runs-on: ubuntu-latest
-    outputs:
-      tag_name: ${{ steps.generate_tag.outputs.tag_name }}
-    steps:
-      - name: Check out the repo
-        uses: actions/checkout@v4
-
-      - name: Generate Tag Name
-        id: generate_tag
-        run: |
-          timestamp=$(date +%Y%m%d%H%M%S)
-          tag=JukaGUI-$timestamp
-          echo "tag_name=$tag" >> $GITHUB_OUTPUT
-
-      - name: Set Tag using GitHub Script
-        id: set_tag
-        uses: actions/github-script@v5
-        with:
-          script: |
-            await github.rest.git.createRef({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              ref: `refs/tags/${{ steps.generate_tag.outputs.tag_name }}`,
-              sha: context.sha,
-            })
-
-
-
-
-  build-and-publish-ubuntu:
-    runs-on: ubuntu-latest
-    needs: create-tag
-    container:
-      image: anibaldeboni/trimui-smart-pro-toolchain:latest
-    env: 
-      TAG_NAME: ${{ needs.create-tag.outputs.tag_name }}
-    steps:
-      - name: Debug TAG_NAME
-        run: |
-          echo "Debug TAG_NAME: ${TAG_NAME}"
-      - name: Check Tag Name Variable
-        run: |
-          if [ -z "${TAG_NAME}" ]; then
-            echo "TAG_NAME variable does not exist. Exiting."
-            exit 1
-          else
-            echo "TAG_NAME variable exists: ${TAG_NAME}"
-          fi
-    
-      - name: Check out the repo
-        uses: actions/checkout@v4
-
-      - name: Download and Install ARM Libraries
-        run: |
-          mkdir -p ${SYSROOT}/usr/lib
-          mkdir -p ${SYSROOT}/usr/include
-
-          # Download and install zlib 1.3.1
-          wget https://zlib.net/zlib-1.3.1.tar.gz
-          tar -xzf zlib-1.3.1.tar.gz
-          cd zlib-1.3.1
-          ./configure --prefix=${SYSROOT}/usr
-          make
-          make install
-          cd ..
-
-          # Download and install libpng 1.6.37
-          wget https://download.sourceforge.net/libpng/libpng-1.6.37.tar.gz
-          tar -xzf libpng-1.6.37.tar.gz
-          cd libpng-1.6.37
-          ./configure --host=aarch64-linux-gnu --prefix=${SYSROOT}/usr
-          make
-          make install
-          cd ..
-
-          # Download and install libjpeg
-          wget http://www.ijg.org/files/jpegsrc.v9d.tar.gz
-          tar -xzf jpegsrc.v9d.tar.gz
-          cd jpeg-9d
-          ./configure --host=aarch64-linux-gnu --prefix=${SYSROOT}/usr
-          make
-          make install
-          cd ..
-
-          # Download and install libbz2
-          wget https://sourceware.org/pub/bzip2/bzip2-1.0.8.tar.gz
-          tar -xzf bzip2-1.0.8.tar.gz
-          cd bzip2-1.0.8
-          make CC="aarch64-linux-gnu-gcc" AR="aarch64-linux-gnu-ar" RANLIB="aarch64-linux-gnu-ranlib" libbz2.a
-          cp libbz2.a ${SYSROOT}/usr/lib/
-          cp bzlib.h ${SYSROOT}/usr/include/
-          cd ..
-
-          # Download and install libtiff
-          wget http://download.osgeo.org/libtiff/tiff-4.0.9.tar.gz
-          tar -xzf tiff-4.0.9.tar.gz
-          cd tiff-4.0.9
-          if [ -f config/config.sub ]; then sed -i 's/| x86_64)/| x86_64| aarch64)/' config/config.sub; fi
-          ./configure --host=aarch64-linux-gnu --prefix=${SYSROOT}/usr
-          make
-          make install
-          cd ..
-
-          # Download and install libwebp
-          wget https://storage.googleapis.com/downloads.webmproject.org/releases/webp/libwebp-1.0.0.tar.gz
-          tar -xzf libwebp-1.0.0.tar.gz
-          cd libwebp-1.0.0
-          if [ -f config/config.sub ]; then sed -i 's/| x86_64)/| x86_64| aarch64)/' config/config.sub; fi
-          ./configure --host=aarch64-linux-gnu --prefix=${SYSROOT}/usr
-          make
-          make install
-          cd ..
-
-          export SYSROOT=/usr/local/aarch64-linux-gnu-7.5.0-linaro/sysroot
-          export CC="aarch64-linux-gnu-gcc --sysroot=${SYSROOT}"
-          export CXX="aarch64-linux-gnu-g++ --sysroot=${SYSROOT}"
-          export CGO_ENABLED=1
-          export GOARCH=arm64
-          export GOOS=linux
-          export CGO_CFLAGS="-I${SYSROOT}/usr/include -I/usr/aarch64-linux-gnu/include -I/usr/aarch64-linux-gnu/include/SDL2 -I/usr/include/SDL2 -D_REENTRANT"
-          export CGO_LDFLAGS="-L${SYSROOT}/usr/lib -L/usr/lib/aarch64-linux-gnu -lSDL2_image -lSDL2_ttf -lSDL2 -lpng -ltiff -lwebp -lfreetype -ljpeg -lz -lbz2 -ldl -lpthread -lm"
-          ln -s ${SYSROOT}/lib/libpthread.so.0 /usr/lib/libpthread.so.0
-          ln -s ${SYSROOT}/usr/lib/libpthread_nonshared.a /usr/lib/libpthread_nonshared.a
-
-      - name: Install Dependencies
-        run: |
-          cd player
-          GOPROXY=https://proxy.golang.org,direct
-          go mod tidy
-
-      - name: Build Package
-        run: |
-          mkdir -p ../JukaGUI-Trimui
-          cd player
-          echo "Building package..."
-          CGO_ENABLED=1 \
-          CC="aarch64-linux-gnu-gcc --sysroot=${SYSROOT}" \
-          CXX="aarch64-linux-gnu-g++ --sysroot=${SYSROOT}" \
-          GOARCH=arm64 \
-          GOOS=linux \
-          CGO_CFLAGS="-I${SYSROOT}/usr/include -I/usr/aarch64-linux-gnu/include -I/usr/aarch64-linux-gnu/include/SDL2 -I/usr/include/SDL2 -D_REENTRANT" \
-          CGO_LDFLAGS="-L${SYSROOT}/usr/lib -L/usr/lib/aarch64-linux-gnu -lSDL2_image -lSDL2_ttf -lSDL2 -lpng -ltiff -lwebp -lfreetype -ljpeg -lz -lbz2 -ldl -lpthread -lm" \
-          go build -tags static -ldflags "-s -w -extldflags '-static'" -o ../JukaGUI-Trimui/JukaGUI ./
-          echo "Build completed."
-
-      - name: Package Artifacts
-        run: |
-          mkdir -p JukaGUI-Trimui
-          cp player/jukaconfig.json JukaGUI-Trimui/
-          cp player/Roboto-Black.ttf JukaGUI-Trimui/
-          cp player/launch.sh JukaGUI-Trimui/
-          cp player/config.json JukaGUI-Trimui/
-          cp player/background.jpg JukaGUI-Trimui/
-          cp player/JukaPlayer.png JukaGUI-Trimui/
-          zip -r JukaGUI-Trimui.zip JukaGUI-Trimui/
-  
-      - name: Create Release
-        uses: actions/create-release@v1
-        id: create_release
-        with:
-          tag_name: ${{ env.TAG_NAME }}
-          release_name: ${{ env.TAG_NAME }}
-          draft: false
-          prerelease: false
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Upload Release Assets
-        uses: actions/upload-release-asset@v1
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./JukaGUI-Trimui.zip
-          asset_name: JukaGUI-Trimui.zip
-          asset_content_type: application/zip
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-  build-and-publish-windows:
+  build-windows:
     runs-on: windows-latest
-    needs: create-tag
-    env: 
-      TAG_NAME: ${{ needs.create-tag.outputs.tag_name }}
     steps:
-      - name: Debug TAG_NAME
-        shell: pwsh
-        run: |
-          echo "Debug TAG_NAME: $env:TAG_NAME"
-
-      - name: Check Tag Name Variable
-        shell: pwsh
-        run: |
-          if (-not $env:TAG_NAME) {
-            Write-Output "TAG_NAME variable does not exist. Exiting."
-            exit 1
-          } else {
-            Write-Output "TAG_NAME variable exists: $env:TAG_NAME"
-          }
-        
-    
       - name: Check out the repo
         uses: actions/checkout@v4
 
@@ -230,7 +29,7 @@ jobs:
         run: |
           Invoke-WebRequest -Uri https://github.com/libsdl-org/SDL/releases/download/release-2.30.11/SDL2-devel-2.30.11-mingw.zip -OutFile SDL2.zip
           7z x SDL2.zip -oSDL2
-          xcopy SDL2\SDL2-2.30.11\x86_64-w64-mingw32 C:\tools\mingw64\x86_64-w64-mingw32 /E /I /Y
+          xcopy SDL2\SDL2-2.30.11\x86_64-w64-mingw32\* C:\tools\mingw64\ /E /I /Y
 
       - name: Download and Install SDL_image and SDL_ttf
         run: |
@@ -238,9 +37,13 @@ jobs:
           Invoke-WebRequest -Uri https://github.com/libsdl-org/SDL_ttf/releases/download/release-2.22.0/SDL2_ttf-devel-2.22.0-mingw.zip -OutFile SDL2_ttf.zip
           7z x SDL2_image.zip -oSDL2_image
           7z x SDL2_ttf.zip -oSDL2_ttf
-          xcopy SDL2_image\SDL2_image-2.8.4\x86_64-w64-mingw32 C:\tools\mingw64\x86_64-w64-mingw32 /E /I /Y
-          xcopy SDL2_ttf\SDL2_ttf-2.22.0\x86_64-w64-mingw32 C:\tools\mingw64\x86_64-w64-mingw32 /E /I /Y
+          xcopy SDL2_image\SDL2_image-2.8.4\x86_64-w64-mingw32\* C:\tools\mingw64\ /E /I /Y
+          xcopy SDL2_ttf\SDL2_ttf-2.22.0\x86_64-w64-mingw32\* C:\tools\mingw64\ /E /I /Y
 
+      - name: Verify SDL2 Installation
+        run: |
+          dir C:\tools\mingw64\include\SDL2
+          dir C:\tools\mingw64\lib
 
       - name: Set up Go
         uses: actions/setup-go@v2
@@ -252,6 +55,15 @@ jobs:
           cd player
           go mod tidy
 
+      - name: Verify Go Environment
+        run: |
+          go env
+
+      - name: Verify Compiler
+        run: |
+          gcc --version
+          g++ --version
+
       - name: Build Package
         env:
           CGO_CFLAGS: -IC:/tools/mingw64/x86_64-w64-mingw32/include/SDL2
@@ -261,31 +73,3 @@ jobs:
           cd player
           go build -o ../JukaGUI-Trimui-Windows/JukaGUI.exe ./
           echo "Build completed."
-
-      - name: Package Artifacts
-        run: |
-          cd player
-          cp jukaconfig.json Roboto-Black.ttf background.jpg SDL2.dll SDL2_image.dll SDL2_ttf.dll ../JukaGUI-Trimui-Windows/
-          cd ..
-          zip -r JukaGUI-Trimui-Windows.zip JukaGUI-Trimui-Windows/
-
-      - name: Create Release
-        uses: actions/create-release@v1
-        id: create_release
-        with:
-          tag_name: ${{ env.TAG_NAME }}
-          release_name: ${{ env.TAG_NAME }}
-          draft: false
-          prerelease: false
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Upload Release Assets
-        uses: actions/upload-release-asset@v1
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./JukaGUI-Trimui-Windows.zip
-          asset_name: JukaGUI-Trimui-Windows.zip
-          asset_content_type: application/zip
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
