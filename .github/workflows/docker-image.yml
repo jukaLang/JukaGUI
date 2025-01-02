@@ -15,23 +15,36 @@ jobs:
       - name: Check out the repo
         uses: actions/checkout@v4
 
-      - name: Install MSYS2
-        run: choco install msys2
-
-      - name: Setup MSYS2
+      - name: Uninstall Previous MinGW Versions
         run: |
-          C:\tools\msys64\usr\bin\bash.exe -lc "pacman -Syu --noconfirm"
-          C:\tools\msys64\usr\bin\bash.exe -lc "pacman -Syu --noconfirm"
-          C:\tools\msys64\usr\bin\bash.exe -lc "pacman -S mingw-w64-x86_64-SDL2 mingw-w64-x86_64-SDL2_image mingw-w64-x86_64-SDL2_ttf --noconfirm"
-        shell: cmd
+          choco uninstall mingw --all-versions --yes
+          Remove-Item -Recurse -Force C:\Program Files\mingw-w64
+        shell: pwsh
 
-      - name: Add MSYS2 to PATH
-        run: echo "C:\tools\msys64\mingw64\bin" >> $GITHUB_PATH
+      - name: Install MinGW
+        run: choco install mingw --version=8.1.0
+
+      - name: Download and Install SDL2
+        run: |
+          # Set up directories
+          mkdir -p C:\mingw64\include\SDL2
+          mkdir -p C:\mingw64\lib
+
+          # Download SDL2 development libraries
+          Invoke-WebRequest -Uri https://www.libsdl.org/release/SDL2-devel-2.0.14-mingw.zip -OutFile SDL2.zip
+          7z x SDL2.zip -oSDL2
+
+          # Copy headers and libs to appropriate directories
+          xcopy SDL2\SDL2-2.0.14\x86_64-w64-mingw32\include\SDL2 C:\mingw64\include\SDL2 /E /I /Y
+          xcopy SDL2\SDL2-2.0.14\x86_64-w64-mingw32\lib C:\mingw64\lib /E /I /Y
+
+      - name: Add MinGW and SDL2 to PATH
+        run: echo "C:\mingw64\bin" >> $GITHUB_PATH
 
       - name: Verify SDL2 Installation
         run: |
-          dir C:\tools\msys64\mingw64\include\SDL2
-          dir C:\tools\msys64\mingw64\lib
+          dir C:\mingw64\include\SDL2
+          dir C:\mingw64\lib
 
       - name: Set up Go
         uses: actions/setup-go@v2
@@ -58,15 +71,12 @@ jobs:
 
       - name: Build Package
         env:
-          CGO_CFLAGS: "-IC:/tools/msys64/mingw64/include/SDL2"
-          CGO_LDFLAGS: "-LC:/tools/msys64/mingw64/lib"
-        shell: cmd
+          CGO_CFLAGS: "-IC:/mingw64/include/SDL2"
+          CGO_LDFLAGS: "-LC:/mingw64/lib"
         run: |
           mkdir -p ../JukaGUI-Trimui-Windows
           cd player
-          set "CGO_CFLAGS=-IC:/tools/msys64/mingw64/include/SDL2"
-          set "CGO_LDFLAGS=-LC:/tools/msys64/mingw64/lib"
-          echo "CGO_CFLAGS: %CGO_CFLAGS%"
-          echo "CGO_LDFLAGS: %CGO_LDFLAGS%"
+          echo "CGO_CFLAGS: $env:CGO_CFLAGS"
+          echo "CGO_LDFLAGS: $env:CGO_LDFLAGS"
           go build -o ../JukaGUI-Trimui-Windows/JukaGUI.exe ./
           echo "Build completed."
