@@ -126,7 +126,14 @@ jobs:
           mkdir -p ../JukaGUI-Trimui
           cd player
           echo "Building package..."
-          # [Your existing script here]
+          CGO_ENABLED=1 \
+          CC="aarch64-linux-gnu-gcc --sysroot=${SYSROOT}" \
+          CXX="aarch64-linux-gnu-g++ --sysroot=${SYSROOT}" \
+          GOARCH=arm64 \
+          GOOS=linux \
+          CGO_CFLAGS="-I${SYSROOT}/usr/include -I/usr/aarch64-linux-gnu/include -I/usr/aarch64-linux-gnu/include/SDL2 -I/usr/include/SDL2 -D_REENTRANT" \
+          CGO_LDFLAGS="-L${SYSROOT}/usr/lib -L/usr/lib/aarch64-linux-gnu -lSDL2_image -lSDL2_ttf -lSDL2 -lpng -ltiff -lwebp -lfreetype -ljpeg -lz -lbz2 -ldl -lpthread -lm" \
+          go build -tags static -ldflags "-s -w -extldflags '-static'" -o ../JukaGUI-Trimui/JukaGUI ./
           echo "Build completed."
 
       - name: Package Artifacts
