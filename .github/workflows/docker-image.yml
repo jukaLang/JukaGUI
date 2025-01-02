@@ -292,7 +292,7 @@ jobs:
       - name: Package Artifacts
         run: |
           cd player
-          cd player cp jukaconfig.json Roboto-Black.ttf background.jpg SDL2.dll SDL2_image.dll SDL2_ttf.dll ../JukaGUI-Trimui-Windows/
+          cp jukaconfig.json Roboto-Black.ttf background.jpg SDL2.dll SDL2_image.dll SDL2_ttf.dll ../JukaGUI-Trimui-Windows/
           cd ..
           zip -r JukaGUI-Trimui-Windows.zip JukaGUI-Trimui-Windows/
 
