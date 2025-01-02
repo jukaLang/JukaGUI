@@ -149,12 +149,10 @@ jobs:
   
 
       - name: Upload Release Assets
-        uses: softprops/action-gh-release@v2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          files: ./JukaGUI-Trimui.zip
-          tag_name: ${{ needs.create-tag.outputs.tag_name }}
+        run: |
+          gh release upload ${{ needs.create-tag.outputs.tag_name }} JukaGUI-Trimui.zip
 
   build-and-publish-windows:
     name: Build and Publish (Windows)
@@ -167,15 +165,13 @@ jobs:
       - name: Install mingw-w64
         run: |
           choco install mingw --version=8.1.0
-          echo "::add-path::C:/tools/mingw64/bin"
-          refreshenv
+          echo "C:/tools/mingw64/bin" >> $GITHUB_PATH
 
       - name: Download and Install SDL2
         run: |
           wget https://github.com/libsdl-org/SDL/releases/download/release-2.0.16/SDL2-devel-2.0.16-mingw.zip
           7z x SDL2-devel-2.0.16-mingw.zip -oSDL2
           xcopy SDL2\SDL2-2.0.16\x86_64-w64-mingw32 C:\tools\mingw64 /E /I /Y
-          set PATH=C:\tools\mingw64\bin;%PATH%
 
       - name: Download and Install SDL_image, SDL_mixer, SDL_ttf
         run: |
@@ -215,9 +211,8 @@ jobs:
           zip -r JukaGUI-Trimui-Windows.zip JukaGUI-Trimui-Windows/
 
       - name: Upload Release Assets
-        uses: softprops/action-gh-release@v2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          files: ./JukaGUI-Trimui-Windows.zip
-          tag_name: ${{ needs.create-tag.outputs.tag_name }}
+        run: |
+          gh release upload ${{ needs.create-tag.outputs.tag_name }} JukaGUI-Trimui-Windows.zip
+      
