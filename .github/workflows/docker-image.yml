@@ -26,26 +26,17 @@ jobs:
         run: |
           timestamp=$(date +%Y%m%d%H%M%S)
           tag=JukaGUI-$timestamp
-          echo "tag_name=$tag" >> $GITHUB_ENV
           echo "::set-output name=tag_name::$tag"
+          echo "tag_name=$tag" >> $GITHUB_ENV
+          echo "Generated tag name: $tag"
 
       - name: Set Output for Tag Name
         id: set_tag_name
-        run: echo "tag_name=${{ env.tag_name }}" >> $GITHUB_ENV
+        run: echo "tag_name=${{ env.tag_name }}"
 
-      - name: Check if Tag Exists
-        id: check_tag
-        run: |
-          if git rev-parse "refs/tags/${{ env.tag_name }}" >/dev/null 2>&1; then
-            echo "Tag exists."
-            exit 1
-          else
-            echo "Tag does not exist. Creating tag."
-          fi
 
       - name: Set Tag using GitHub Script
         id: set_tag
-        if: steps.check_tag.outcome == 'success'
         uses: actions/github-script@v5
         with:
           script: |
@@ -58,22 +49,23 @@ jobs:
 
 
   build-and-publish-ubuntu:
-    name: Build and Publish (Ubuntu)
     runs-on: ubuntu-latest
     needs: create-tag
-    env:
+    env: 
       TAG_NAME: ${{ needs.create-tag.outputs.tag_name }}
-    container:
-      image: anibaldeboni/trimui-smart-pro-toolchain:latest
     steps:
+      - name: Debug TAG_NAME
+        run: echo "Debug TAG_NAME: ${TAG_NAME}"
+
       - name: Check Tag Name Variable
         run: |
-          if [ -z "${env.TAG_NAME}" ]; then
+          if [ -z "${TAG_NAME}" ]; then
             echo "TAG_NAME variable does not exist. Exiting."
             exit 1
           else
             echo "TAG_NAME variable exists: ${TAG_NAME}"
           fi
+
     
       - name: Check out the repo
         uses: actions/checkout@v4
@@ -204,12 +196,15 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   build-and-publish-windows:
-    name: Build and Publish (Windows)
     runs-on: windows-latest
     needs: create-tag
     env: 
       TAG_NAME: ${{ needs.create-tag.outputs.tag_name }}
     steps:
+      - name: Debug TAG_NAME
+        shell: pwsh
+        run: echo "Debug TAG_NAME: $env:TAG_NAME"
+
       - name: Check Tag Name Variable
         shell: pwsh
         run: |
@@ -218,8 +213,8 @@ jobs:
             exit 1
           } else {
             Write-Output "TAG_NAME variable exists: $env:TAG_NAME"
-          }
-    
+          fi
+
     
       - name: Check out the repo
         uses: actions/checkout@v4
