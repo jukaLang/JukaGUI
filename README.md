@@ -1,5 +1,7 @@
 # JukaGUI
 
+[![Netlify Status](https://api.netlify.com/api/v1/badges/dea0cf4b-3799-41d9-8f2a-b4fd2a270b15/deploy-status)](https://app.netlify.com/sites/jukagenerator/deploys)
+
 **Juka GUI Creator**
 
 If you just want to create the app, launch it from here: [https://generate.jukalang.com](https://generate.jukalang.com)
