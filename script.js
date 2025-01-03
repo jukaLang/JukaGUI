@@ -430,6 +430,7 @@ function setupElementEvents(el) {
                 el.style.fontSize = getFontSize(fontSizePicker.value) + 'px';
             };
 
+            if (el.getAttribute('data-type') !== 'label') {
             document.querySelector('.control-label[for="bgColorPicker"]').style.display = 'block';
             bgColorPicker.value = el.getAttribute('data-bg-color') || '#ffffff';
             bgColorPicker.style.display = 'block';
@@ -437,7 +438,9 @@ function setupElementEvents(el) {
                 el.style.backgroundColor = bgColorPicker.value;
                 el.setAttribute('data-bg-color', bgColorPicker.value);
             };
+        }
 
+        if (el.getAttribute('data-type') !== 'label') {
             document.querySelector('.control-label[for="triggerSelector"]').style.display = 'block';
             triggerSelector.value = el.getAttribute('data-trigger') || '';
             triggerSelector.style.display = 'block';
@@ -482,6 +485,7 @@ function setupElementEvents(el) {
                 variableChangeSelector.value = el.getAttribute('data-trigger-target') || '';
                 variableChangeValue.value = el.getAttribute('data-trigger-value') || '';
             }
+        }
         } else {
             document.querySelector('.control-label[for="colorPicker"]').style.display = 'none';
             colorPicker.style.display = 'none';
@@ -535,7 +539,7 @@ function addElement(type, x, y) {
     el.setAttribute('data-font', 'medium'); // Default font size
     el.setAttribute('data-width', type === 'image' ? '100px' : ''); // Default width for images
     el.setAttribute('data-height', type === 'image' ? '100px' : ''); // Default height for images
-    el.style.fontSize = '16px'; // Setting a default font size for buttons and labels
+    el.style.fontSize = '24px'; // Setting a default font size for buttons and labels
     el.style.padding = '5px'; // Adjusting padding to make elements fit the text size
     el.style.width = 'auto'; // Ensure the element fits the text size
     if (type === 'label') {
