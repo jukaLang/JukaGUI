@@ -56,9 +56,11 @@
             <button onclick="renameScene()">Rename Scene</button>
         </div>
         <div class="variable-controls">
-            <button onclick="addVariable()">Add Variable</button>
-            <select id="variableSelector" onchange="changeVariable()"></select>
-            <button onclick="renameVariable()">Rename Variable</button>
+            <button id="addVariableButton" onclick="addVariable()">Add Variable</button>
+            <select id="variableSelector" style="display: none;" onchange="changeVariable()"></select>
+            <input type="text" id="variableValueInput" style="display: none;" readonly>
+            <button id="renameVariableButton" style="display: none;" onclick="renameVariable()">Rename Variable</button>
+            <button id="changeValueButton" style="display: none;" onclick="showChangeValue()">Change Value</button>
         </div>
         <div class="toolbar">
             <div class="element" draggable="true" data-type="button">Button</div>

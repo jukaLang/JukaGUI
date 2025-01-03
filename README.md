@@ -82,3 +82,9 @@ If you encounter any issues or have questions, feel free to join our [Discord Ch
 
 This project is licensed under the MIT License. See the [LICENSE](https://github.com/jukaLang/JukaGUI/blob/main/LICENSE) file for details.
 
+## Special Thanks
+Special thanks to Nevrdid for finding and documenting bugs
+Special thanks to Arthur Gregorio for answering questions regarding Go structure.
+Special thanks to StarDrive and DigestPrism for supporting this app.
+Special thanks to all of Juka Discord channel for making this app possible.
+

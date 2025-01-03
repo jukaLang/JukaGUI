@@ -91,12 +91,23 @@ function renameScene() {
         delete scenes[currentScene];
         currentScene = newName;
 
+        // Update the option in the scene selector
         const selectedOption = sceneSelector.querySelector(`option[value="${sceneSelector.value}"]`);
-        selectedOption.value = newName;
-        selectedOption.textContent = newName;
+        if (selectedOption) {
+            selectedOption.value = newName;
+            selectedOption.textContent = newName;
+        }
+
+        // Reflect the change in the scene selector
+        sceneSelector.querySelector(`option[value="${sceneSelector.value}"]`).value = newName;
+        sceneSelector.querySelector(`option[value="${sceneSelector.value}"]`).textContent = newName;
 
         sceneSelector.value = newName;
         updateSceneChangeSelector();
+        loadScene(newName);
+        console.log(`Scene renamed to: ${newName}`);
+    } else {
+        console.log('Scene name already exists or invalid input.');
     }
 }
 
@@ -165,6 +176,7 @@ function addVariable() {
         variableOption.textContent = variableName;
         variableChangeSelector.appendChild(variableOption);
         variableSelector.value = variableName;
+        showVariableControls();
         changeVariable();
     }
 }
@@ -189,14 +201,70 @@ function renameVariable() {
     }
 }
 
+// Function to change variable
 function changeVariable() {
     const variableName = variableSelector.value;
-    const variableValue = prompt('Enter variable value:', variables[variableName]);
+    document.getElementById('variableValueInput').value = variables[variableName];
+}
+
+// Function to show variable controls
+function showVariableControls() {
+    document.getElementById('variableSelector').style.display = 'inline';
+    document.getElementById('variableValueInput').style.display = 'inline';
+    document.getElementById('renameVariableButton').style.display = 'inline';
+    document.getElementById('changeValueButton').style.display = 'inline';
+}
+
+// Function to show Change Value button and input field
+function showChangeValue() {
+    const variableName = variableSelector.value;
+    const variableValue = prompt('Enter new variable value:', variables[variableName]);
     if (variableValue !== null) {
         variables[variableName] = variableValue;
+        document.getElementById('variableValueInput').value = variables[variableName];
         updateVariableText();
     }
 }
+
+function showTooltip(event) {
+    const target = event.target;
+    const variableNames = target.getAttribute('data-variable');
+    if (variableNames) {
+        let tooltip = document.createElement('div');
+        tooltip.className = 'tooltip';
+        let tooltipText = '';
+        const addedVariables = new Set(); // To track added variables and avoid duplicates
+        variableNames.split(',').forEach(variableName => {
+            if (variables[variableName] !== undefined && !addedVariables.has(variableName)) {
+                tooltipText += `$${variableName}:${variables[variableName]} `;
+                addedVariables.add(variableName);
+            }
+        });
+        tooltip.textContent = tooltipText.trim();
+        document.body.appendChild(tooltip);
+        const rect = target.getBoundingClientRect();
+        tooltip.style.left = `${rect.left + window.scrollX}px`;
+        tooltip.style.top = `${rect.top + window.scrollY - tooltip.offsetHeight}px`;
+        target._tooltip = tooltip;
+    }
+}
+
+
+function hideTooltip(event) {
+    const target = event.target;
+    if (target._tooltip) {
+        document.body.removeChild(target._tooltip);
+        delete target._tooltip;
+    }
+}
+
+function setupHoverEvents(el) {
+    el.addEventListener('mouseenter', showTooltip);
+    el.addEventListener('mouseleave', hideTooltip);
+}
+
+// Event listener for variable selector
+variableSelector.addEventListener('change', changeVariable);
 
 function updateElementFontSizes() {
     const elements = document.querySelectorAll('.canvas .element');
@@ -212,10 +280,17 @@ function updateVariableText() {
         if (el.getAttribute('data-type') === 'button' || el.getAttribute('data-type') === 'label') {
             let textSpan = el.querySelector('.text-content');
             let text = textSpan.textContent;
+            // Keep $variable names and show tooltip on hover
+            const addedVariables = new Set(); // To track added variables and avoid duplicates
             Object.keys(variables).forEach(key => {
-                text = text.replace(`$${key}`, variables[key]);
+                const variablePlaceholder = `$${key}`;
+                if (text.includes(variablePlaceholder) && !addedVariables.has(key)) {
+                    addedVariables.add(key);
+                    el.setAttribute('data-variable', `${el.getAttribute('data-variable') ? el.getAttribute('data-variable') + ',' : ''}${key}`);
+                    setupHoverEvents(el);
+                }
             });
-            textSpan.textContent = text;
+            textSpan.textContent = text; // Ensure text remains unchanged
         }
     });
 }
@@ -235,6 +310,8 @@ canvas.addEventListener('drop', event => {
 });
 
 function setupElementEvents(el) {
+    setupHoverEvents(el);
+
     el.addEventListener('mousedown', event => {
         if (event.button === 2) { // Right mouse button
             el.style.cursor = 'nwse-resize';
