@@ -234,7 +234,6 @@ canvas.addEventListener('drop', event => {
     addElement(type, x, y);
 });
 
-
 function setupElementEvents(el) {
     el.addEventListener('mousedown', event => {
         if (event.button === 2) { // Right mouse button
@@ -300,7 +299,7 @@ function setupElementEvents(el) {
         event.preventDefault(); // Prevent the context menu from appearing
     });
 
-    el.addEventListener('dblclick', (event) => {
+    el.addEventListener('dblclick', event => {
         event.stopPropagation(); // Prevent the click from bubbling up
         const textSpan = el.querySelector('.text-content');
         if (el.getAttribute('data-type') === 'button' || el.getAttribute('data-type') === 'label') {
@@ -334,86 +333,78 @@ function setupElementEvents(el) {
         }
     });
 
-el.addEventListener('click', () => {
-    hideControls(); // Hide all controls first
+    el.addEventListener('click', () => {
+        hideControls(); // Hide all controls first
 
-    if (el.getAttribute('data-type') !== 'image') {
-        document.querySelector('.control-label[for="colorPicker"]').style.display = 'block';
-        colorPicker.value = el.getAttribute('data-color') || '#000000';
-        colorPicker.style.display = 'block';
-        colorPicker.oninput = function() {
-            el.style.color = colorPicker.value;
-            el.setAttribute('data-color', colorPicker.value);
-        };
+        if (el.getAttribute('data-type') !== 'image') {
+            document.querySelector('.control-label[for="colorPicker"]').style.display = 'block';
+            colorPicker.value = el.getAttribute('data-color') || '#000000';
+            colorPicker.style.display = 'block';
+            colorPicker.oninput = function() {
+                el.style.color = colorPicker.value;
+                el.setAttribute('data-color', colorPicker.value);
+            };
 
-        document.querySelector('.control-label[for="fontSizePicker"]').style.display = 'block';
-        fontSizePicker.value = el.getAttribute('data-font') || 'medium';
-        fontSizePicker.style.display = 'block';
-        fontSizePicker.onchange = function() {
-            el.setAttribute('data-font', fontSizePicker.value);
-            el.style.fontSize = getFontSize(fontSizePicker.value) + 'px';
-        };
+            document.querySelector('.control-label[for="fontSizePicker"]').style.display = 'block';
+            fontSizePicker.value = el.getAttribute('data-font') || 'medium';
+            fontSizePicker.style.display = 'block';
+            fontSizePicker.onchange = function() {
+                el.setAttribute('data-font', fontSizePicker.value);
+                el.style.fontSize = getFontSize(fontSizePicker.value) + 'px';
+            };
 
-        document.querySelector('.control-label[for="bgColorPicker"]').style.display = 'block';
-        bgColorPicker.value = el.getAttribute('data-bg-color') || '#ffffff';
-        bgColorPicker.style.display = 'block';
-        bgColorPicker.oninput = function() {
-            el.style.backgroundColor = bgColorPicker.value;
-            el.setAttribute('data-bg-color', bgColorPicker.value);
-        };
+            document.querySelector('.control-label[for="bgColorPicker"]').style.display = 'block';
+            bgColorPicker.value = el.getAttribute('data-bg-color') || '#ffffff';
+            bgColorPicker.style.display = 'block';
+            bgColorPicker.oninput = function() {
+                el.style.backgroundColor = bgColorPicker.value;
+                el.setAttribute('data-bg-color', bgColorPicker.value);
+            };
 
-        document.querySelector('.control-label[for="triggerSelector"]').style.display = 'block';
-        triggerSelector.value = el.getAttribute('data-trigger') || '';
-        triggerSelector.style.display = 'block';
-        triggerSelector.onchange = function() {
-            el.setAttribute('data-trigger', triggerSelector.value);
-            // Hide all trigger-related fields initially
-            sceneChangeSelector.style.display = 'none';
-            externalAppPath.style.display = 'none';
-            variableChangeSelector.style.display = 'none';
-            variableChangeValue.style.display = 'none';
-            
-            if (triggerSelector.value === 'change_scene') {
+            document.querySelector('.control-label[for="triggerSelector"]').style.display = 'block';
+            triggerSelector.value = el.getAttribute('data-trigger') || '';
+            triggerSelector.style.display = 'block';
+            triggerSelector.onchange = function() {
+                el.setAttribute('data-trigger', triggerSelector.value);
+                // Hide all trigger-related fields initially
+                sceneChangeSelector.style.display = 'none';
+                externalAppPath.style.display = 'none';
+                variableChangeSelector.style.display = 'none';
+                variableChangeValue.style.display = 'none';
+                
+                if (triggerSelector.value === 'change_scene') {
+                    sceneChangeSelector.style.display = 'block';
+                    sceneChangeSelector.value = el.getAttribute('data-trigger-target') || '';
+                    sceneChangeSelector.onchange = function() {
+                        el.setAttribute('data-trigger-target', sceneChangeSelector.value);
+                    };
+                } else if (triggerSelector.value === 'external_app') {
+                    externalAppPath.style.display = 'block';
+                    externalAppPath.value = el.getAttribute('data-trigger-target') || '';
+                    externalAppPath.oninput = function() {
+                        el.setAttribute('data-trigger-target', externalAppPath.value);
+                    };
+                } else if (triggerSelector.value === 'set_variable') {
+                    variableChangeSelector.style.display = 'block';
+                    variableChangeValue.style.display = 'block';
+                    variableChangeSelector.value = el.getAttribute('data-trigger-target') || '';
+                    variableChangeValue.value = el.getAttribute('data-trigger-value') || '';
+                }
+            };
+
+            // Set initial state based on the current trigger
+            if (el.getAttribute('data-trigger') === 'change_scene') {
                 sceneChangeSelector.style.display = 'block';
                 sceneChangeSelector.value = el.getAttribute('data-trigger-target') || '';
-                sceneChangeSelector.onchange = function() {
-                    el.setAttribute('data-trigger-target', sceneChangeSelector.value);
-                };
-            } else if (triggerSelector.value === 'external_app') {
+            } else if (el.getAttribute('data-trigger') === 'external_app') {
                 externalAppPath.style.display = 'block';
                 externalAppPath.value = el.getAttribute('data-trigger-target') || '';
-                externalAppPath.oninput = function() {
-                    el.setAttribute('data-trigger-target', externalAppPath.value);
-                };
-            } else if (triggerSelector.value === 'set_variable') {
+            } else if (el.getAttribute('data-trigger') === 'set_variable') {
                 variableChangeSelector.style.display = 'block';
                 variableChangeValue.style.display = 'block';
                 variableChangeSelector.value = el.getAttribute('data-trigger-target') || '';
                 variableChangeValue.value = el.getAttribute('data-trigger-value') || '';
-                variableChangeSelector.onchange = function() {
-                    el.setAttribute('data-trigger-target', variableChangeSelector.value);
-                };
-                variableChangeValue.oninput = function() {
-                    el.setAttribute('data-trigger-value', variableChangeValue.value);
-                };
             }
-        };
-
-        // Set initial state based on the current trigger
-        if (el.getAttribute('data-trigger') === 'change_scene') {
-            sceneChangeSelector.style.display = 'block';
-            sceneChangeSelector.value = el.getAttribute('data-trigger-target') || '';
-        } else if (el.getAttribute('data-trigger') === 'external_app') {
-            externalAppPath.style.display = 'block';
-            externalAppPath.value = el.getAttribute('data-trigger-target') || '';
-        } else if (el.getAttribute('data-trigger') === 'set_variable') {
-            variableChangeSelector.style.display = 'block';
-            variableChangeValue.style.display = 'block';
-            variableChangeSelector.value = el.getAttribute('data-trigger-target') || '';
-            variableChangeValue.value = el.getAttribute('data-trigger-value') || '';
-        }
-
-
         } else {
             document.querySelector('.control-label[for="colorPicker"]').style.display = 'none';
             colorPicker.style.display = 'none';
@@ -429,7 +420,22 @@ el.addEventListener('click', () => {
     el.addEventListener('contextmenu', event => {
         event.preventDefault(); // Prevent the context menu from appearing
     });
+    
+    const removeButton = el.querySelector('.remove-button');
+    if (removeButton) {
+        removeButton.addEventListener('click', (event) => {
+            event.stopPropagation();
+            const parent = el.parentNode;
+            parent.removeChild(el);
+            const sceneElements = scenes[currentScene];
+            const elementIndex = sceneElements.indexOf(el);
+            if (elementIndex > -1) {
+                sceneElements.splice(elementIndex, 1);
+            }
+        });
+    }
 }
+
 
 
 function addElement(type, x, y) {
@@ -465,22 +471,18 @@ function addElement(type, x, y) {
     removeButton.classList.add('remove-button');
     el.appendChild(removeButton);
 
-    removeButton.addEventListener('click', (event) => {
-        event.stopPropagation();
-        const parent = el.parentNode;
-        parent.removeChild(el);
-        const sceneElements = scenes[currentScene];
-        const elementIndex = sceneElements.indexOf(el);
-        if (elementIndex > -1) {
-            sceneElements.splice(elementIndex, 1);
-        }
-    });
+    // Attach event listeners immediately
+    setupElementEvents(el);
 
-    setupElementEvents(el); // Ensure events are set up
-
-    // Append element to canvas and update scenes
+    // Append element to canvas
     canvas.appendChild(el);
-    updateScenes();
+
+    // Save to the current scene
+    if (!scenes[currentScene]) {
+        scenes[currentScene] = [];
+    }
+    scenes[currentScene].push(el.cloneNode(true));
+
     return el;
 }
 
