@@ -66,11 +66,19 @@
             <div class="element" draggable="true" data-type="button">Button</div>
             <div class="element" draggable="true" data-type="label">Label</div>
             <div class="element" draggable="true" data-type="image">Image</div>
+            <div class="element" draggable="true" data-type="input">Input</div>
         </div>
         <div class="color-controls">
             <label for="hiddenSetting" class="control-label" style="display:inline;">Attributes:</label>
             <select id="hiddenSetting" class="trigger-selector" style="visibility: hidden;">
             </select>
+
+            <label for="datax" class="control-label" style="display:none;">X:</label>
+            <span id="datax" class="color-picker" style="display:none;" ></span>
+
+            <label for="datay" class="control-label" style="display:none;">Y:</label>
+            <span id="datay" class="color-picker" style="display:none;"></span>
+
             <!-- Color Picker for Modifying Text Color -->
             <label for="colorPicker" class="control-label" style="display:none;">Font Color:</label>
             <input type="color" id="colorPicker" class="color-picker" value="#000000" style="display:none;" />
@@ -95,6 +103,8 @@
                 <option value="exit">Exit</option>
                 <option value="external_app">Trigger External App</option>
                 <option value="set_variable">Set Variable</option>
+                <option value="play_video">Play Video</option>
+                <option value="play_image">Fullscreen Image</option>
             </select>
             <!-- Scene Selector for Change Scene Trigger -->
             <select id="sceneChangeSelector" class="scene-change-selector" style="display:none;">

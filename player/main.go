@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"os/exec"
 	"runtime/debug"
 	"strconv"
 	"strings"
@@ -46,6 +47,7 @@ type Variables struct {
 		Medium int `json:"medium"`
 		Small  int `json:"small"`
 	} `json:"fontSizes"`
+	InputText string `json:"inputText"`
 }
 
 type SceneConfig struct {
@@ -68,6 +70,24 @@ type Element struct {
 	Image         string `json:"image"`
 	Width         string `json:"width"`
 	Height        string `json:"height"`
+	Video         string `json:"video"`
+	Variable      string `json:"variable"`
+}
+
+var videoPlayed = false // rack if video has been played
+var inputText string    // Global variable to store input text
+var keyboard [][]string
+var keyboardPosX, keyboardPosY int
+var virtualKeyboardActive = false
+
+func initKeyboard() {
+	keyboard = [][]string{
+		{"Q", "W", "E", "R", "T", "Y", "U", "I", "O", "P"},
+		{"A", "S", "D", "F", "G", "H", "J", "K", "L"},
+		{"Z", "X", "C", "V", "B", "N", "M"},
+		{"SPACE", "BACK", "ENTER"},
+	}
+	keyboardPosX, keyboardPosY = 0, 0
 }
 
 var currentSceneIndex int
@@ -193,6 +213,66 @@ func renderText(renderer *sdl.Renderer, font *ttf.Font, text string, color sdl.C
 	return textWidth, textHeight
 }
 
+func renderButton(renderer *sdl.Renderer, config *Config, element Element) {
+	defaultTextColor := sdl.Color{R: 0, G: 0, B: 0, A: 255}     // Default to black
+	defaultBgColor := sdl.Color{R: 255, G: 255, B: 255, A: 255} // Default to white
+
+	color := resolveColor(config, element.Color, defaultTextColor)
+	bgColor := resolveColor(config, element.BgColor, defaultBgColor)
+
+	// Render button background
+	renderer.SetDrawColor(bgColor.R, bgColor.G, bgColor.B, bgColor.A)
+	renderer.FillRect(&sdl.Rect{X: element.X, Y: element.Y, W: 200, H: 50})
+
+	// Render button text
+	font, _ := getFontAndSize(config, element.Font)
+	renderText(renderer, font, element.Text, color, element.X+100, element.Y+25)
+}
+
+func renderKeyboard(renderer *sdl.Renderer) {
+	startX, startY := 50, 450
+	keyWidth, keyHeight, padding := 40, 40, 10
+
+	for i, row := range keyboard {
+		for j, key := range row {
+			x := startX + j*(keyWidth+padding)
+			y := startY + i*(keyHeight+padding)
+
+			// Draw key background
+			renderer.SetDrawColor(255, 255, 255, 255) // White background
+			if i == keyboardPosY && j == keyboardPosX {
+				renderer.SetDrawColor(0, 255, 0, 255) // Green background for selected key
+			}
+			renderer.FillRect(&sdl.Rect{X: int32(x), Y: int32(y), W: int32(keyWidth), H: int32(keyHeight)})
+
+			// Draw key text
+			renderer.SetDrawColor(0, 0, 0, 255) // Black text
+			renderText(renderer, nil, key, sdl.Color{R: 0, G: 0, B: 0, A: 255}, int32(x+keyWidth/2), int32(y+keyHeight/2))
+		}
+	}
+}
+
+func isInputButtonSelected(element Element) bool {
+	return virtualKeyboardActive
+}
+
+func handleKeyboardInput(config *Config) {
+	selectedKey := keyboard[keyboardPosY][keyboardPosX]
+	switch selectedKey {
+	case "SPACE":
+		inputText += " "
+	case "BACK":
+		if len(inputText) > 0 {
+			inputText = inputText[:len(inputText)-1]
+		}
+	case "ENTER":
+		config.Variables.InputText = inputText
+		virtualKeyboardActive = false // Hide virtual keyboard after setting the variable
+	default:
+		inputText += selectedKey
+	}
+}
+
 func renderScene(renderer *sdl.Renderer, config *Config, sceneConfig SceneConfig) {
 	fontCache := make(map[string]*ttf.Font)
 	bgTexture := resolveBackground(renderer, config, sceneConfig.Background)
@@ -219,22 +299,63 @@ func renderScene(renderer *sdl.Renderer, config *Config, sceneConfig SceneConfig
 			fontCache[element.Font] = font
 		}
 
-		if element.Type == "image" && element.Image != "" {
-			imageTexture, err := img.LoadTexture(renderer, element.Image)
-			if err == nil {
-				defer imageTexture.Destroy()
+		switch element.Type {
+		case "image":
+			if element.Image != "" {
+				imageTexture, err := img.LoadTexture(renderer, element.Image)
+				if err == nil {
+					defer imageTexture.Destroy()
+					width, err := strconv.Atoi(element.Width)
+					if err != nil {
+						width = 0 // Default width if conversion fails
+					}
+					height, err := strconv.Atoi(element.Height)
+					if err != nil {
+						height = 0 // Default height if conversion fails
+					}
+					imageRect := sdl.Rect{X: element.X, Y: element.Y, W: int32(width), H: int32(height)}
+					renderer.Copy(imageTexture, nil, &imageRect)
+				}
+			}
+		case "input":
+			renderButton(renderer, config, element)
+			if isInputButtonSelected(element) {
+				virtualKeyboardActive = true
+				renderKeyboard(renderer)
+			}
+		case "video":
+			if !videoPlayed && element.Video != "" {
 				width, err := strconv.Atoi(element.Width)
 				if err != nil {
-					width = 0 // Default width if conversion fails
+					fmt.Println("Error converting width:", err)
+					continue
 				}
 				height, err := strconv.Atoi(element.Height)
 				if err != nil {
-					height = 0 // Default height if conversion fails
+					fmt.Println("Error converting height:", err)
+					continue
 				}
-				imageRect := sdl.Rect{X: element.X, Y: element.Y, W: int32(width), H: int32(height)}
-				renderer.Copy(imageTexture, nil, &imageRect)
+
+				// Construct the ffplay command with the correct parameters
+				cmd := exec.Command("ffmpeg/ffplay", element.Video,
+					"-noborder",
+					"-x", strconv.Itoa(width),
+					"-y", strconv.Itoa(height),
+					"-left", strconv.Itoa(int(element.X)),
+					"-top", strconv.Itoa(int(element.Y)),
+					"-autoexit")
+
+				// Start the ffplay process
+				if err := cmd.Start(); err != nil {
+					fmt.Println("Error starting ffplay:", err)
+				}
+				videoPlayed = true
+
+				/*if err := cmd.Wait(); err != nil {
+					fmt.Println("Error waiting for ffplay:", err)
+				}*/
 			}
-		} else {
+		default:
 			// Calculate text dimensions
 			textWidth, textHeight := getTextDimensions(font, element.Text)
 			width := textWidth + 20   // Add padding to text width
@@ -359,15 +480,38 @@ func main() {
 			switch e := event.(type) {
 			case *sdl.KeyboardEvent: // Use pointer receiver
 				if e.Type == sdl.KEYDOWN {
-					switch e.Keysym.Sym {
-					case sdl.K_UP, sdl.K_w:
-						moveSelection(config, -1)
-					case sdl.K_DOWN, sdl.K_s:
-						moveSelection(config, 1)
-					case sdl.K_RETURN, sdl.K_KP_ENTER:
-						triggerSelectedElement(config)
-					case sdl.K_ESCAPE:
-						running = false
+					if virtualKeyboardActive {
+						switch e.Keysym.Sym {
+						case sdl.K_UP, sdl.K_w:
+							if keyboardPosY > 0 {
+								keyboardPosY--
+							}
+						case sdl.K_DOWN, sdl.K_s:
+							if keyboardPosY < len(keyboard)-1 {
+								keyboardPosY++
+							}
+						case sdl.K_LEFT, sdl.K_a:
+							if keyboardPosX > 0 {
+								keyboardPosX--
+							}
+						case sdl.K_RIGHT, sdl.K_d:
+							if keyboardPosX < len(keyboard[keyboardPosY])-1 {
+								keyboardPosX++
+							}
+						case sdl.K_RETURN:
+							handleKeyboardInput(config)
+						}
+					} else {
+						switch e.Keysym.Sym {
+						case sdl.K_UP, sdl.K_w:
+							moveSelection(config, -1)
+						case sdl.K_DOWN, sdl.K_s:
+							moveSelection(config, 1)
+						case sdl.K_RETURN, sdl.K_KP_ENTER:
+							triggerSelectedElement(config)
+						case sdl.K_ESCAPE:
+							running = false
+						}
 					}
 				}
 			case *sdl.TextInputEvent: // Use pointer receiver
@@ -392,13 +536,36 @@ func main() {
 				}
 			case *sdl.ControllerButtonEvent: // Use pointer receiver
 				if e.Type == sdl.CONTROLLERBUTTONDOWN {
-					switch e.Button {
-					case sdl.CONTROLLER_BUTTON_DPAD_UP:
-						moveSelection(config, -1)
-					case sdl.CONTROLLER_BUTTON_DPAD_DOWN:
-						moveSelection(config, 1)
-					case sdl.CONTROLLER_BUTTON_A:
-						triggerSelectedElement(config)
+					if virtualKeyboardActive {
+						switch e.Button {
+						case sdl.CONTROLLER_BUTTON_DPAD_UP:
+							if keyboardPosY > 0 {
+								keyboardPosY--
+							}
+						case sdl.CONTROLLER_BUTTON_DPAD_DOWN:
+							if keyboardPosY < len(keyboard)-1 {
+								keyboardPosY++
+							}
+						case sdl.CONTROLLER_BUTTON_DPAD_LEFT:
+							if keyboardPosX > 0 {
+								keyboardPosX--
+							}
+						case sdl.CONTROLLER_BUTTON_DPAD_RIGHT:
+							if keyboardPosX < len(keyboard[keyboardPosY])-1 {
+								keyboardPosX++
+							}
+						case sdl.CONTROLLER_BUTTON_A, sdl.CONTROLLER_BUTTON_B:
+							handleKeyboardInput(config)
+						}
+					} else {
+						switch e.Button {
+						case sdl.CONTROLLER_BUTTON_DPAD_UP:
+							moveSelection(config, -1)
+						case sdl.CONTROLLER_BUTTON_DPAD_DOWN:
+							moveSelection(config, 1)
+						case sdl.CONTROLLER_BUTTON_A, sdl.CONTROLLER_BUTTON_B:
+							triggerSelectedElement(config)
+						}
 					}
 				}
 				//default:
@@ -423,7 +590,7 @@ func moveSelection(config *Config, direction int) {
 	for elements[selectedButtonIndex].Type != "button" {
 		selectedButtonIndex = (selectedButtonIndex + direction + numElements) % numElements
 	}
-	//fmt.Println("Selected button index:", selectedButtonIndex)
+	fmt.Println("Selected button index:", selectedButtonIndex)
 }
 
 func triggerSelectedElement(config *Config) {
@@ -451,6 +618,7 @@ func handleTrigger(config *Config, element Element) {
 				if scene.Name == element.TriggerTarget {
 					currentSceneIndex = i
 					selectedButtonIndex = 0
+					videoPlayed = false
 					//fmt.Println("Scene changed to:", element.TriggerTarget)
 					break
 				}

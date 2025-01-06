@@ -1,5 +1,7 @@
 const canvas = document.getElementById('canvas');
 const output = document.getElementById('output');
+const datax = document.getElementById('datax');
+const datay = document.getElementById('datay');
 const colorPicker = document.getElementById('colorPicker');
 const bgColorPicker = document.getElementById('bgColorPicker');
 const fontSizePicker = document.getElementById('fontSizePicker');
@@ -277,7 +279,7 @@ function updateElementFontSizes() {
 function updateVariableText() {
     const elements = document.querySelectorAll('.canvas .element');
     elements.forEach(el => {
-        if (el.getAttribute('data-type') === 'button' || el.getAttribute('data-type') === 'label') {
+        //if (el.getAttribute('data-type') === 'button' || el.getAttribute('data-type') === 'label') {
             let textSpan = el.querySelector('.text-content');
             let text = textSpan.textContent;
             // Keep $variable names and show tooltip on hover
@@ -291,7 +293,7 @@ function updateVariableText() {
                 }
             });
             textSpan.textContent = text; // Ensure text remains unchanged
-        }
+        //}
     });
 }
 
@@ -413,7 +415,16 @@ function setupElementEvents(el) {
     el.addEventListener('click', () => {
         hideControls(); // Hide all controls first
 
-        if (el.getAttribute('data-type') !== 'image') {
+        document.querySelector('.control-label[for="datax"]').style.display = 'block';
+        datax.style.display = 'block';
+        datax.innerText = el.getAttribute('data-x');
+
+        document.querySelector('.control-label[for="datay"]').style.display = 'block';
+        datay.style.display = 'block';
+        datay.innerText = el.getAttribute('data-y');
+
+
+        if (el.getAttribute('data-type') !== 'image' && el.getAttribute('data-type') !== "input") {
             document.querySelector('.control-label[for="colorPicker"]').style.display = 'block';
             colorPicker.value = el.getAttribute('data-color') || '#000000';
             colorPicker.style.display = 'block';
@@ -469,6 +480,12 @@ function setupElementEvents(el) {
                     variableChangeValue.style.display = 'block';
                     variableChangeSelector.value = el.getAttribute('data-trigger-target') || '';
                     variableChangeValue.value = el.getAttribute('data-trigger-value') || '';
+                } else if (triggerSelector.value === 'play_video') {
+                    externalAppPath.style.display = 'block';
+                    externalAppPath.value = el.getAttribute('data-trigger-target') || '';
+                } else if (triggerSelector.value === 'play_image') {
+                    externalAppPath.style.display = 'block';
+                    externalAppPath.value = el.getAttribute('data-trigger-target') || '';
                 }
             };
 
@@ -484,9 +501,21 @@ function setupElementEvents(el) {
                 variableChangeValue.style.display = 'block';
                 variableChangeSelector.value = el.getAttribute('data-trigger-target') || '';
                 variableChangeValue.value = el.getAttribute('data-trigger-value') || '';
+            }else if (el.getAttribute('data-trigger') === 'play_video') {
+                externalAppPath.style.display = 'block';
+                externalAppPath.value = el.getAttribute('data-trigger-target') || '';
+            }
+            else if (el.getAttribute('data-trigger') === 'play_image') {
+                externalAppPath.style.display = 'block';
+                externalAppPath.value = el.getAttribute('data-trigger-target') || '';
             }
         }
         } else {
+            //document.querySelector('.control-label[for="datax"]').style.display = 'none';
+            //datax.style.display = 'none';
+            //document.querySelector('.control-label[for="datay"]').style.display = 'none';
+            //datay.style.display = 'none';
+
             document.querySelector('.control-label[for="colorPicker"]').style.display = 'none';
             colorPicker.style.display = 'none';
             document.querySelector('.control-label[for="fontSizePicker"]').style.display = 'none';
@@ -653,6 +682,10 @@ canvas.addEventListener('click', (event) => {
 });
 
 function hideControls() {
+    document.querySelector('.control-label[for="datax"]').style.display = 'none';
+    datax.style.display = 'none';
+    document.querySelector('.control-label[for="datay"]').style.display = 'none';
+    datay.style.display = 'none';
     document.querySelector('.control-label[for="colorPicker"]').style.display = 'none';
     colorPicker.style.display = 'none';
     document.querySelector('.control-label[for="bgColorPicker"]').style.display = 'none';
