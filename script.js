@@ -475,6 +475,11 @@ function setupElementEvents(el) {
                     externalAppPath.oninput = function() {
                         el.setAttribute('data-trigger-target', externalAppPath.value);
                     };
+                    variableChangeValue.style.display = 'block';
+                    variableChangeValue.value = el.getAttribute('data-trigger-value') || '';
+                    variableChangeValue.oninput = function() {
+                        el.setAttribute('data-trigger-value', variableChangeValue.value);
+                    };
                 } else if (triggerSelector.value === 'set_variable') {
                     variableChangeSelector.style.display = 'block';
                     variableChangeValue.style.display = 'block';
@@ -783,3 +788,46 @@ function loadJukaApp(data) {
 
     updateElementFontSizes();
 }
+
+
+
+// Automatically load jukaconfig.json
+window.addEventListener('load', () => {
+    fetch('player/jukaconfig.json')
+        .then(response => response.json())
+        .then(data => loadJukaApp(data))
+        .catch(error => console.error('Error loading jukaconfig.json:', error));
+});
+
+// Add a button to clear everything and start new
+document.getElementById('clearButton').addEventListener('click', () => {
+    if (confirm('Are you sure you want to clear everything and start new?')) {
+        scenes = { 'Scene 1': [] };
+        currentScene = 'Scene 1';
+        variables = {};
+        canvas.innerHTML = '';
+        sceneSelector.innerHTML = '';
+        const option = document.createElement('option');
+        option.value = 'Scene 1';
+        option.textContent = 'Scene 1';
+        sceneSelector.appendChild(option);
+        sceneSelector.value = 'Scene 1';
+        updateSceneChangeSelector();
+        updateCanvasSize();
+        document.getElementById('title').value = '';
+        document.getElementById('author').value = '';
+        document.getElementById('description').value = '';
+        document.getElementById('titleSize').value = 48;
+        document.getElementById('bigSize').value = 36;
+        document.getElementById('mediumSize').value = 24;
+        document.getElementById('smallSize').value = 18;
+    }
+});
+
+
+// Add a dialogue when closing the tab
+window.addEventListener('beforeunload', (event) => {
+    event.preventDefault();
+    event.returnValue = 'Are you sure you want to leave? Changes you made may not be saved.';
+});
+
