@@ -722,15 +722,17 @@ document.getElementById('loadFile').addEventListener('change', function(event) {
 
 function loadJukaApp(data) {
     // Update title, author, description
-    document.getElementById('title').value = data.title;
-    document.getElementById('author').value = data.author;
-    document.getElementById('description').value = data.description;
+    document.getElementById('title').value = data.title || '';
+    document.getElementById('author').value = data.author || '';
+    document.getElementById('description').value = data.description || '';
 
     // Update font sizes
-    document.getElementById('titleSize').value = data.variables.fontSizes.title;
-    document.getElementById('bigSize').value = data.variables.fontSizes.big;
-    document.getElementById('mediumSize').value = data.variables.fontSizes.medium;
-    document.getElementById('smallSize').value = data.variables.fontSizes.small;
+    if (data.variables && data.variables.fontSizes) {
+        document.getElementById('titleSize').value = data.variables.fontSizes.title || 48;
+        document.getElementById('bigSize').value = data.variables.fontSizes.big || 36;
+        document.getElementById('mediumSize').value = data.variables.fontSizes.medium || 24;
+        document.getElementById('smallSize').value = data.variables.fontSizes.small || 18;
+    }
 
     // Clear the scenes object
     scenes = {};
@@ -740,36 +742,98 @@ function loadJukaApp(data) {
     const sceneSelector = document.getElementById('sceneSelector');
     sceneSelector.innerHTML = '';
 
+    // Load variables if they exist
+    variables = {};
+    if (data.variables) {
+        // Extract any custom variables (excluding predefined ones)
+        Object.keys(data.variables).forEach(key => {
+            if (!['buttonColor', 'labelColor', 'backgroundImage', 'fonts', 'fontSizes'].includes(key)) {
+                variables[key] = data.variables[key];
+                
+                // Update variable selectors
+                const option = document.createElement('option');
+                option.value = key;
+                option.textContent = key;
+                variableSelector.appendChild(option);
+                
+                const variableOption = document.createElement('option');
+                variableOption.value = key;
+                variableOption.textContent = key;
+                variableChangeSelector.appendChild(variableOption);
+            }
+        });
+    }
+
     // Load scenes and elements
     data.scenes.forEach(scene => {
-        scenes[scene.name] = scene.elements.map(element => {
-            const el = addElement(element.type, element.x, element.y);
-
-            if (element.type === 'button' || element.type === 'label') {
-                el.querySelector('.text-content').textContent = element.text;
-                el.setAttribute('data-color', element.color);
-                el.style.color = element.color;
-                el.setAttribute('data-font', element.font);
-                el.style.fontSize = getFontSize(element.font) + 'px';
-                if (element.type === 'button') {
-                    el.setAttribute('data-bg-color', element.bgColor);
-                    el.style.backgroundColor = element.bgColor;
-                    el.setAttribute('data-trigger', element.trigger);
-                    el.setAttribute('data-trigger-target', element.triggerTarget);
-                    el.setAttribute('data-trigger-value', element.triggerValue);
-                }
+        // Create a new scene entry
+        scenes[scene.name] = [];
+        
+        // Process each element in the scene
+        scene.elements.forEach(element => {
+            // Create a new DOM element
+            const el = document.createElement('div');
+            el.classList.add('element');
+            el.style.position = 'absolute';
+            el.style.left = `${element.x}px`;
+            el.style.top = `${element.y}px`;
+            
+            // Add the text content span
+            const textSpan = document.createElement('span');
+            textSpan.classList.add('text-content');
+            textSpan.textContent = element.text || element.type.charAt(0).toUpperCase() + element.type.slice(1);
+            el.appendChild(textSpan);
+            
+            // Add the remove button
+            const removeButton = document.createElement('span');
+            removeButton.textContent = '✕';
+            removeButton.classList.add('remove-button');
+            el.appendChild(removeButton);
+            
+            // Set attributes
+            el.setAttribute('data-type', element.type);
+            el.setAttribute('data-x', element.x);
+            el.setAttribute('data-y', element.y);
+            
+            // Apply specific styling based on element type
+            // Inside loadJukaApp function, where we style elements based on type:
+	    if (element.type === 'button' || element.type === 'label') {
+               el.setAttribute('data-color', element.color || '#000000');
+               el.style.color = element.color || '#000000';
+               el.setAttribute('data-font', element.font || 'medium');
+               el.style.fontSize = `${getFontSize(element.font || 'medium')}px`;
+    
+               if (element.type === 'button') {
+                  el.setAttribute('data-bg-color', element.bgColor || '#ffffff');
+                  el.style.backgroundColor = element.bgColor || '#ffffff';
+                  el.setAttribute('data-trigger', element.trigger || '');
+                  el.setAttribute('data-trigger-target', element.triggerTarget || '');
+                  el.setAttribute('data-trigger-value', element.triggerValue || '');
+               } else if (element.type === 'label') {
+                  // Ensure labels have transparent background
+                  el.style.background = 'none';
+               }
             } else if (element.type === 'image') {
-                el.style.backgroundImage = `url(${element.image})`;
-                el.style.backgroundSize = 'cover';
-                el.style.width = `${element.width}px`;
-                el.style.height = `${element.height}px`;
-                el.setAttribute('data-width', element.width);
-                el.setAttribute('data-height', element.height);
-                el.setAttribute('data-image', element.image);
+                if (element.image) {
+                    el.style.backgroundImage = `url(${element.image})`;
+                    el.style.backgroundSize = 'cover';
+                    el.setAttribute('data-image', element.image);
+                }
+                
+                el.style.width = `${element.width || 100}px`;
+                el.style.height = `${element.height || 100}px`;
+                el.setAttribute('data-width', element.width || 100);
+                el.setAttribute('data-height', element.height || 100);
             }
-
+            
+            // Set up the event listeners
             setupElementEvents(el);
-            return el;
+            
+            // Add the element to the canvas
+            canvas.appendChild(el);
+            
+            // Add to the scene array (store the cloned DOM element)
+            scenes[scene.name].push(el.cloneNode(true));
         });
 
         // Add scene to the scene selector
@@ -779,16 +843,30 @@ function loadJukaApp(data) {
         sceneSelector.appendChild(option);
     });
 
+    // Set the background if available
+    if (data.scenes.length > 0) {
+        const firstScene = data.scenes[0];
+        if (firstScene.background) {
+            canvas.style.backgroundImage = `url(${firstScene.background})`;
+            backgroundPath = firstScene.background;
+        }
+    }
+
     // Show the first scene by default
     if (data.scenes.length > 0) {
         currentScene = data.scenes[0].name;
         sceneSelector.value = currentScene;
-        updateScenes();
     }
 
+    // Update scene change selector with all available scenes
+    updateSceneChangeSelector();
+    
+    // Apply font sizes to all elements
     updateElementFontSizes();
+    
+    // Update any variable references in text
+    updateVariableText();
 }
-
 
 
 // Automatically load jukaconfig.json

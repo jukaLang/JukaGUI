@@ -13,7 +13,7 @@
       "g": 255,
       "b": 255
     },
-    "backgroundImage": "",
+    "backgroundImage": "background.jpg",
     "fonts": {
       "title": "Roboto-Black.ttf",
       "big": "Roboto-Black.ttf",
@@ -30,13 +30,13 @@
   "scenes": [
     {
       "name": "Scene 1",
-      "background": "",
+      "background": "background.jpg",
       "elements": [
         {
           "type": "label",
           "text": "JukaHub",
-          "color": "#d1d1d1",
-          "x": 377,
+          "color": "#ffffff",
+          "x": 411,
           "y": 0,
           "font": "title",
           "trigger": null,
