@@ -29,22 +29,28 @@
   },
   "scenes": [
     {
-      "name": "Scene 1",
+      "name": "Main",
       "background": "background.jpg",
       "elements": [
         {
           "type": "label",
-          "text": "JukaHub",
-          "color": "#ffffff",
           "x": 411,
           "y": 0,
+          "text": "JukaHub",
+          "color": "#ffffff",
           "font": "title",
           "trigger": null,
           "triggerTarget": null,
           "triggerValue": null,
           "image": null,
-          "width": "",
-          "height": ""
+          "width": null,
+          "height": null
+        },
+        {
+          "type": "menu",
+          "x": 844,
+          "y": 671,
+          "height": 50
         }
       ]
     }

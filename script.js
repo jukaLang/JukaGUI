@@ -58,6 +58,9 @@ function changeScene() {
     loadScene(currentScene);
     updateElementFontSizes();
     updateVariableText();
+    document.querySelectorAll('.menu').forEach(menuEl => {
+        updateMenuSceneButtons(menuEl);
+    });
 }
 
 function loadScene(sceneName) {
@@ -84,6 +87,9 @@ function addScene() {
     sceneSelector.value = newSceneName;
     updateSceneChangeSelector();
     changeScene();
+    document.querySelectorAll('.menu').forEach(menuEl => {
+       updateMenuSceneButtons(menuEl);
+    });
 }
 
 function renameScene() {
@@ -554,52 +560,209 @@ function setupElementEvents(el) {
 
 
 function addElement(type, x, y) {
-    const el = document.createElement('div');
-    el.classList.add('element');
-    el.style.position = 'absolute';
-    el.style.left = `${x}px`;
-    el.style.top = `${y}px`;
+  const el = document.createElement('div');
+  el.classList.add('element');
+  el.style.position = 'absolute';
+  el.style.left = `${x}px`;
+  el.style.top = `${y}px`;
 
+  // Setting default width and height
+  let defaultWidth = 'auto';
+  let defaultHeight = type === 'menu' ? '50px' : 'auto';
+  
+  if (type === 'image') {
+    defaultWidth = '100px';
+    defaultHeight = '100px';
+  } else if (type === 'menu') {
+    defaultWidth = '100%';
+    // Position at bottom of canvas
+    const canvasRect = canvas.getBoundingClientRect();
+    y = canvasRect.height - parseInt(defaultHeight);
+    el.style.top = `${y}px`;
+    el.style.left = '0px';
+  }
+
+  // Set width and height
+  el.style.width = defaultWidth;
+  el.style.height = defaultHeight;
+
+  // Add content based on element type
+  if (type === 'menu') {
+    // Create menu structure
+    el.innerHTML = `
+      <div class="handle"></div>
+      <div class="menu-clock">00:00</div>
+      <div class="menu-scene-buttons"></div>
+      <button class="menu-config">⚙️</button>
+    `;
+    el.classList.add('menu');
+    
+    // Initialize the menu
+    initializeMenu(el);
+    
+    // Start the clock
+    updateMenuClock(el.querySelector('.menu-clock'));
+  } else {
+    // For non-menu elements, add the text content and remove button as before
     const textSpan = document.createElement('span');
     textSpan.classList.add('text-content');
     textSpan.textContent = type.charAt(0).toUpperCase() + type.slice(1);
     el.appendChild(textSpan);
-
-    el.setAttribute('data-type', type);
-    el.setAttribute('data-x', x);
-    el.setAttribute('data-y', y);
-    el.setAttribute('data-color', '#000000'); // Default text color
-    el.setAttribute('data-bg-color', type === 'button' ? '#ffffff' : ''); // Default background color for buttons
-    el.setAttribute('data-font', 'medium'); // Default font size
-    el.setAttribute('data-width', type === 'image' ? '100px' : ''); // Default width for images
-    el.setAttribute('data-height', type === 'image' ? '100px' : ''); // Default height for images
-    el.style.fontSize = '24px'; // Setting a default font size for buttons and labels
-    el.style.padding = '5px'; // Adjusting padding to make elements fit the text size
-    el.style.width = 'auto'; // Ensure the element fits the text size
-    if (type === 'label') {
-        el.style.background = 'none'; // No background for labels
-    }
-
-    // Add the remove button
+    
     const removeButton = document.createElement('span');
     removeButton.textContent = '✕';
     removeButton.classList.add('remove-button');
     el.appendChild(removeButton);
+  }
 
-    // Attach event listeners immediately
-    setupElementEvents(el);
-
-    // Append element to canvas
-    canvas.appendChild(el);
-
-    // Save to the current scene
-    if (!scenes[currentScene]) {
-        scenes[currentScene] = [];
+  el.setAttribute('data-type', type);
+  el.setAttribute('data-x', x);
+  el.setAttribute('data-y', y);
+  
+  if (type !== 'menu') {
+    el.setAttribute('data-color', '#000000'); // Default text color
+    el.setAttribute('data-bg-color', type === 'button' ? '#ffffff' : ''); // Default background color for buttons
+    el.setAttribute('data-font', 'medium'); // Default font size
+    
+    if (type === 'image') {
+      el.setAttribute('data-width', defaultWidth);
+      el.setAttribute('data-height', defaultHeight);
     }
-    scenes[currentScene].push(el.cloneNode(true));
+    
+    el.style.fontSize = '24px'; // Setting a default font size for buttons and labels
+    el.style.padding = '5px'; // Adjusting padding to make elements fit the text size
+    
+    if (type === 'label') {
+      el.style.background = 'none'; // No background for labels
+    }
+  } else {
+    el.setAttribute('data-height', defaultHeight.replace('px', ''));
+  }
 
-    return el;
+  // Attach event listeners
+  if (type === 'menu') {
+    setupMenuEvents(el);
+  } else {
+    setupElementEvents(el);
+  }
+
+  // Append element to canvas
+  canvas.appendChild(el);
+
+  // Save to the current scene
+  if (!scenes[currentScene]) {
+    scenes[currentScene] = [];
+  }
+  scenes[currentScene].push(el.cloneNode(true));
+
+  return el;
 }
+
+
+
+
+
+function initializeMenu(menuEl) {
+  updateMenuSceneButtons(menuEl);
+  
+  // Add event listener to the config button
+  const configButton = menuEl.querySelector('.menu-config');
+  configButton.addEventListener('click', (event) => {
+    event.stopPropagation();
+    const height = prompt('Enter menu height (in pixels):', menuEl.getAttribute('data-height') || '50');
+    if (height && !isNaN(parseInt(height))) {
+      menuEl.style.height = `${height}px`;
+      menuEl.setAttribute('data-height', height);
+    }
+  });
+}
+
+// Update the scene buttons in the menu
+function updateMenuSceneButtons(menuEl) {
+  const sceneButtonsContainer = menuEl.querySelector('.menu-scene-buttons');
+  sceneButtonsContainer.innerHTML = '';
+  
+  Object.keys(scenes).forEach(sceneName => {
+    const button = document.createElement('button');
+    button.classList.add('menu-scene-button');
+    if (sceneName === currentScene) {
+      button.classList.add('active');
+    }
+    button.textContent = sceneName;
+    button.addEventListener('click', () => {
+      sceneSelector.value = sceneName;
+      changeScene();
+      
+      // Update active button
+      menuEl.querySelectorAll('.menu-scene-button').forEach(btn => {
+        btn.classList.remove('active');
+      });
+      button.classList.add('active');
+    });
+    sceneButtonsContainer.appendChild(button);
+  });
+}
+
+// Update the clock in the menu
+function updateMenuClock(clockEl) {
+  const updateTime = () => {
+    const now = new Date();
+    const hours = now.getHours().toString().padStart(2, '0');
+    const minutes = now.getMinutes().toString().padStart(2, '0');
+    clockEl.textContent = `${hours}:${minutes}`;
+  };
+  
+  updateTime();
+  setInterval(updateTime, 60000); // Update every minute
+}
+
+
+// Set up event listeners for the menu
+function setupMenuEvents(menuEl) {
+  const handle = menuEl.querySelector('.handle');
+  
+  handle.addEventListener('mousedown', event => {
+    event.stopPropagation();
+    menuEl.style.cursor = 'grabbing';
+    const startY = event.clientY;
+    const startTop = parseInt(menuEl.style.top);
+    
+    function onMouseMove(event) {
+      const canvasRect = canvas.getBoundingClientRect();
+      const newTop = Math.max(0, Math.min(canvasRect.height - menuEl.offsetHeight, startTop + (event.clientY - startY)));
+      menuEl.style.top = `${newTop}px`;
+      menuEl.setAttribute('data-y', newTop);
+    }
+    
+    function onMouseUp() {
+      menuEl.style.cursor = '';
+      document.removeEventListener('mousemove', onMouseMove);
+      document.removeEventListener('mouseup', onMouseUp);
+    }
+    
+    document.addEventListener('mousemove', onMouseMove);
+    document.addEventListener('mouseup', onMouseUp);
+  });
+  
+  // Add the remove button
+  const removeButton = document.createElement('span');
+  removeButton.textContent = '✕';
+  removeButton.classList.add('remove-button');
+  menuEl.appendChild(removeButton);
+  
+  removeButton.addEventListener('click', (event) => {
+    event.stopPropagation();
+    const parent = menuEl.parentNode;
+    parent.removeChild(menuEl);
+    const sceneElements = scenes[currentScene];
+    const elementIndex = sceneElements.indexOf(menuEl);
+    if (elementIndex > -1) {
+      sceneElements.splice(elementIndex, 1);
+    }
+  });
+}
+
+
 
 
 function getFontSize(fontSize) {
@@ -626,58 +789,72 @@ function setBackground() {
 
 function createJukaApp() {
     updateScenes();
-    const elements = Array.from(canvas.getElementsByClassName('element'));
-    const config = {
-        title: document.getElementById('title').value,
-        author: document.getElementById('author').value,
-        description: document.getElementById('description').value,
-        variables: {
-            ...variables,
-            buttonColor: { r: 255, g: 0, b: 0 },
-            labelColor: { r: 255, g: 255, b: 255 },
-            backgroundImage: backgroundPath,
-            fonts: {
-                title: 'Roboto-Black.ttf',
-                big: 'Roboto-Black.ttf',
-                medium: 'Roboto-Black.ttf',
-                small: 'Roboto-Black.ttf'
-            },
-            fontSizes: {
-                title: parseInt(titleSizeInput.value, 10),
-                big: parseInt(bigSizeInput.value, 10),
-                medium: parseInt(mediumSizeInput.value, 10),
-                small: parseInt(smallSizeInput.value, 10)
-            }
-        },
-        scenes: Object.keys(scenes).map(sceneName => ({
-            name: sceneName,
-            background: sceneName === currentScene ? backgroundPath : '',
-            elements: scenes[sceneName].map(el => ({
-                type: el.getAttribute('data-type'),
-                text: el.querySelector('.text-content').textContent, // Get text content excluding 'x' button
-                color: el.getAttribute('data-color'),
-                x: parseInt(el.getAttribute('data-x'), 10),
-                y: parseInt(el.getAttribute('data-y'), 10),
-                font: el.getAttribute('data-font'),
-                bgColor: el.getAttribute('data-type') === 'button' ? el.getAttribute('data-bg-color') : undefined,
-                trigger: el.getAttribute('data-trigger'),
-                triggerTarget: el.getAttribute('data-trigger-target'),
-                triggerValue: el.getAttribute('data-trigger-value'),
-                image: el.getAttribute('data-image'),
-                width: el.getAttribute('data-width'),
-                height: el.getAttribute('data-height')
-            }))
-        }))
-    };
+const elements = Array.from(canvas.getElementsByClassName('element'));
+  const config = {
+    title: document.getElementById('title').value,
+    author: document.getElementById('author').value,
+    description: document.getElementById('description').value,
+    variables: {
+      ...variables,
+      buttonColor: { r: 255, g: 0, b: 0 },
+      labelColor: { r: 255, g: 255, b: 255 },
+      backgroundImage: backgroundPath,
+      fonts: {
+        title: 'Roboto-Black.ttf',
+        big: 'Roboto-Black.ttf',
+        medium: 'Roboto-Black.ttf',
+        small: 'Roboto-Black.ttf'
+      },
+      fontSizes: {
+        title: parseInt(titleSizeInput.value, 10),
+        big: parseInt(bigSizeInput.value, 10),
+        medium: parseInt(mediumSizeInput.value, 10),
+        small: parseInt(smallSizeInput.value, 10)
+      }
+    },
+    scenes: Object.keys(scenes).map(sceneName => ({
+      name: sceneName,
+      background: sceneName === currentScene ? backgroundPath : '',
+      elements: scenes[sceneName].map(el => {
+        const elementType = el.getAttribute('data-type');
+        const baseElement = {
+          type: elementType,
+          x: parseInt(el.getAttribute('data-x'), 10),
+          y: parseInt(el.getAttribute('data-y'), 10)
+        };
+        
+        if (elementType === 'menu') {
+          return {
+            ...baseElement,
+            height: parseInt(el.getAttribute('data-height'), 10) || 50
+          };
+        } else {
+          return {
+            ...baseElement,
+            text: el.querySelector('.text-content')?.textContent || '',
+            color: el.getAttribute('data-color'),
+            font: el.getAttribute('data-font'),
+            bgColor: el.getAttribute('data-type') === 'button' ? el.getAttribute('data-bg-color') : undefined,
+            trigger: el.getAttribute('data-trigger'),
+            triggerTarget: el.getAttribute('data-trigger-target'),
+            triggerValue: el.getAttribute('data-trigger-value'),
+            image: el.getAttribute('data-image'),
+            width: el.getAttribute('data-width'),
+            height: el.getAttribute('data-height')
+          };
+        }
+      })
+    }))
+  };
 
-    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(config, null, 2));
-    const downloadAnchorNode = document.createElement('a');
-    downloadAnchorNode.setAttribute("href", dataStr);
-    downloadAnchorNode.setAttribute("download", "jukaconfig.json");
-    document.body.appendChild(downloadAnchorNode); // required for firefox
-    downloadAnchorNode.click();
-    downloadAnchorNode.remove();
-}
+  const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(config, null, 2));
+  const downloadAnchorNode = document.createElement('a');
+  downloadAnchorNode.setAttribute("href", dataStr);
+  downloadAnchorNode.setAttribute("download", "jukaconfig.json");
+  document.body.appendChild(downloadAnchorNode);
+  downloadAnchorNode.click();
+  downloadAnchorNode.remove();
+};
 
 
 canvas.addEventListener('click', (event) => {
@@ -866,6 +1043,9 @@ function loadJukaApp(data) {
     
     // Update any variable references in text
     updateVariableText();
+  document.querySelectorAll('.menu').forEach(menuEl => {
+    initializeMenu(menuEl);
+  });
 }
 
 
