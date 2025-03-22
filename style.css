@@ -64,7 +64,7 @@ h1 {
     background: #fafafa;
     position: relative;
     background-size: cover;
-    min-height: 600px;
+    min-height: 1px;
     margin-bottom: 20px;
     border-radius: 8px;
 }

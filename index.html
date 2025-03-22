@@ -46,7 +46,15 @@
         <select id="canvasSize">
             <option value="1280x720">TSP (1280 x 720)</option>
             <option value="1024x768">Brick (1024 x 768)</option>
+            <option value="custom">Custom</option>
         </select>
+
+        <div id="customSizeFields" style="display: none; margin-left: 10px; ">
+            <input type="number" id="customWidth" placeholder="Width" min="1" style="width: 70px;">
+            <span>x</span>
+            <input type="number" id="customHeight" placeholder="Height" min="1" style="width: 70px;">
+        </div>
+
         <label for="backgroundFile">&nbsp;&nbsp;&nbsp;Change Background:</label>
         <input type="file" id="backgroundFile" accept="image/*">
     </div>

@@ -18,16 +18,43 @@ const bigSizeInput = document.getElementById('bigSize');
 const mediumSizeInput = document.getElementById('mediumSize');
 const smallSizeInput = document.getElementById('smallSize');
 const variableSelector = document.getElementById('variableSelector');
+const customWidthInput = document.getElementById('customWidth');
+const customHeightInput = document.getElementById('customHeight');
 let backgroundPath = '';
 let scenes = { 'Scene 1': [] };
 let currentScene = 'Scene 1';
 let variables = {};
 
+
+function toggleCustomFields() {
+    const select = document.getElementById('canvasSize');
+    const customFields = document.getElementById('customSizeFields');
+    
+    if (select.value === 'custom') {
+        customFields.style.display = 'inline-block';
+    } else {
+        customFields.style.display = 'none';
+    }
+}
+
 function updateCanvasSize() {
     const canvasSize = canvasSizeSelect.value;
-    const [width, height] = canvasSize.split('x').map(Number);
-    canvas.style.width = `${width}px`;
-    canvas.style.height = `${height}px`;
+    
+    if (canvasSize === 'custom') {
+        
+        // Get width and height from custom input fields
+        const width = parseInt(customWidthInput.value) || 1280; // Default if empty
+        const height = parseInt(customHeightInput.value) || 720; // Default if empty
+        
+        canvas.style.width = `${width}px`;
+        canvas.style.height = `${height}px`;
+    } else {
+        // Handle preset sizes
+        const [width, height] = canvasSize.split('x').map(Number);
+        canvas.style.width = `${width}px`;
+        canvas.style.height = `${height}px`;
+    }
+    toggleCustomFields();
 }
 
 function updateScenes() {
@@ -1168,6 +1195,9 @@ window.addEventListener('load', () => {
         .then(response => response.json())
         .then(data => loadJukaApp(data))
         .catch(error => console.error('Error loading jukaconfig.json:', error));
+
+    customWidthInput.addEventListener('change', updateCanvasSize);
+    customHeightInput.addEventListener('change', updateCanvasSize);
 });
 
 // Add a button to clear everything and start new
