@@ -494,7 +494,7 @@ function setupElementEvents(el) {
     el.addEventListener('dblclick', event => {
         event.stopPropagation(); // Prevent the click from bubbling up
         const textSpan = el.querySelector('.text-content');
-        if (el.getAttribute('data-type') === 'button' || el.getAttribute('data-type') === 'label') {
+        if (el.getAttribute('data-type') === 'button' || el.getAttribute('data-type') === 'label' || el.getAttribute('data-type') === 'input') {
             const newText = prompt("Enter new text:", textSpan.textContent);
             if (newText !== null) {
                 textSpan.textContent = newText; // Change only the text span content
