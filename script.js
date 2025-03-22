@@ -119,6 +119,86 @@ function renameScene() {
     }
 }
 
+function deleteScene() {
+    if (Object.keys(scenes).length <= 1) {
+        alert('Cannot delete the only scene. You must have at least one scene.');
+        return;
+    }
+
+    if (confirm(`Are you sure you want to delete scene "${currentScene}"?`)) {
+        // Get the current index to determine which scene to show next
+        const sceneNames = Object.keys(scenes);
+        const currentIndex = sceneNames.indexOf(currentScene);
+        
+        // Remove the scene from scenes object
+        delete scenes[currentScene];
+        
+        // Remove the option from scene selector
+        const optionToRemove = sceneSelector.querySelector(`option[value="${currentScene}"]`);
+        if (optionToRemove) {
+            sceneSelector.removeChild(optionToRemove);
+        }
+        
+        // Determine which scene to show next
+        let nextSceneIndex = currentIndex > 0 ? currentIndex - 1 : 0;
+        if (nextSceneIndex >= sceneNames.length - 1) {
+            nextSceneIndex = sceneNames.length - 2; // Adjust for removal
+        }
+        
+        const nextScene = sceneNames[nextSceneIndex] === currentScene ? 
+            sceneNames[(nextSceneIndex + 1) % (sceneNames.length - 1)] : 
+            sceneNames[nextSceneIndex];
+            
+        // Update current scene and load it
+        currentScene = nextScene;
+        sceneSelector.value = currentScene;
+        
+        // Update selectors and UI
+        updateSceneChangeSelector();
+        loadScene(currentScene);
+        
+        // Update menus
+        document.querySelectorAll('.menu').forEach(menuEl => {
+            updateMenuSceneButtons(menuEl);
+        });
+        
+        console.log(`Scene "${currentScene}" deleted successfully.`);
+    }
+}
+
+function duplicateScene() {
+    const newSceneName = prompt('Enter name for the duplicated scene:', `${currentScene} Copy`);
+    
+    if (newSceneName && !scenes[newSceneName]) {
+        // Clone current scene elements
+        scenes[newSceneName] = scenes[currentScene].map(el => el.cloneNode(true));
+        
+        // Add new scene to selector
+        const option = document.createElement('option');
+        option.value = newSceneName;
+        option.textContent = newSceneName;
+        sceneSelector.appendChild(option);
+        
+        // Switch to the new scene
+        sceneSelector.value = newSceneName;
+        currentScene = newSceneName;
+        
+        // Update UI and selectors
+        updateSceneChangeSelector();
+        loadScene(newSceneName);
+        
+        // Update menus
+        document.querySelectorAll('.menu').forEach(menuEl => {
+            updateMenuSceneButtons(menuEl);
+        });
+        
+        console.log(`Scene duplicated as "${newSceneName}"`);
+    } else if (scenes[newSceneName]) {
+        alert('A scene with that name already exists. Please choose a different name.');
+    }
+}
+
+
 function updateSceneChangeSelector() {
     sceneChangeSelector.innerHTML = '';
     Object.keys(scenes).forEach(sceneName => {
