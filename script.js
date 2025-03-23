@@ -115,8 +115,13 @@ function addScene() {
     sceneSelector.value = newSceneName;
     updateSceneChangeSelector();
     changeScene();
+    
+    // Add menu to new scene
+    const canvasHeight = canvas.offsetHeight;
+    addElement('menu', 0, canvasHeight - 50);
+    
     document.querySelectorAll('.menu').forEach(menuEl => {
-       updateMenuSceneButtons(menuEl);
+        updateMenuSceneButtons(menuEl);
     });
 }
 
@@ -252,6 +257,12 @@ document.addEventListener('DOMContentLoaded', () => {
     option.textContent = 'Scene 1';
     sceneSelector.appendChild(option);
     sceneSelector.value = 'Scene 1';
+
+    // Add menu to initial scene
+    setTimeout(() => { // Wait for canvas size to update
+        const canvasHeight = canvas.offsetHeight;
+        addElement('menu', 0, canvasHeight - 50);
+    }, 0);
 });
 
 function setupToolbar() {
@@ -471,6 +482,9 @@ function setupElementEvents(el) {
                 if (newX + elRect.width > canvasRect.width) newX = canvasRect.width - elRect.width;
                 if (newY + elRect.height > canvasRect.height) newY = canvasRect.height - elRect.height;
 
+                newX = parseInt(newX)
+                newY = parseInt(newY)
+
                 el.style.left = `${newX}px`;
                 el.style.top = `${newY}px`;
                 el.setAttribute('data-x', newX);
@@ -630,11 +644,6 @@ function setupElementEvents(el) {
             }
         }
         } else {
-            //document.querySelector('.control-label[for="datax"]').style.display = 'none';
-            //datax.style.display = 'none';
-            //document.querySelector('.control-label[for="datay"]').style.display = 'none';
-            //datay.style.display = 'none';
-
             document.querySelector('.control-label[for="colorPicker"]').style.display = 'none';
             colorPicker.style.display = 'none';
             document.querySelector('.control-label[for="fontSizePicker"]').style.display = 'none';
@@ -724,8 +733,8 @@ function addElement(type, x, y) {
   }
 
   el.setAttribute('data-type', type);
-  el.setAttribute('data-x', x);
-  el.setAttribute('data-y', y);
+  el.setAttribute('data-x', x | 0);
+  el.setAttribute('data-y', y | 0);
   
   if (type !== 'menu') {
     el.setAttribute('data-color', '#000000'); // Default text color
