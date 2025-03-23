@@ -3,6 +3,7 @@
   "author": "Juka et al.",
   "description": "A main app for JukaHub. Anybody can edit and update this",
   "variables": {
+    "version": "0.4.0.a",
     "buttonColor": {
       "r": 255,
       "g": 0,
@@ -48,9 +49,126 @@
         },
         {
           "type": "menu",
-          "x": 844,
+          "x": 0,
           "y": 671,
           "height": 50
+        },
+        {
+          "type": "label",
+          "x": 17,
+          "y": 587,
+          "text": "Version: $version",
+          "color": "#ffffff",
+          "font": "medium",
+          "trigger": null,
+          "triggerTarget": null,
+          "triggerValue": null,
+          "image": null,
+          "width": null,
+          "height": null
+        },
+        {
+          "type": "label",
+          "x": 260,
+          "y": 268,
+          "text": "- Welcome to JukaHub. This is the first version to be released using the new JukaGUI Generator",
+          "color": "#ffffff",
+          "font": "small",
+          "trigger": null,
+          "triggerTarget": null,
+          "triggerValue": null,
+          "image": null,
+          "width": null,
+          "height": null
+        }
+      ]
+    },
+    {
+      "name": "Tube",
+      "background": "",
+      "elements": [
+        {
+          "type": "menu",
+          "x": 0,
+          "y": 670,
+          "height": 50
+        }
+      ]
+    },
+    {
+      "name": "IPStream",
+      "background": "",
+      "elements": [
+        {
+          "type": "menu",
+          "x": 0,
+          "y": 670,
+          "height": 50
+        }
+      ]
+    },
+    {
+      "name": "FileExplorer",
+      "background": "",
+      "elements": [
+        {
+          "type": "menu",
+          "x": 0,
+          "y": 670,
+          "height": 50
+        }
+      ]
+    },
+    {
+      "name": "Settings",
+      "background": "",
+      "elements": [
+        {
+          "type": "menu",
+          "x": 0,
+          "y": 670,
+          "height": 50
+        }
+      ]
+    },
+    {
+      "name": "Exit",
+      "background": "",
+      "elements": [
+        {
+          "type": "menu",
+          "x": 0,
+          "y": 670,
+          "height": 50
+        },
+        {
+          "type": "label",
+          "x": 405,
+          "y": 200,
+          "text": "Thank you for using JukaHub",
+          "color": "#ffffff",
+          "font": "big",
+          "trigger": null,
+          "triggerTarget": null,
+          "triggerValue": null,
+          "image": null,
+          "width": null,
+          "height": null
+        },
+        {
+          "type": "button",
+          "x": 606,
+          "y": 298,
+          "text": "Exit",
+          "color": "#000000",
+          "font": "medium",
+          "bgColor": "#ffffff",
+          "trigger": "exit",
+          "triggerTarget": null,
+          "triggerValue": null,
+          "image": null,
+          "width": null,
+          "height": null
         }
       ]
     }
