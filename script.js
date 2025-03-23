@@ -88,6 +88,7 @@ function changeScene() {
     document.querySelectorAll('.menu').forEach(menuEl => {
         updateMenuSceneButtons(menuEl);
     });
+    
 }
 
 function loadScene(sceneName) {
@@ -392,7 +393,7 @@ function updateElementFontSizes() {
 function updateVariableText() {
     const elements = document.querySelectorAll('.canvas .element');
     elements.forEach(el => {
-        //if (el.getAttribute('data-type') === 'button' || el.getAttribute('data-type') === 'label') {
+        if (el.getAttribute('data-type') === 'button' || el.getAttribute('data-type') === 'label' || el.getAttribute('data-type') === 'input' || el.getAttribute('data-type') === 'image') {
             let textSpan = el.querySelector('.text-content');
             let text = textSpan.textContent;
             // Keep $variable names and show tooltip on hover
@@ -406,7 +407,7 @@ function updateVariableText() {
                 }
             });
             textSpan.textContent = text; // Ensure text remains unchanged
-        //}
+        }
     });
 }
 
@@ -698,9 +699,9 @@ function addElement(type, x, y) {
     // Create menu structure
     el.innerHTML = `
       <div class="handle"></div>
-      <div class="menu-clock">00:00</div>
       <div class="menu-scene-buttons"></div>
-      <button class="menu-config">⚙️</button>
+      <button class="menu-language">EN</button>
+      <div class="menu-clock">00:00</div>
     `;
     el.classList.add('menu');
     
@@ -771,17 +772,6 @@ function addElement(type, x, y) {
 
 function initializeMenu(menuEl) {
   updateMenuSceneButtons(menuEl);
-  
-  // Add event listener to the config button
-  const configButton = menuEl.querySelector('.menu-config');
-  configButton.addEventListener('click', (event) => {
-    event.stopPropagation();
-    const height = prompt('Enter menu height (in pixels):', menuEl.getAttribute('data-height') || '50');
-    if (height && !isNaN(parseInt(height))) {
-      menuEl.style.height = `${height}px`;
-      menuEl.setAttribute('data-height', height);
-    }
-  });
 }
 
 // Update the scene buttons in the menu
@@ -820,7 +810,7 @@ function updateMenuClock(clockEl) {
   };
   
   updateTime();
-  setInterval(updateTime, 60000); // Update every minute
+  setInterval(updateTime, 6000); // Update every minute
 }
 
 
@@ -1069,10 +1059,10 @@ scene.elements.forEach(element => {
         
         // Create menu structure
         el.innerHTML = `
-            <div class="handle"></div>
-            <div class="menu-clock">00:00</div>
-            <div class="menu-scene-buttons"></div>
-            <button class="menu-config">⚙️</button>
+      <div class="handle"></div>
+      <div class="menu-scene-buttons"></div>
+      <button class="menu-language">EN</button>
+      <div class="menu-clock">00:00</div>
         `;
         
         // Set attribute for height

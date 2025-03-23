@@ -297,6 +297,7 @@
   .menu-clock {
     color: var(--on-primary);
     font-variant-numeric: tabular-nums;
+    font-size: 18px;
   }
   
   .handle {
