@@ -25,6 +25,8 @@
                 <li><b>NOTE:</b> If images are used, make sure to combine them with the template.</li>
             </ol>
             <button id="clearButton" class="create-button">Clear and Start New</button>
+            <label for="loadFile">&nbsp;&nbsp;&nbsp;Load jukaconfig.json:</label>
+            <input type="file" id="loadFile" accept="application/json">
         </div>
     </header>
     <main>
@@ -67,6 +69,8 @@
             <button onclick="renameScene()">Rename Scene</button>
             <button onclick="deleteScene()">Delete Scene</button>
             <button onclick="duplicateScene()">Duplicate Scene</button>
+        </section>
+        <section  class="scene-controls">
             <button id="addVariableButton" onclick="addVariable()">Add Variable</button>
             <select id="variableSelector" style="display: none;" onchange="changeVariable()"></select>
             <input type="text" id="variableValueInput" style="display: none;" readonly>
