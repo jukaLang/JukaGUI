@@ -135,6 +135,7 @@
     opacity: 0;
     transition: var(--transition);
     line-height: 24px;
+    font-size: 24px;
   }
   
   .element:hover .remove-button {

@@ -1221,6 +1221,13 @@ document.getElementById('clearButton').addEventListener('click', () => {
         document.getElementById('bigSize').value = 36;
         document.getElementById('mediumSize').value = 24;
         document.getElementById('smallSize').value = 18;
+        // Add menu to new scene
+        const canvasHeight = canvas.offsetHeight;
+        addElement('menu', 0, canvasHeight - 50);
+        
+        document.querySelectorAll('.menu').forEach(menuEl => {
+            updateMenuSceneButtons(menuEl);
+        });
     }
 });
 
