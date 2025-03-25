@@ -84,7 +84,6 @@
     border-radius: 4px;
     cursor: grab;
     position: relative;
-    transition: var(--transition);
     min-width: 100px;
     text-align: center;
   }
@@ -367,4 +366,16 @@
       transition: none !important;
     }
   }
+  
+/* Prevent text selection on canvas elements */
+.canvas, .canvas * {
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* Selection indicator */
+.element.selected {
+  outline: 2px solid #2196F3;
+  z-index: 100;
+}
   

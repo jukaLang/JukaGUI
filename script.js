@@ -541,6 +541,12 @@ function setupElementEvents(el) {
     });
 
     el.addEventListener('click', () => {
+        // Deselect all other elements
+        document.querySelectorAll('.element').forEach(otherEl => {
+            otherEl.classList.remove('selected');
+        });
+        // Select clicked element
+        el.classList.add('selected');
         hideControls(); // Hide all controls first
 
         document.querySelector('.control-label[for="datax"]').style.display = 'block';
@@ -1173,6 +1179,8 @@ scene.elements.forEach(element => {
         currentScene = data.scenes[0].name;
         sceneSelector.value = currentScene;
     }
+
+    loadScene(currentScene);
 
     // Update scene change selector with all available scenes
     updateSceneChangeSelector();
