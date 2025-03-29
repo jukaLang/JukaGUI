@@ -6,9 +6,11 @@ import (
 	"log"
 	"os"
 	"os/exec"
+	"regexp"
 	"runtime/debug"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/veandco/go-sdl2/img"
 	"github.com/veandco/go-sdl2/sdl"
@@ -47,7 +49,8 @@ type Variables struct {
 		Medium int `json:"medium"`
 		Small  int `json:"small"`
 	} `json:"fontSizes"`
-	InputText string `json:"inputText"`
+	InputText  string            `json:"inputText"`
+	CustomVars map[string]string `json:"customVars"`
 }
 
 type SceneConfig struct {
@@ -135,6 +138,24 @@ func hexToRGB(hex string) (uint8, uint8, uint8) {
 	return uint8(r), uint8(g), uint8(b)
 }
 
+func renderElement(renderer *sdl.Renderer, config *Config, element Element) {
+	// Substitute variables in text
+	element.Text = substituteVariables(element.Text, config.Variables.CustomVars)
+
+	switch element.Type {
+	case "menu":
+		renderMenu(renderer, config, element)
+	case "input":
+		renderInputField(renderer, config, element)
+	case "button":
+		renderButton(renderer, config, element)
+	case "label":
+		renderLabel(renderer, config, element)
+	case "image":
+		renderImage(renderer, element)
+	}
+}
+
 func resolveBackground(renderer *sdl.Renderer, config *Config, background any) *sdl.Texture {
 	if str, ok := background.(string); ok {
 		if strings.HasPrefix(str, "$") {
@@ -153,6 +174,13 @@ func resolveBackground(renderer *sdl.Renderer, config *Config, background any) *
 	renderer.SetDrawColor(249, 249, 249, 255) // Default to #f9f9f9
 	renderer.Clear()
 	return nil
+}
+
+func substituteVariables(text string, vars map[string]string) string {
+	return regexp.MustCompile(`\$(\w+)`).ReplaceAllStringFunc(text, func(m string) string {
+		varName := m[1:]
+		return vars[varName]
+	})
 }
 
 func getFontAndSize(config *Config, fontName string) (*ttf.Font, int) {
@@ -180,6 +208,59 @@ func getFontAndSize(config *Config, fontName string) (*ttf.Font, int) {
 		os.Exit(1)
 	}
 	return font, size
+}
+
+func handleInputElement(config *Config, element Element) {
+	virtualKeyboardActive = true
+	defer func() { virtualKeyboardActive = false }()
+
+	for {
+		// Draw virtual keyboard
+		renderKeyboard(renderer)
+		renderer.Present()
+
+		// Handle input events
+		for event := sdl.PollEvent(); event != nil; event = sdl.PollEvent() {
+			switch e := event.(type) {
+			case *sdl.KeyboardEvent:
+				if e.Type == sdl.KEYDOWN {
+					// Handle keyboard navigation...
+				}
+			case *sdl.ControllerButtonEvent:
+				// Handle controller input...
+			}
+		}
+
+		// Update input text variable
+		if element.Variable != "" {
+			config.Variables.CustomVars[element.Variable] = inputText
+		}
+
+		if exitInput {
+			break
+		}
+	}
+}
+
+func renderMenu(renderer *sdl.Renderer, config *Config, element Element) {
+	// Draw menu background
+	renderer.SetDrawColor(32, 32, 32, 200)
+	renderer.FillRect(&sdl.Rect{X: element.X, Y: element.Y, W: 1280, H: 50})
+
+	// Draw scene buttons
+	buttonX := int32(10)
+	for _, scene := range config.Scenes {
+		text := scene.Name
+		if scene.Name == config.Scenes[currentSceneIndex].Name {
+			text = "[" + text + "]"
+		}
+		w, h := renderText(renderer, font, text, sdl.Color{R: 255, G: 255, B: 255, A: 255}, buttonX+40, element.Y+25)
+		buttonX += w + 20
+	}
+
+	// Draw clock
+	currentTime := time.Now().Format("15:04")
+	renderText(renderer, font, currentTime, sdl.Color{R: 255, G: 255, B: 255, A: 255}, 1200, element.Y+25)
 }
 
 func renderText(renderer *sdl.Renderer, font *ttf.Font, text string, color sdl.Color, x int32, y int32) (int32, int32) {
@@ -580,17 +661,51 @@ func main() {
 
 func moveSelection(config *Config, direction int) {
 	elements := config.Scenes[currentSceneIndex].Elements
-	numElements := len(elements)
 
-	if numElements == 0 {
+	// Create a list of navigable element indices (buttons and inputs)
+	var interactive []int
+	for i, el := range elements {
+		if el.Type == "button" || el.Type == "input" {
+			interactive = append(interactive, i)
+		}
+	}
+
+	// No interactive elements available
+	if len(interactive) == 0 {
+		selectedButtonIndex = -1
 		return
 	}
 
-	selectedButtonIndex = (selectedButtonIndex + direction + numElements) % numElements
-	for elements[selectedButtonIndex].Type != "button" {
-		selectedButtonIndex = (selectedButtonIndex + direction + numElements) % numElements
+	// Find current position in interactive list
+	currentIdx := -1
+	for idx, val := range interactive {
+		if val == selectedButtonIndex {
+			currentIdx = idx
+			break
+		}
 	}
-	fmt.Println("Selected button index:", selectedButtonIndex)
+
+	// Handle new selections or wrap around
+	if currentIdx == -1 {
+		selectedButtonIndex = interactive[0]
+		return
+	}
+
+	// Calculate new index with wrap-around
+	newIdx := currentIdx + direction
+	if newIdx >= len(interactive) {
+		newIdx = 0
+	} else if newIdx < 0 {
+		newIdx = len(interactive) - 1
+	}
+
+	// Update selection
+	selectedButtonIndex = interactive[newIdx]
+
+	// Skip menu elements (if any somehow got through)
+	if elements[selectedButtonIndex].Type == "menu" {
+		moveSelection(config, direction) // Recursively move to next
+	}
 }
 
 func triggerSelectedElement(config *Config) {
@@ -608,6 +723,30 @@ func handleTrigger(config *Config, element Element) {
 
 	//fmt.Println("Handling trigger for element:", element.Text)
 	switch element.Trigger {
+	case "set_variable":
+		if element.TriggerTarget != "" {
+			config.Variables.CustomVars[element.TriggerTarget] = element.TriggerValue
+		}
+
+	case "external_app":
+		cmd := exec.Command(element.TriggerTarget)
+		if err := cmd.Start(); err != nil {
+			log.Printf("Failed to start external app: %v", err)
+		}
+
+	case "play_video":
+		go func() {
+			cmd := exec.Command("ffplay", element.TriggerTarget, "-fs", "-autoexit")
+			if err := cmd.Run(); err != nil {
+				log.Printf("Video playback failed: %v", err)
+			}
+		}()
+
+	case "play_image":
+		texture, _ := img.LoadTexture(renderer, element.TriggerTarget)
+		renderer.Copy(texture, nil, nil)
+		renderer.Present()
+		sdl.Delay(3000) // Show image for 3 seconds
 	case "exit":
 		//fmt.Println("Exiting the application.")
 		os.Exit(0)
@@ -623,11 +762,6 @@ func handleTrigger(config *Config, element Element) {
 					break
 				}
 			}
-		}
-	case "set_variable":
-		if element.TriggerTarget != "" && element.TriggerValue != "" {
-			//fmt.Println("Setting variable", element.TriggerTarget, "to", element.TriggerValue)
-			setConfigVariable(config, element.TriggerTarget, element.TriggerValue)
 		}
 	}
 }
