@@ -17,6 +17,18 @@ import (
 	"github.com/veandco/go-sdl2/ttf"
 )
 
+// Add the StringOrInt type and its UnmarshalJSON method
+type StringOrInt string
+
+var (
+	inputActiveElement  *Element // Currently active input element
+	inputTextBuffer     string   // Buffer for text input
+	cursorBlinkTimer    uint32   // For cursor animation
+	currentSceneIndex   int
+	selectedButtonIndex int
+	keyboard            [][]string
+)
+
 type Config struct {
 	Title       string        `json:"title"`
 	Author      string        `json:"author"`
@@ -36,21 +48,10 @@ type Variables struct {
 		G int `json:"g"`
 		B int `json:"b"`
 	} `json:"labelColor"`
-	BackgroundImage string `json:"backgroundImage"`
-	Fonts           struct {
-		Title  string `json:"title"`
-		Big    string `json:"big"`
-		Medium string `json:"medium"`
-		Small  string `json:"small"`
-	} `json:"fonts"`
-	FontSizes struct {
-		Title  int `json:"title"`
-		Big    int `json:"big"`
-		Medium int `json:"medium"`
-		Small  int `json:"small"`
-	} `json:"fontSizes"`
-	InputText  string            `json:"inputText"`
-	CustomVars map[string]string `json:"customVars"`
+	BackgroundImage string            `json:"backgroundImage"`
+	Fonts           map[string]string `json:"fonts"`
+	FontSizes       map[string]int    `json:"fontSizes"`
+	Custom          map[string]interface{}
 }
 
 type SceneConfig struct {
@@ -59,42 +60,165 @@ type SceneConfig struct {
 	Elements   []Element `json:"elements"`
 }
 
+// Update the Element struct
 type Element struct {
-	Type          string `json:"type"`
-	Text          string `json:"text"`
-	Color         string `json:"color"`
-	X             int32  `json:"x"`
-	Y             int32  `json:"y"`
-	Font          string `json:"font"`
-	BgColor       string `json:"bgColor"`
-	Trigger       string `json:"trigger"`
-	TriggerTarget string `json:"triggerTarget"`
-	TriggerValue  string `json:"triggerValue"`
-	Image         string `json:"image"`
-	Width         string `json:"width"`
-	Height        string `json:"height"`
-	Video         string `json:"video"`
-	Variable      string `json:"variable"`
+	Type          string      `json:"type"`
+	Text          string      `json:"text"`
+	Color         string      `json:"color"`
+	X             int32       `json:"x"`
+	Y             int32       `json:"y"`
+	Font          string      `json:"font"`
+	BgColor       string      `json:"bgColor"`
+	Trigger       string      `json:"trigger"`
+	TriggerTarget string      `json:"triggerTarget"`
+	TriggerValue  string      `json:"triggerValue"`
+	Image         string      `json:"image"`
+	Width         StringOrInt `json:"width"`
+	Height        StringOrInt `json:"height"`
+	Video         string      `json:"video"`
+	Variable      string      `json:"variable"`
 }
 
 var videoPlayed = false // rack if video has been played
 var inputText string    // Global variable to store input text
-var keyboard [][]string
 var keyboardPosX, keyboardPosY int
 var virtualKeyboardActive = false
 
-func initKeyboard() {
-	keyboard = [][]string{
-		{"Q", "W", "E", "R", "T", "Y", "U", "I", "O", "P"},
-		{"A", "S", "D", "F", "G", "H", "J", "K", "L"},
-		{"Z", "X", "C", "V", "B", "N", "M"},
-		{"SPACE", "BACK", "ENTER"},
+// Add this UnmarshalJSON method for StringOrInt
+func (s *StringOrInt) UnmarshalJSON(data []byte) error {
+	// Try string first
+	var str string
+	if err := json.Unmarshal(data, &str); err == nil {
+		*s = StringOrInt(str)
+		return nil
 	}
-	keyboardPosX, keyboardPosY = 0, 0
+
+	// Then try number
+	var num int
+	if err := json.Unmarshal(data, &num); err == nil {
+		*s = StringOrInt(strconv.Itoa(num))
+		return nil
+	}
+
+	// Handle null values
+	if string(data) == "null" {
+		*s = ""
+		return nil
+	}
+
+	return fmt.Errorf("StringOrInt: expected string or integer, got %q", data)
 }
 
-var currentSceneIndex int
-var selectedButtonIndex int
+func (v *Variables) UnmarshalJSON(data []byte) error {
+	var raw map[string]json.RawMessage
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return err
+	}
+
+	// Handle known fields explicitly
+	knownFields := map[string]bool{
+		"buttonColor":     true,
+		"labelColor":      true,
+		"backgroundImage": true,
+		"fonts":           true,
+		"fontSizes":       true,
+	}
+
+	v.Custom = make(map[string]interface{})
+
+	for key, val := range raw {
+		if knownFields[key] {
+			switch key {
+			case "buttonColor":
+				if err := json.Unmarshal(val, &v.ButtonColor); err != nil {
+					return err
+				}
+			case "labelColor":
+				if err := json.Unmarshal(val, &v.LabelColor); err != nil {
+					return err
+				}
+			case "backgroundImage":
+				if err := json.Unmarshal(val, &v.BackgroundImage); err != nil {
+					return err
+				}
+			case "fonts":
+				if err := json.Unmarshal(val, &v.Fonts); err != nil {
+					return err
+				}
+			case "fontSizes":
+				if err := json.Unmarshal(val, &v.FontSizes); err != nil {
+					return err
+				}
+			}
+		} else {
+			var value interface{}
+			if err := json.Unmarshal(val, &value); err != nil {
+				return err
+			}
+			v.Custom[key] = value
+			log.Printf("[DEBUG] Stored custom variable: %s = %v (type %T)", key, value, value)
+		}
+	}
+	log.Printf("[DEBUG] Total custom variables: %+v", v.Custom)
+	return nil
+}
+
+func (v *Variables) Get(name string) string {
+	targetKey := strings.ToLower(name)
+	log.Printf("[DEBUG] === Searching for variable: '%s' ===", name)
+
+	// Check custom variables first
+	for key, val := range v.Custom {
+		if strings.EqualFold(key, targetKey) {
+			log.Printf("[DEBUG] Found in custom vars: %s = %v (type %T)", key, val, val)
+			switch val := val.(type) {
+			case string:
+				return val
+			case float64:
+				return strconv.FormatFloat(val, 'f', -1, 64)
+			case int:
+				return strconv.Itoa(val)
+			default:
+				return fmt.Sprintf("%v", val)
+			}
+		}
+	}
+
+	// Predefined variables
+	switch targetKey {
+	case "buttoncolor":
+		log.Printf("[DEBUG] Found button color")
+		return fmt.Sprintf("%d,%d,%d", v.ButtonColor.R, v.ButtonColor.G, v.ButtonColor.B)
+	case "labelcolor":
+		log.Printf("[DEBUG] Found label color")
+		return fmt.Sprintf("%d,%d,%d", v.LabelColor.R, v.LabelColor.G, v.LabelColor.B)
+	case "backgroundimage":
+		log.Printf("[DEBUG] Found background image")
+		return v.BackgroundImage
+	}
+
+	// Fonts
+	for key, path := range v.Fonts {
+		if strings.EqualFold(key, targetKey) {
+			log.Printf("[DEBUG] Found font: %s", path)
+			return path
+		}
+	}
+
+	// Font sizes
+	for key, size := range v.FontSizes {
+		if strings.EqualFold(key, targetKey) {
+			log.Printf("[DEBUG] Found font size: %d", size)
+			return strconv.Itoa(size)
+		}
+	}
+
+	log.Printf("[ERROR] MISSING VARIABLE: %s (searched as: %s)", name, targetKey)
+	log.Printf("[DEBUG] Custom vars: %+v", v.Custom)
+	log.Printf("[DEBUG] Fonts: %+v", v.Fonts)
+	log.Printf("[DEBUG] Font sizes: %+v", v.FontSizes)
+	return "MISSING_VAR"
+}
 
 func loadConfig(filename string) (*Config, error) {
 	file, err := os.Open(filename)
@@ -110,17 +234,30 @@ func loadConfig(filename string) (*Config, error) {
 		return nil, err
 	}
 
+	// Ensure fonts exist
+	if config.Variables.Fonts == nil {
+		config.Variables.Fonts = make(map[string]string)
+	}
+	if config.Variables.FontSizes == nil {
+		config.Variables.FontSizes = make(map[string]int)
+	}
+
 	return &config, nil
 }
 
 func resolveColor(config *Config, colorName string, defaultColor sdl.Color) sdl.Color {
 	if strings.HasPrefix(colorName, "$") {
-		color := config.Variables.ButtonColor
-		if colorName[1:] == "labelColor" {
-			color = config.Variables.LabelColor
+		colorValue := config.Variables.Get(colorName[1:])
+		parts := strings.Split(colorValue, ",")
+		if len(parts) == 3 {
+			r, _ := strconv.Atoi(parts[0])
+			g, _ := strconv.Atoi(parts[1])
+			b, _ := strconv.Atoi(parts[2])
+			return sdl.Color{R: uint8(r), G: uint8(g), B: uint8(b), A: 255}
 		}
-		return sdl.Color{R: uint8(color.R), G: uint8(color.G), B: uint8(color.B), A: 255}
+		return defaultColor
 	}
+
 	if colorName != "" {
 		r, g, b := hexToRGB(colorName)
 		return sdl.Color{R: r, G: g, B: b, A: 255}
@@ -138,111 +275,114 @@ func hexToRGB(hex string) (uint8, uint8, uint8) {
 	return uint8(r), uint8(g), uint8(b)
 }
 
-func renderElement(renderer *sdl.Renderer, config *Config, element Element) {
-	// Substitute variables in text
-	element.Text = substituteVariables(element.Text, config.Variables.CustomVars)
-
-	switch element.Type {
-	case "menu":
-		renderMenu(renderer, config, element)
-	case "input":
-		renderInputField(renderer, config, element)
-	case "button":
-		renderButton(renderer, config, element)
-	case "label":
-		renderLabel(renderer, config, element)
-	case "image":
-		renderImage(renderer, element)
-	}
-}
-
 func resolveBackground(renderer *sdl.Renderer, config *Config, background any) *sdl.Texture {
-	if str, ok := background.(string); ok {
+	if str, ok := background.(string); ok && str != "" {
+		texturePath := str
+		// If starts with $, use variable
 		if strings.HasPrefix(str, "$") {
-			texturePath := config.Variables.BackgroundImage
-			texture, err := img.LoadTexture(renderer, texturePath)
-			if err != nil {
-				os.Exit(1)
-			}
-			return texture
+			texturePath = config.Variables.BackgroundImage
 		}
-	} else if bgMap, ok := background.(map[string]any); ok {
-		renderer.SetDrawColor(uint8(bgMap["r"].(float64)), uint8(bgMap["g"].(float64)), uint8(bgMap["b"].(float64)), 255)
-		renderer.Clear()
-		return nil
+
+		texture, err := img.LoadTexture(renderer, texturePath)
+		if err != nil {
+			log.Printf("Failed to load background texture: %v", err)
+			return nil
+		}
+		return texture
 	}
-	renderer.SetDrawColor(249, 249, 249, 255) // Default to #f9f9f9
+
+	// Default background
+	renderer.SetDrawColor(32, 32, 32, 255) // Dark gray fallback
 	renderer.Clear()
 	return nil
 }
 
-func substituteVariables(text string, vars map[string]string) string {
+func substituteVariables(text string, config *Config) string {
 	return regexp.MustCompile(`\$(\w+)`).ReplaceAllStringFunc(text, func(m string) string {
 		varName := m[1:]
-		return vars[varName]
+		value := config.Variables.Get(varName)
+		if value == "" {
+			log.Printf("MISSING VARIABLE: %s", varName)
+			return "MISSING_VAR"
+		}
+		return value
 	})
 }
 
 func getFontAndSize(config *Config, fontName string) (*ttf.Font, int) {
-	var fontPath string
-	var size int
-	switch fontName {
-	case "title":
-		fontPath = config.Variables.Fonts.Title
-		size = config.Variables.FontSizes.Title
-	case "big":
-		fontPath = config.Variables.Fonts.Big
-		size = config.Variables.FontSizes.Big
-	case "medium":
-		fontPath = config.Variables.Fonts.Medium
-		size = config.Variables.FontSizes.Medium
-	case "small":
-		fontPath = config.Variables.Fonts.Small
-		size = config.Variables.FontSizes.Small
-	default:
-		fontPath = config.Variables.Fonts.Medium // Default font
-		size = 24                                // Default font size
+	// Ensure maps are initialized
+	if config.Variables.Fonts == nil {
+		config.Variables.Fonts = make(map[string]string)
 	}
+	if config.Variables.FontSizes == nil {
+		config.Variables.FontSizes = make(map[string]int)
+	}
+
+	// Get font path (case-insensitive)
+	fontPath := "Roboto-Black.ttf" // Default fallback
+	size := 24
+
+	// Find matching font key
+	for key, path := range config.Variables.Fonts {
+		if strings.EqualFold(key, fontName) {
+			fontPath = path
+			break
+		}
+	}
+
+	// Find matching font size key
+	for key, val := range config.Variables.FontSizes {
+		if strings.EqualFold(key, fontName) {
+			size = val
+			break
+		}
+	}
+
 	font, err := ttf.OpenFont(fontPath, size)
 	if err != nil {
-		os.Exit(1)
+		log.Printf("Error loading font %s: %v", fontPath, err)
+		return nil, 0
 	}
 	return font, size
 }
 
-func handleInputElement(config *Config, element Element) {
+func handleInputElement(renderer *sdl.Renderer, config *Config, element Element) {
 	virtualKeyboardActive = true
 	defer func() { virtualKeyboardActive = false }()
+	exitInput := false
 
-	for {
-		// Draw virtual keyboard
-		renderKeyboard(renderer)
+	for !exitInput {
+		renderer.SetDrawColor(249, 249, 249, 255)
+		renderer.Clear()
+		renderScene(renderer, config, config.Scenes[currentSceneIndex])
+		renderKeyboard(renderer, config)
 		renderer.Present()
 
-		// Handle input events
 		for event := sdl.PollEvent(); event != nil; event = sdl.PollEvent() {
 			switch e := event.(type) {
 			case *sdl.KeyboardEvent:
 				if e.Type == sdl.KEYDOWN {
-					// Handle keyboard navigation...
+					switch e.Keysym.Sym {
+					case sdl.K_ESCAPE:
+						exitInput = true
+					case sdl.K_RETURN:
+						handleKeyboardInput(config)
+						exitInput = true
+					}
 				}
-			case *sdl.ControllerButtonEvent:
-				// Handle controller input...
 			}
-		}
-
-		// Update input text variable
-		if element.Variable != "" {
-			config.Variables.CustomVars[element.Variable] = inputText
-		}
-
-		if exitInput {
-			break
 		}
 	}
 }
 
 func renderMenu(renderer *sdl.Renderer, config *Config, element Element) {
+	// Define text color (white by default for menu items)
+	textColor := sdl.Color{R: 255, G: 255, B: 255, A: 255}
+
+	// Get font using medium size from config
+	font, _ := getFontAndSize(config, "medium")
+	defer font.Close()
+
 	// Draw menu background
 	renderer.SetDrawColor(32, 32, 32, 200)
 	renderer.FillRect(&sdl.Rect{X: element.X, Y: element.Y, W: 1280, H: 50})
@@ -254,46 +394,45 @@ func renderMenu(renderer *sdl.Renderer, config *Config, element Element) {
 		if scene.Name == config.Scenes[currentSceneIndex].Name {
 			text = "[" + text + "]"
 		}
-		w, h := renderText(renderer, font, text, sdl.Color{R: 255, G: 255, B: 255, A: 255}, buttonX+40, element.Y+25)
+		w, _ := renderText(renderer, config, font, text, textColor, buttonX+40, element.Y+25)
 		buttonX += w + 20
 	}
 
 	// Draw clock
 	currentTime := time.Now().Format("15:04")
-	renderText(renderer, font, currentTime, sdl.Color{R: 255, G: 255, B: 255, A: 255}, 1200, element.Y+25)
+	renderText(renderer, config, font, currentTime, textColor, 1200, element.Y+25)
 }
-
-func renderText(renderer *sdl.Renderer, font *ttf.Font, text string, color sdl.Color, x int32, y int32) (int32, int32) {
-	if text == "" || font == nil {
+func renderText(renderer *sdl.Renderer, config *Config, font *ttf.Font, text string, color sdl.Color, x int32, y int32) (int32, int32) {
+	processedText := substituteVariables(text, config)
+	if processedText == "" || font == nil {
 		return 0, 0
 	}
 
-	// Render text to surface
-	surface, err := font.RenderUTF8Blended(text, color)
+	surface, err := font.RenderUTF8Blended(processedText, color)
 	if err != nil {
-		os.Exit(1)
+		log.Printf("Render error: %v", err)
+		return 0, 0
 	}
 	defer surface.Free()
 
-	if surface.W == 0 && surface.H == 0 {
-		return 0, 0
-	}
-
-	// Create texture from surface
 	texture, err := renderer.CreateTextureFromSurface(surface)
 	if err != nil {
-		os.Exit(1)
+		log.Printf("Texture error: %v", err)
+		return 0, 0
 	}
 	defer texture.Destroy()
 
-	// Render texture to screen using surface dimensions
-	textWidth := int32(surface.W)
-	textHeight := int32(surface.H)
-	renderer.Copy(texture, nil, &sdl.Rect{X: x - textWidth/2, Y: y - textHeight/2, W: textWidth, H: textHeight})
+	// Get exact dimensions from texture
+	_, _, w, h, _ := texture.Query()
+	renderer.Copy(texture, nil, &sdl.Rect{
+		X: x,
+		Y: y,
+		W: w,
+		H: h,
+	})
 
-	return textWidth, textHeight
+	return w, h
 }
-
 func renderButton(renderer *sdl.Renderer, config *Config, element Element) {
 	defaultTextColor := sdl.Color{R: 0, G: 0, B: 0, A: 255}     // Default to black
 	defaultBgColor := sdl.Color{R: 255, G: 255, B: 255, A: 255} // Default to white
@@ -307,54 +446,148 @@ func renderButton(renderer *sdl.Renderer, config *Config, element Element) {
 
 	// Render button text
 	font, _ := getFontAndSize(config, element.Font)
-	renderText(renderer, font, element.Text, color, element.X+100, element.Y+25)
+	renderText(renderer, config, font, element.Text, color, element.X+100, element.Y+25)
 }
 
-func renderKeyboard(renderer *sdl.Renderer) {
-	startX, startY := 50, 450
-	keyWidth, keyHeight, padding := 40, 40, 10
+func renderKeyboard(renderer *sdl.Renderer, config *Config) {
+	if !virtualKeyboardActive {
+		return
+	}
 
-	for i, row := range keyboard {
-		for j, key := range row {
-			x := startX + j*(keyWidth+padding)
-			y := startY + i*(keyHeight+padding)
+	// Dark overlay
+	renderer.SetDrawColor(0, 0, 0, 200)
+	renderer.FillRect(&sdl.Rect{X: 0, Y: 0, W: 1280, H: 720})
 
+	keyWidth := int32(60)
+	keyHeight := int32(60)
+	padding := int32(10)
+	startX := (1280 - (10*keyWidth + 9*padding)) / 2
+	startY := int32(200)
+
+	for y, row := range keyboard {
+		rowStartX := startX
+		if y == 1 {
+			rowStartX += keyWidth / 2
+		}
+		if y == 2 {
+			rowStartX += keyWidth
+		}
+		if y == 3 {
+			rowStartX += keyWidth * 3
+		}
+
+		for x, key := range row {
 			// Draw key background
-			renderer.SetDrawColor(255, 255, 255, 255) // White background
-			if i == keyboardPosY && j == keyboardPosX {
-				renderer.SetDrawColor(0, 255, 0, 255) // Green background for selected key
+			bgColor := sdl.Color{R: 255, G: 255, B: 255}
+			if x == keyboardPosX && y == keyboardPosY {
+				bgColor = sdl.Color{R: 0, G: 255, B: 0}
 			}
-			renderer.FillRect(&sdl.Rect{X: int32(x), Y: int32(y), W: int32(keyWidth), H: int32(keyHeight)})
+			renderer.SetDrawColor(bgColor.R, bgColor.G, bgColor.B, 255)
+
+			rect := &sdl.Rect{
+				X: rowStartX + int32(x)*(keyWidth+padding),
+				Y: startY + int32(y)*(keyHeight+padding),
+				W: keyWidth,
+				H: keyHeight,
+			}
+			renderer.FillRect(rect)
 
 			// Draw key text
-			renderer.SetDrawColor(0, 0, 0, 255) // Black text
-			renderText(renderer, nil, key, sdl.Color{R: 0, G: 0, B: 0, A: 255}, int32(x+keyWidth/2), int32(y+keyHeight/2))
+			font, _ := getFontAndSize(config, "medium") // Now has access to config
+			renderText(renderer, config, font, key, sdl.Color{R: 0, G: 0, B: 0},
+				rect.X+keyWidth/2,
+				rect.Y+keyHeight/2,
+			)
 		}
 	}
 }
 
 func isInputButtonSelected(element Element) bool {
-	return virtualKeyboardActive
+	return virtualKeyboardActive && inputActiveElement == &element
+}
+
+func handleTextInput(event *sdl.KeyboardEvent, config *Config) {
+	switch event.Keysym.Sym {
+	case sdl.K_BACKSPACE:
+		if len(inputTextBuffer) > 0 {
+			inputTextBuffer = inputTextBuffer[:len(inputTextBuffer)-1]
+		}
+	case sdl.K_RETURN, sdl.K_KP_ENTER:
+		// Finish input
+		inputActiveElement = nil
+		sdl.StopTextInput()
+	default:
+		// Characters handled by TextInputEvent
+	}
+	updateInputVariable(config)
+}
+
+func handleInputSelection(renderer *sdl.Renderer, config *Config, element *Element) {
+	inputActiveElement = element
+	virtualKeyboardActive = true
+	handleInputElement(renderer, config, *element)
+	sdl.StartTextInput()
+}
+
+func updateInputVariable(config *Config) {
+	if inputActiveElement != nil && inputActiveElement.Variable != "" {
+		config.Variables.Custom[inputActiveElement.Variable] = inputTextBuffer
+	}
+}
+
+func initKeyboard() {
+	keyboard = [][]string{
+		{"Q", "W", "E", "R", "T", "Y", "U", "I", "O", "P"},
+		{"A", "S", "D", "F", "G", "H", "J", "K", "L"},
+		{"Z", "X", "C", "V", "B", "N", "M"},
+		{"SPACE", "BACK", "ENTER"},
+	}
+	keyboardPosX, keyboardPosY = 0, 0
+}
+
+func handleVirtualKeyboardInput(event *sdl.KeyboardEvent, config *Config) {
+	switch event.Keysym.Sym {
+	case sdl.K_UP:
+		if keyboardPosY > 0 {
+			keyboardPosY--
+		}
+	case sdl.K_DOWN:
+		if keyboardPosY < len(keyboard)-1 {
+			keyboardPosY++
+		}
+	case sdl.K_LEFT:
+		if keyboardPosX > 0 {
+			keyboardPosX--
+		}
+	case sdl.K_RIGHT:
+		if keyboardPosX < len(keyboard[keyboardPosY])-1 {
+			keyboardPosX++
+		}
+	case sdl.K_RETURN:
+		handleKeyboardInput(config)
+	}
 }
 
 func handleKeyboardInput(config *Config) {
 	selectedKey := keyboard[keyboardPosY][keyboardPosX]
 	switch selectedKey {
 	case "SPACE":
-		inputText += " "
+		inputTextBuffer += " "
 	case "BACK":
-		if len(inputText) > 0 {
-			inputText = inputText[:len(inputText)-1]
+		if len(inputTextBuffer) > 0 {
+			inputTextBuffer = inputTextBuffer[:len(inputTextBuffer)-1]
 		}
 	case "ENTER":
-		config.Variables.InputText = inputText
-		virtualKeyboardActive = false // Hide virtual keyboard after setting the variable
+		virtualKeyboardActive = false
+		inputActiveElement = nil
 	default:
-		inputText += selectedKey
+		inputTextBuffer += selectedKey
 	}
+	updateInputVariable(config)
 }
 
 func renderScene(renderer *sdl.Renderer, config *Config, sceneConfig SceneConfig) {
+	log.Printf("Rendering scene: %s", sceneConfig.Name)
 	fontCache := make(map[string]*ttf.Font)
 	bgTexture := resolveBackground(renderer, config, sceneConfig.Background)
 	if bgTexture != nil {
@@ -363,6 +596,7 @@ func renderScene(renderer *sdl.Renderer, config *Config, sceneConfig SceneConfig
 	}
 
 	for i, element := range sceneConfig.Elements {
+		log.Printf("Rendering element %d: %s (%s)", i, element.Text, element.Type)
 		defaultTextColor := sdl.Color{R: 0, G: 0, B: 0, A: 255}     // Default to black
 		defaultBgColor := sdl.Color{R: 255, G: 255, B: 255, A: 255} // Default to white
 
@@ -382,39 +616,44 @@ func renderScene(renderer *sdl.Renderer, config *Config, sceneConfig SceneConfig
 
 		switch element.Type {
 		case "image":
+			log.Printf("Loading image: %s", element.Image)
 			if element.Image != "" {
+				// Handle width with variable substitution
+				widthStr := substituteVariables(string(element.Width), config)
+				width, err := strconv.Atoi(widthStr)
+				if err != nil {
+					width = 0
+				}
+
+				// Handle height with variable substitution
+				heightStr := substituteVariables(string(element.Height), config)
+				height, err := strconv.Atoi(heightStr)
+				if err != nil {
+					height = 0
+				}
+
 				imageTexture, err := img.LoadTexture(renderer, element.Image)
 				if err == nil {
 					defer imageTexture.Destroy()
-					width, err := strconv.Atoi(element.Width)
-					if err != nil {
-						width = 0 // Default width if conversion fails
-					}
-					height, err := strconv.Atoi(element.Height)
-					if err != nil {
-						height = 0 // Default height if conversion fails
-					}
 					imageRect := sdl.Rect{X: element.X, Y: element.Y, W: int32(width), H: int32(height)}
 					renderer.Copy(imageTexture, nil, &imageRect)
 				}
 			}
 		case "input":
-			renderButton(renderer, config, element)
-			if isInputButtonSelected(element) {
-				virtualKeyboardActive = true
-				renderKeyboard(renderer)
-			}
+			log.Printf("Rendering input field at (%d,%d)", element.X, element.Y)
+			renderInputField(renderer, config, element)
 		case "video":
 			if !videoPlayed && element.Video != "" {
-				width, err := strconv.Atoi(element.Width)
+				widthStr := substituteVariables(string(element.Width), config)
+				width, err := strconv.Atoi(widthStr)
 				if err != nil {
-					fmt.Println("Error converting width:", err)
-					continue
+					width = 0
 				}
-				height, err := strconv.Atoi(element.Height)
+
+				heightStr := substituteVariables(string(element.Height), config)
+				height, err := strconv.Atoi(heightStr)
 				if err != nil {
-					fmt.Println("Error converting height:", err)
-					continue
+					height = 0
 				}
 
 				// Construct the ffplay command with the correct parameters
@@ -436,32 +675,42 @@ func renderScene(renderer *sdl.Renderer, config *Config, sceneConfig SceneConfig
 					fmt.Println("Error waiting for ffplay:", err)
 				}*/
 			}
-		default:
-			// Calculate text dimensions
+		case "label": // Add specific label handling
+			if font != nil {
+				renderText(renderer, config, font, element.Text, color,
+					element.X,
+					element.Y)
+			}
+		case "button": // Explicit button handling
+			// Calculate dimensions
 			textWidth, textHeight := getTextDimensions(font, element.Text)
-			width := textWidth + 20   // Add padding to text width
-			height := textHeight + 10 // Add padding to text height
+			width := textWidth + 20
+			height := textHeight + 10
 
-			// Override width and height if specified
-			if element.Width != "" {
-				w, err := strconv.Atoi(element.Width)
-				if err == nil {
-					width = int32(w)
-				}
+			// Override dimensions if specified
+			if string(element.Width) != "" {
+				widthStr := substituteVariables(string(element.Width), config)
+				w, _ := strconv.Atoi(widthStr)
+				width = int32(w)
 			}
-			if element.Height != "" {
-				h, err := strconv.Atoi(element.Height)
-				if err == nil {
-					height = int32(h)
-				}
+			if string(element.Height) != "" {
+				heightStr := substituteVariables(string(element.Height), config)
+				h, _ := strconv.Atoi(heightStr)
+				height = int32(h)
 			}
 
-			// Render button background or label background
+			// Render button background
 			renderer.SetDrawColor(bgColor.R, bgColor.G, bgColor.B, bgColor.A)
 			renderer.FillRect(&sdl.Rect{X: element.X, Y: element.Y, W: width, H: height})
 
-			// Render button text or label text
-			renderText(renderer, font, element.Text, color, element.X+width/2, element.Y+height/2)
+			// Render button text
+			renderText(renderer, config, font, element.Text, color,
+				element.X+width/2,
+				element.Y+height/2)
+		case "menu":
+			renderMenu(renderer, config, element)
+		default:
+			log.Printf("Unknown element type: %s", element.Type)
 		}
 	}
 
@@ -470,12 +719,74 @@ func renderScene(renderer *sdl.Renderer, config *Config, sceneConfig SceneConfig
 	}
 }
 
-// Helper function to get text dimensions
+func renderInputField(renderer *sdl.Renderer, config *Config, element Element) {
+	// Draw background
+	bgColor := resolveColor(config, element.BgColor, sdl.Color{R: 255, G: 255, B: 255, A: 255})
+	renderer.SetDrawColor(bgColor.R, bgColor.G, bgColor.B, bgColor.A)
+	renderer.FillRect(&sdl.Rect{
+		X: element.X,
+		Y: element.Y,
+		W: 300, // Default width
+		H: 40,  // Default height
+	})
+
+	// Draw text
+	textColor := resolveColor(config, element.Color, sdl.Color{R: 0, G: 0, B: 0, A: 255})
+	font, _ := getFontAndSize(config, element.Font)
+
+	// Show cursor if active
+	text := inputTextBuffer
+	if inputActiveElement == &element && (uint32(sdl.GetTicks64()/500)%2 == 0) {
+		text += "_"
+	}
+
+	renderText(renderer, config, font, text, textColor, element.X+10, element.Y+20)
+
+	// Draw border if active
+	if inputActiveElement == &element {
+		renderer.SetDrawColor(0, 120, 215, 255)
+		renderer.DrawRect(&sdl.Rect{
+			X: element.X - 2,
+			Y: element.Y - 2,
+			W: 304,
+			H: 44,
+		})
+	}
+}
+
+func renderImage(renderer *sdl.Renderer, config *Config, element Element) {
+	if element.Image == "" {
+		return
+	}
+	texture, err := img.LoadTexture(renderer, element.Image)
+	if err != nil {
+		log.Printf("Failed to load image %s: %v", element.Image, err)
+		return
+	}
+	defer texture.Destroy()
+
+	widthStr := substituteVariables(string(element.Width), config)
+	width, _ := strconv.Atoi(widthStr)
+	heightStr := substituteVariables(string(element.Height), config)
+	height, _ := strconv.Atoi(heightStr)
+
+	if width == 0 || height == 0 {
+		_, _, w, h, _ := texture.Query()
+		width = int(w)
+		height = int(h)
+	}
+	renderer.Copy(texture, nil, &sdl.Rect{X: element.X, Y: element.Y, W: int32(width), H: int32(height)})
+}
+
 func getTextDimensions(font *ttf.Font, text string) (int32, int32) {
+	if text == "" || font == nil {
+		return 0, 0 // Return zero dimensions for empty text or invalid font
+	}
+
 	surface, err := font.RenderUTF8Blended(text, sdl.Color{R: 0, G: 0, B: 0, A: 0})
 	if err != nil {
-		fmt.Println("Error rendering text to surface:", err)
-		os.Exit(1)
+		log.Printf("Warning: Error rendering text '%s': %v", text, err)
+		return 0, 0
 	}
 	defer surface.Free()
 
@@ -537,11 +848,11 @@ func main() {
 	mapping2 := "0000000058626f782047616d65706100,Xbox Gamepad (userspace driver),platform:Linux,a:b0,b:b1,x:b2,y:b3,start:b7,back:b6,guide:b8,dpup:h0.1,dpdown:h0.4,dpleft:h0.8,dpright:h0.2,leftshoulder:b4,rightshoulder:b5,lefttrigger:a5,righttrigger:a4,leftstick:b9,rightstick:b10,leftx:a0,lefty:a1,rightx:a2,righty:a3,"
 
 	if sdl.GameControllerAddMapping(mapping1) == -1 {
-		fmt.Println("Failed to add controller mapping: %s\n", sdl.GetError())
+		fmt.Printf("Failed to add controller mapping: %s\n", sdl.GetError())
 	}
 
 	if sdl.GameControllerAddMapping(mapping2) == -1 {
-		fmt.Println("Failed to add controller mapping: %s\n", sdl.GetError())
+		fmt.Printf("Failed to add controller mapping: %s\n", sdl.GetError())
 	}
 
 	if sdl.NumJoysticks() > 0 {
@@ -550,6 +861,8 @@ func main() {
 			fmt.Println("Controller detected.")
 		}
 	}
+
+	initKeyboard() // Initialize virtual keyboard layout
 
 	currentSceneIndex = 0
 	selectedButtonIndex = 0
@@ -562,56 +875,46 @@ func main() {
 			case *sdl.KeyboardEvent: // Use pointer receiver
 				if e.Type == sdl.KEYDOWN {
 					if virtualKeyboardActive {
-						switch e.Keysym.Sym {
-						case sdl.K_UP, sdl.K_w:
-							if keyboardPosY > 0 {
-								keyboardPosY--
-							}
-						case sdl.K_DOWN, sdl.K_s:
-							if keyboardPosY < len(keyboard)-1 {
-								keyboardPosY++
-							}
-						case sdl.K_LEFT, sdl.K_a:
-							if keyboardPosX > 0 {
-								keyboardPosX--
-							}
-						case sdl.K_RIGHT, sdl.K_d:
-							if keyboardPosX < len(keyboard[keyboardPosY])-1 {
-								keyboardPosX++
-							}
-						case sdl.K_RETURN:
-							handleKeyboardInput(config)
-						}
-					} else {
-						switch e.Keysym.Sym {
-						case sdl.K_UP, sdl.K_w:
-							moveSelection(config, -1)
-						case sdl.K_DOWN, sdl.K_s:
-							moveSelection(config, 1)
-						case sdl.K_RETURN, sdl.K_KP_ENTER:
-							triggerSelectedElement(config)
-						case sdl.K_ESCAPE:
-							running = false
-						}
+						handleVirtualKeyboardInput(e, config)
+					} else if inputActiveElement != nil {
+						// Handle direct text input
+						handleTextInput(e, config)
 					}
 				}
 			case *sdl.TextInputEvent: // Use pointer receiver
 				inputText += string(e.Text[:])
+				updateInputVariable(config)
 			case *sdl.QuitEvent: // Use pointer receiver
 				running = false
-			case *sdl.MouseButtonEvent: // Use pointer receiver
-				//fmt.Printf("Mouse event")
+			case *sdl.MouseButtonEvent:
 				if e.Button == sdl.BUTTON_LEFT {
 					mouseX := int(e.X)
 					mouseY := int(e.Y)
 
 					currentScene := config.Scenes[currentSceneIndex]
 					for _, element := range currentScene.Elements {
-						if element.Type == "button" &&
-							mouseX > int(element.X)-50 && mouseX < int(element.X)+50 &&
-							mouseY > int(element.Y)-25 && mouseY < int(element.Y)+25 {
-							//fmt.Println("Button clicked:", element.Text)
-							handleTrigger(config, element)
+						// Input field handling
+						if element.Type == "input" {
+							widthStr := substituteVariables(string(element.Width), config)
+							width, _ := strconv.Atoi(widthStr)
+							if width == 0 {
+								width = 200
+							}
+							heightStr := substituteVariables(string(element.Height), config)
+							height, _ := strconv.Atoi(heightStr)
+							if height == 0 {
+								height = 50
+							}
+
+							if mouseX > int(element.X) && mouseX < int(element.X)+width &&
+								mouseY > int(element.Y) && mouseY < int(element.Y)+height {
+								handleInputSelection(renderer, config, &element)
+							}
+						} else if element.Type == "button" { // Proper else placement
+							if mouseX > int(element.X)-50 && mouseX < int(element.X)+50 &&
+								mouseY > int(element.Y)-25 && mouseY < int(element.Y)+25 {
+								handleTrigger(renderer, config, element)
+							}
 						}
 					}
 				}
@@ -645,7 +948,12 @@ func main() {
 						case sdl.CONTROLLER_BUTTON_DPAD_DOWN:
 							moveSelection(config, 1)
 						case sdl.CONTROLLER_BUTTON_A, sdl.CONTROLLER_BUTTON_B:
-							triggerSelectedElement(config)
+							selectedElement := config.Scenes[currentSceneIndex].Elements[selectedButtonIndex]
+							if selectedElement.Type == "input" {
+								handleInputSelection(renderer, config, &selectedElement) // Changed from &element
+							} else {
+								triggerSelectedElement(renderer, config)
+							}
 						}
 					}
 				}
@@ -660,12 +968,13 @@ func main() {
 }
 
 func moveSelection(config *Config, direction int) {
-	elements := config.Scenes[currentSceneIndex].Elements
+	currentScene := config.Scenes[currentSceneIndex]
+	elements := currentScene.Elements
 
 	// Create a list of navigable element indices (buttons and inputs)
 	var interactive []int
 	for i, el := range elements {
-		if el.Type == "button" || el.Type == "input" {
+		if el.Type == "button" || el.Type == "input" { // Remove "label" from list
 			interactive = append(interactive, i)
 		}
 	}
@@ -708,24 +1017,22 @@ func moveSelection(config *Config, direction int) {
 	}
 }
 
-func triggerSelectedElement(config *Config) {
+func triggerSelectedElement(renderer *sdl.Renderer, config *Config) {
 	selectedElement := config.Scenes[currentSceneIndex].Elements[selectedButtonIndex]
 	if selectedElement.Type == "button" {
-		//fmt.Println("Triggering selected button:", selectedElement.Text)
-		handleTrigger(config, selectedElement)
+		handleTrigger(renderer, config, selectedElement) // Pass renderer here
 	}
 }
 
-func handleTrigger(config *Config, element Element) {
+func handleTrigger(renderer *sdl.Renderer, config *Config, element Element) {
 	if element.Trigger == "" {
 		return
 	}
 
-	//fmt.Println("Handling trigger for element:", element.Text)
 	switch element.Trigger {
 	case "set_variable":
 		if element.TriggerTarget != "" {
-			config.Variables.CustomVars[element.TriggerTarget] = element.TriggerValue
+			config.Variables.Custom[element.TriggerTarget] = element.TriggerValue
 		}
 
 	case "external_app":
@@ -743,10 +1050,15 @@ func handleTrigger(config *Config, element Element) {
 		}()
 
 	case "play_image":
-		texture, _ := img.LoadTexture(renderer, element.TriggerTarget)
+		texture, err := img.LoadTexture(renderer, element.TriggerTarget) // Use passed renderer
+		if err == nil {
+			renderer.Copy(texture, nil, nil)
+			renderer.Present()
+		}
+		defer texture.Destroy()
 		renderer.Copy(texture, nil, nil)
 		renderer.Present()
-		sdl.Delay(3000) // Show image for 3 seconds
+		sdl.Delay(3000)
 	case "exit":
 		//fmt.Println("Exiting the application.")
 		os.Exit(0)

@@ -890,10 +890,10 @@ function getFontSize(fontSize) {
 function setBackground() {
     const file = backgroundFileInput.files[0];
     if (file) {
-        backgroundPath = file.name;
         const reader = new FileReader();
         reader.onload = function(event) {
             canvas.style.backgroundImage = `url(${event.target.result})`;
+            backgroundPath = event.target.result; // Store data URL instead of filename
         };
         reader.readAsDataURL(file);
     }
@@ -1199,9 +1199,18 @@ scene.elements.forEach(element => {
 // Automatically load jukaconfig.json
 window.addEventListener('load', () => {
     fetch('player/jukaconfig.json')
-        .then(response => response.json())
-        .then(data => loadJukaApp(data))
-        .catch(error => console.error('Error loading jukaconfig.json:', error));
+    .then(response => response.json())
+    .then(data => {
+        // Handle base64 encoded images
+        data.scenes = data.scenes.map(scene => ({
+            ...scene,
+            background: scene.background && scene.background.startsWith('data:') 
+                ? scene.background 
+                : `data:image/png;base64,${scene.background}`
+        }));
+        loadJukaApp(data);
+    })
+    .catch(error => console.error('Error loading jukaconfig.json:', error));
 
     customWidthInput.addEventListener('change', updateCanvasSize);
     customHeightInput.addEventListener('change', updateCanvasSize);

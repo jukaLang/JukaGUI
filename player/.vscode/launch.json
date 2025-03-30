@@ -6,9 +6,6 @@
       "type": "go",
       "request": "launch",
       "program": "${workspaceFolder}",
-      "env": {
-        "PATH": "C:\\SDL2\\bin;${env:PATH}"
-      },
       "args": [],
       "buildFlags": ""
     }
