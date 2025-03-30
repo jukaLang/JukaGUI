@@ -55,9 +55,8 @@ type Variables struct {
 }
 
 type SceneConfig struct {
-	Name       string    `json:"name"`
-	Background any       `json:"background"`
-	Elements   []Element `json:"elements"`
+	Name     string    `json:"name"`
+	Elements []Element `json:"elements"`
 }
 
 // Update the Element struct
@@ -275,15 +274,9 @@ func hexToRGB(hex string) (uint8, uint8, uint8) {
 	return uint8(r), uint8(g), uint8(b)
 }
 
-func resolveBackground(renderer *sdl.Renderer, config *Config, background any) *sdl.Texture {
-	if str, ok := background.(string); ok && str != "" {
-		texturePath := str
-		// If starts with $, use variable
-		if strings.HasPrefix(str, "$") {
-			texturePath = config.Variables.BackgroundImage
-		}
-
-		texture, err := img.LoadTexture(renderer, texturePath)
+func resolveBackground(renderer *sdl.Renderer, config *Config) *sdl.Texture {
+	if config.Variables.BackgroundImage != "" {
+		texture, err := img.LoadTexture(renderer, config.Variables.BackgroundImage)
 		if err != nil {
 			log.Printf("Failed to load background texture: %v", err)
 			return nil
@@ -292,7 +285,7 @@ func resolveBackground(renderer *sdl.Renderer, config *Config, background any) *
 	}
 
 	// Default background
-	renderer.SetDrawColor(32, 32, 32, 255) // Dark gray fallback
+	renderer.SetDrawColor(32, 32, 32, 255)
 	renderer.Clear()
 	return nil
 }
@@ -394,13 +387,13 @@ func renderMenu(renderer *sdl.Renderer, config *Config, element Element) {
 		if scene.Name == config.Scenes[currentSceneIndex].Name {
 			text = "[" + text + "]"
 		}
-		w, _ := renderText(renderer, config, font, text, textColor, buttonX+40, element.Y+25)
+		w, _ := renderText(renderer, config, font, text, textColor, buttonX+40, element.Y+10)
 		buttonX += w + 20
 	}
 
 	// Draw clock
 	currentTime := time.Now().Format("15:04")
-	renderText(renderer, config, font, currentTime, textColor, 1200, element.Y+25)
+	renderText(renderer, config, font, currentTime, textColor, 1200, element.Y+10)
 }
 func renderText(renderer *sdl.Renderer, config *Config, font *ttf.Font, text string, color sdl.Color, x int32, y int32) (int32, int32) {
 	processedText := substituteVariables(text, config)
@@ -589,7 +582,7 @@ func handleKeyboardInput(config *Config) {
 func renderScene(renderer *sdl.Renderer, config *Config, sceneConfig SceneConfig) {
 	log.Printf("Rendering scene: %s", sceneConfig.Name)
 	fontCache := make(map[string]*ttf.Font)
-	bgTexture := resolveBackground(renderer, config, sceneConfig.Background)
+	bgTexture := resolveBackground(renderer, config)
 	if bgTexture != nil {
 		renderer.Copy(bgTexture, nil, &sdl.Rect{X: 0, Y: 0, W: 1280, H: 720})
 		bgTexture.Destroy()
