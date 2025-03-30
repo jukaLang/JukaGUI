@@ -334,7 +334,6 @@ function changeVariable() {
     document.getElementById('variableValueInput').value = variables[variableName];
 }
 
-// Function to show variable controls
 function showVariableControls() {
     document.getElementById('variableSelector').style.display = 'inline';
     document.getElementById('variableValueInput').style.display = 'inline';
@@ -1009,6 +1008,9 @@ document.getElementById('loadFile').addEventListener('change', function(event) {
 });
 
 function loadJukaApp(data) {
+    variableSelector.innerHTML = '';
+    variableChangeSelector.innerHTML = '';
+
     // Update title, author, description
     document.getElementById('title').value = data.title || '';
     document.getElementById('author').value = data.author || '';
@@ -1043,7 +1045,7 @@ function loadJukaApp(data) {
             if (!['buttonColor', 'labelColor', 'backgroundImage', 'fonts', 'fontSizes'].includes(key)) {
                 variables[key] = data.variables[key];
                 
-                // Update variable selectors
+                // Add to variable selectors
                 const option = document.createElement('option');
                 option.value = key;
                 option.textContent = key;
@@ -1055,6 +1057,12 @@ function loadJukaApp(data) {
                 variableChangeSelector.appendChild(variableOption);
             }
         });
+        // Show controls if variables exist
+        if (Object.keys(variables).length > 0) {
+            showVariableControls();
+            variableSelector.value = Object.keys(variables)[0];
+            changeVariable();
+        }
     }
 
     // Load scenes and elements
