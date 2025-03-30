@@ -7,6 +7,7 @@
     --error: #b00020;
     --on-primary: #fff;
     --on-secondary: #000;
+    --small-size: 18px; /* Default value, will be updated by JS */
     --border-radius: 8px;
     --shadow: 0 2px 4px rgba(0,0,0,0.1);
     --transition: all 0.3s ease;
@@ -379,3 +380,46 @@
   z-index: 100;
 }
   
+.element[data-type="menu"] {
+  background: #2a2a2a; /* Solid dark background */
+  border-top: 1px solid #444;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 1rem;
+}
+
+.menu-scene-buttons {
+  flex-grow: 1;
+  margin: 0 1rem;
+}
+
+.menu-scene-button {
+  background: #404040;
+  color: #fff;
+  border: none;
+  padding: 4px 8px;
+  margin: 0 2px;
+  border-radius: 3px;
+  font-size: var(--small-size);
+}
+
+.menu-scene-button.active {
+  background: #007acc;
+  color: #fff;
+}
+
+.menu-clock {
+  color: #fff;
+  font-size: var(--small-size);
+  min-width: 60px;
+  text-align: center;
+}
+
+.menu-language {
+  background: none;
+  border: 1px solid #666;
+  color: #fff;
+  padding: 2px 5px;
+  font-size: var(--small-size);
+}

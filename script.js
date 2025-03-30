@@ -712,11 +712,11 @@ function addElement(type, x, y) {
   if (type === 'menu') {
     // Create menu structure
     el.innerHTML = `
-      <div class="handle"></div>
       <div class="menu-scene-buttons"></div>
       <button class="menu-language">EN</button>
       <div class="menu-clock">00:00</div>
     `;
+    el.style.fontSize = `${smallSizeInput.value}px`;
     el.classList.add('menu');
     
     // Initialize the menu
@@ -821,6 +821,7 @@ function updateMenuClock(clockEl) {
     const hours = now.getHours().toString().padStart(2, '0');
     const minutes = now.getMinutes().toString().padStart(2, '0');
     clockEl.textContent = `${hours}:${minutes}`;
+    clockEl.style.fontSize = `${smallSizeInput.value}px`;
   };
   
   updateTime();
@@ -830,31 +831,7 @@ function updateMenuClock(clockEl) {
 
 // Set up event listeners for the menu
 function setupMenuEvents(menuEl) {
-  const handle = menuEl.querySelector('.handle');
-  
-  handle.addEventListener('mousedown', event => {
-    event.stopPropagation();
-    menuEl.style.cursor = 'grabbing';
-    const startY = event.clientY;
-    const startTop = parseInt(menuEl.style.top);
-    
-    function onMouseMove(event) {
-      const canvasRect = canvas.getBoundingClientRect();
-      const newTop = Math.max(0, Math.min(canvasRect.height - menuEl.offsetHeight, startTop + (event.clientY - startY)));
-      menuEl.style.top = `${newTop}px`;
-      menuEl.setAttribute('data-y', newTop);
-    }
-    
-    function onMouseUp() {
-      menuEl.style.cursor = '';
-      document.removeEventListener('mousemove', onMouseMove);
-      document.removeEventListener('mouseup', onMouseUp);
-    }
-    
-    document.addEventListener('mousemove', onMouseMove);
-    document.addEventListener('mouseup', onMouseUp);
-  });
-  
+
   // Add the remove button
   const removeButton = document.createElement('span');
   removeButton.textContent = '✕';
@@ -1088,11 +1065,11 @@ scene.elements.forEach(element => {
         
         // Create menu structure
         el.innerHTML = `
-      <div class="handle"></div>
       <div class="menu-scene-buttons"></div>
       <button class="menu-language">EN</button>
       <div class="menu-clock">00:00</div>
         `;
+        el.style.fontSize = `${smallSizeInput.value}px`;
         
         // Set attribute for height
         el.setAttribute('data-height', element.height || 50);
