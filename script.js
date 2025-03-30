@@ -1022,7 +1022,10 @@ function loadJukaApp(data) {
         document.getElementById('smallSize').value = data.variables.fontSizes.small || 18;
     }
 
-    
+    if (data.variables && data.variables.backgroundImage) {
+        canvas.style.backgroundImage = `url(${data.variables.backgroundImage})`;
+        backgroundPath = data.variables.backgroundImage;
+    }
 
     // Clear the scenes object
     scenes = {};
