@@ -527,7 +527,7 @@ function setupElementEvents(el) {
                     const reader = new FileReader();
                     reader.onload = function(event) {
                         el.style.backgroundImage = `url(${event.target.result})`;
-                        el.style.backgroundSize = 'cover';
+                        el.style.backgroundSize = "cover"
                         el.setAttribute('data-image', file.name);
                     };
                     reader.readAsDataURL(file);
@@ -892,6 +892,7 @@ function setBackground() {
         const reader = new FileReader();
         reader.onload = function(event) {
             canvas.style.backgroundImage = `url(${event.target.result})`;
+            canvas.style.backgroundSize = canvas.style.width + ' ' + canvas.style.height;
             backgroundPath = event.target.result; // Store data URL instead of filename
         };
         reader.readAsDataURL(file);
@@ -1026,6 +1027,7 @@ function loadJukaApp(data) {
 
     if (data.variables && data.variables.backgroundImage) {
         canvas.style.backgroundImage = `url(${data.variables.backgroundImage})`;
+        canvas.style.backgroundSize = canvas.style.width + ' ' + canvas.style.height;
         backgroundPath = data.variables.backgroundImage;
     }
 
@@ -1149,7 +1151,7 @@ scene.elements.forEach(element => {
         } else if (element.type === 'image') {
             if (element.image) {
                 el.style.backgroundImage = `url(${element.image})`;
-                el.style.backgroundSize = 'cover';
+                el.style.backgroundSize = 'contain';
                 el.setAttribute('data-image', element.image);
             }
             
@@ -1182,6 +1184,7 @@ scene.elements.forEach(element => {
         const firstScene = data.scenes[0];
         if (firstScene.background) {
             canvas.style.backgroundImage = `url(${firstScene.background})`;
+            canvas.style.backgroundSize = canvas.style.width + ' ' + canvas.style.height;
             backgroundPath = firstScene.background;
         }
     }
