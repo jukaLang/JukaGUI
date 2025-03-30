@@ -31,7 +31,6 @@
   "scenes": [
     {
       "name": "Main",
-      "background": "background.jpg",
       "elements": [
         {
           "type": "label",
@@ -85,7 +84,6 @@
     },
     {
       "name": "Tube",
-      "background": "",
       "elements": [
         {
           "type": "menu",
@@ -97,7 +95,6 @@
     },
     {
       "name": "IPStream",
-      "background": "",
       "elements": [
         {
           "type": "menu",
@@ -109,7 +106,6 @@
     },
     {
       "name": "FileExplorer",
-      "background": "",
       "elements": [
         {
           "type": "menu",
@@ -121,7 +117,6 @@
     },
     {
       "name": "Settings",
-      "background": "",
       "elements": [
         {
           "type": "menu",
@@ -133,7 +128,6 @@
     },
     {
       "name": "Exit",
-      "background": "",
       "elements": [
         {
           "type": "menu",

@@ -926,7 +926,6 @@ const elements = Array.from(canvas.getElementsByClassName('element'));
     },
     scenes: Object.keys(scenes).map(sceneName => ({
       name: sceneName,
-      background: sceneName === currentScene ? backgroundPath : '',
       elements: scenes[sceneName].map(el => {
         const elementType = el.getAttribute('data-type');
         const baseElement = {
