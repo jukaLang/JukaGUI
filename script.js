@@ -20,6 +20,14 @@ const smallSizeInput = document.getElementById('smallSize');
 const variableSelector = document.getElementById('variableSelector');
 const customWidthInput = document.getElementById('customWidth');
 const customHeightInput = document.getElementById('customHeight');
+
+let opacitySlider = document.getElementById('opacitySlider');
+const dataWidth = document.getElementById('dataWidth');
+const dataHeight = document.getElementById('dataHeight');
+
+const darkModeToggle = document.getElementById('darkModeToggle');
+
+
 let backgroundPath = '';
 let scenes = { 'Scene 1': [] };
 let currentScene = 'Scene 1';
@@ -263,6 +271,18 @@ document.addEventListener('DOMContentLoaded', () => {
         const canvasHeight = canvas.offsetHeight;
         addElement('menu', 0, canvasHeight - 50);
     }, 0);
+
+     // Dark mode toggle
+     darkModeToggle.addEventListener('click', () => {
+        document.body.classList.toggle('dark-mode');
+        // Update button text based on current mode
+        if (document.body.classList.contains('dark-mode')) {
+            darkModeToggle.textContent = '☀️ Light Mode';
+        } else {
+            darkModeToggle.textContent = '🌙 Dark Mode';
+        }
+    });
+
 });
 
 function setupToolbar() {
@@ -548,13 +568,24 @@ function setupElementEvents(el) {
         el.classList.add('selected');
         hideControls(); // Hide all controls first
 
-        document.querySelector('.control-label[for="datax"]').style.display = 'block';
+        // Position controls
+        document.getElementById('xLabel').style.display = 'block';
         datax.style.display = 'block';
         datax.innerText = el.getAttribute('data-x');
 
-        document.querySelector('.control-label[for="datay"]').style.display = 'block';
+        document.getElementById('yLabel').style.display = 'block';
         datay.style.display = 'block';
         datay.innerText = el.getAttribute('data-y');
+
+
+        // Size controls
+        document.getElementById('widthLabel').style.display = 'block';
+        dataWidth.style.display = 'block';
+        dataWidth.innerText = `${el.offsetWidth}px`;
+        
+        document.getElementById('heightLabel').style.display = 'block';
+        dataHeight.style.display = 'block';
+        dataHeight.innerText = `${el.offsetHeight}px`;
 
 
         if (el.getAttribute('data-type') !== 'image' && el.getAttribute('data-type') !== "input") {
@@ -952,10 +983,18 @@ canvas.addEventListener('click', (event) => {
 });
 
 function hideControls() {
-    document.querySelector('.control-label[for="datax"]').style.display = 'none';
+    // Position controls
+    document.getElementById('xLabel').style.display = 'none';
     datax.style.display = 'none';
-    document.querySelector('.control-label[for="datay"]').style.display = 'none';
+    document.getElementById('yLabel').style.display = 'none';
     datay.style.display = 'none';
+    
+    // Size controls
+    document.getElementById('widthLabel').style.display = 'none';
+    dataWidth.style.display = 'none';
+    document.getElementById('heightLabel').style.display = 'none';
+    dataHeight.style.display = 'none';
+    
     document.querySelector('.control-label[for="colorPicker"]').style.display = 'none';
     colorPicker.style.display = 'none';
     document.querySelector('.control-label[for="bgColorPicker"]').style.display = 'none';

@@ -11,6 +11,9 @@
 <body>
     <header>
         <h1>JukaGUI Generator</h1>
+        <!-- Dark mode toggle button -->
+        <button id="darkModeToggle" class="dark-mode-toggle">🌙 Dark Mode</button>
+        
         <div class="steps-box">
             <ol>
                 <li>Move elements to screen and double click to rename.
@@ -88,14 +91,26 @@
         <section class="color-controls">
             <label for="hiddenSetting" class="control-label" style="display:inline;">Attributes:</label>
             <select id="hiddenSetting" class="trigger-selector" style="visibility: hidden;"></select>
-            <label for="datax" class="control-label" style="display:none;">X:</label>
-            <span id="datax" class="color-picker" style="display:none;"></span>
-            <label for="datay" class="control-label" style="display:none;">Y:</label>
-            <span id="datay" class="color-picker" style="display:none;"></span>
+            
+            <!-- Fixed labels with proper associations -->
+            <span class="control-label" id="xLabel" style="display:none;">X:</span>
+            <span id="datax" class="size-display" style="display:none;"></span>
+            
+            <span class="control-label" id="yLabel" style="display:none;">Y:</span>
+            <span id="datay" class="size-display" style="display:none;"></span>
+            
+            <span class="control-label" id="widthLabel" style="display:none;">Width:</span>
+            <span id="dataWidth" class="size-display" style="display:none;"></span>
+            
+            <span class="control-label" id="heightLabel" style="display:none;">Height:</span>
+            <span id="dataHeight" class="size-display" style="display:none;"></span>
+            
             <label for="colorPicker" class="control-label" style="display:none;">Font Color:</label>
             <input type="color" id="colorPicker" class="color-picker" value="#000000" style="display:none;">
+            
             <label for="bgColorPicker" class="control-label" style="display:none;">Background Color:</label>
             <input type="color" id="bgColorPicker" class="bg-color-picker" value="#ffffff" style="display:none;">
+            
             <label for="fontSizePicker" class="control-label" style="display:none;">Text Size:</label>
             <select id="fontSizePicker" class="font-size-picker" style="display:none;">
                 <option value="title">Title</option>
@@ -103,6 +118,7 @@
                 <option value="medium">Medium</option>
                 <option value="small">Small</option>
             </select>
+            
             <label for="triggerSelector" class="control-label" style="display:none;">Trigger:</label>
             <select id="triggerSelector" class="trigger-selector" style="display:none;">
                 <option value="">None</option>
@@ -113,10 +129,14 @@
                 <option value="play_video">Play Video</option>
                 <option value="play_image">Fullscreen Image</option>
             </select>
+            
             <select id="sceneChangeSelector" class="scene-change-selector" style="display:none;"></select>
             <input type="text" id="externalAppPath" class="external-app-path" placeholder="Enter path to external app" style="display:none;">
             <select id="variableChangeSelector" class="variable-change-selector" style="display:none;"></select>
             <input type="text" id="variableChangeValue" class="variable-change-value" placeholder="Enter new variable value" style="display:none;">
+            
+            <label for="opacitySlider" class="control-label" style="display:none;">Opacity:</label>
+            <input type="range" id="opacitySlider" min="0" max="100" value="100" class="opacity-slider" style="display:none; width: 100px;">
         </section>
         <div class="canvas" id="canvas"></div>
         <section>
