@@ -2,6 +2,8 @@ const canvas = document.getElementById('canvas');
 const output = document.getElementById('output');
 const datax = document.getElementById('datax');
 const datay = document.getElementById('datay');
+const dataWidth = document.getElementById('dataWidth');
+const dataHeight = document.getElementById('dataHeight');
 const colorPicker = document.getElementById('colorPicker');
 const bgColorPicker = document.getElementById('bgColorPicker');
 const fontSizePicker = document.getElementById('fontSizePicker');
@@ -20,19 +22,14 @@ const smallSizeInput = document.getElementById('smallSize');
 const variableSelector = document.getElementById('variableSelector');
 const customWidthInput = document.getElementById('customWidth');
 const customHeightInput = document.getElementById('customHeight');
-
-let opacitySlider = document.getElementById('opacitySlider');
-const dataWidth = document.getElementById('dataWidth');
-const dataHeight = document.getElementById('dataHeight');
-
+const opacitySlider = document.getElementById('opacitySlider');
+const opacityValue = document.getElementById('opacityValue');
 const darkModeToggle = document.getElementById('darkModeToggle');
-
-
 let backgroundPath = '';
 let scenes = { 'Scene 1': [] };
 let currentScene = 'Scene 1';
 let variables = {};
-
+let currentElement = null;
 
 function toggleCustomFields() {
     const select = document.getElementById('canvasSize');
@@ -49,15 +46,11 @@ function updateCanvasSize() {
     const canvasSize = canvasSizeSelect.value;
     
     if (canvasSize === 'custom') {
-        
-        // Get width and height from custom input fields
-        const width = parseInt(customWidthInput.value) || 1280; // Default if empty
-        const height = parseInt(customHeightInput.value) || 720; // Default if empty
-        
+        const width = parseInt(customWidthInput.value) || 1280;
+        const height = parseInt(customHeightInput.value) || 720;
         canvas.style.width = `${width}px`;
         canvas.style.height = `${height}px`;
     } else {
-        // Handle preset sizes
         const [width, height] = canvasSize.split('x').map(Number);
         canvas.style.width = `${width}px`;
         canvas.style.height = `${height}px`;
@@ -66,26 +59,11 @@ function updateCanvasSize() {
 }
 
 function updateScenes() {
-    // Save current elements to the current scene
     if (!scenes[currentScene]) {
         scenes[currentScene] = [];
     }
     scenes[currentScene] = Array.from(canvas.children).map(el => el.cloneNode(true));
-    console.log(`Scene ${currentScene} updated with elements:`, scenes[currentScene]);
-
-    // Clear the canvas
-    canvas.innerHTML = '';
-
-    // Re-render elements for the current scene
-    scenes[currentScene].forEach(el => {
-        canvas.appendChild(el);
-    });
-    
-    // Update font sizes if necessary
-    updateElementFontSizes();
 }
-
-
 
 function changeScene() {
     updateScenes();
@@ -96,7 +74,6 @@ function changeScene() {
     document.querySelectorAll('.menu').forEach(menuEl => {
         updateMenuSceneButtons(menuEl);
     });
-    
 }
 
 function loadScene(sceneName) {
@@ -107,11 +84,8 @@ function loadScene(sceneName) {
             setupElementEvents(clonedEl);
             canvas.appendChild(clonedEl);
         });
-    } else {
-        console.error(`Scene ${sceneName} not found`);
     }
 }
-
 
 function addScene() {
     const newSceneName = 'Scene ' + (Object.keys(scenes).length + 1);
@@ -124,7 +98,6 @@ function addScene() {
     updateSceneChangeSelector();
     changeScene();
     
-    // Add menu to new scene
     const canvasHeight = canvas.offsetHeight;
     addElement('menu', 0, canvasHeight - 50);
     
@@ -140,23 +113,18 @@ function renameScene() {
         delete scenes[currentScene];
         currentScene = newName;
 
-        // Update the option in the scene selector
         const selectedOption = sceneSelector.querySelector(`option[value="${sceneSelector.value}"]`);
         if (selectedOption) {
             selectedOption.value = newName;
             selectedOption.textContent = newName;
         }
 
-        // Reflect the change in the scene selector
         sceneSelector.querySelector(`option[value="${sceneSelector.value}"]`).value = newName;
         sceneSelector.querySelector(`option[value="${sceneSelector.value}"]`).textContent = newName;
 
         sceneSelector.value = newName;
         updateSceneChangeSelector();
         loadScene(newName);
-        console.log(`Scene renamed to: ${newName}`);
-    } else {
-        console.log('Scene name already exists or invalid input.');
     }
 }
 
@@ -167,43 +135,34 @@ function deleteScene() {
     }
 
     if (confirm(`Are you sure you want to delete scene "${currentScene}"?`)) {
-        // Get the current index to determine which scene to show next
         const sceneNames = Object.keys(scenes);
         const currentIndex = sceneNames.indexOf(currentScene);
         
-        // Remove the scene from scenes object
         delete scenes[currentScene];
         
-        // Remove the option from scene selector
         const optionToRemove = sceneSelector.querySelector(`option[value="${currentScene}"]`);
         if (optionToRemove) {
             sceneSelector.removeChild(optionToRemove);
         }
         
-        // Determine which scene to show next
         let nextSceneIndex = currentIndex > 0 ? currentIndex - 1 : 0;
         if (nextSceneIndex >= sceneNames.length - 1) {
-            nextSceneIndex = sceneNames.length - 2; // Adjust for removal
+            nextSceneIndex = sceneNames.length - 2;
         }
         
         const nextScene = sceneNames[nextSceneIndex] === currentScene ? 
             sceneNames[(nextSceneIndex + 1) % (sceneNames.length - 1)] : 
             sceneNames[nextSceneIndex];
             
-        // Update current scene and load it
         currentScene = nextScene;
         sceneSelector.value = currentScene;
         
-        // Update selectors and UI
         updateSceneChangeSelector();
         loadScene(currentScene);
         
-        // Update menus
         document.querySelectorAll('.menu').forEach(menuEl => {
             updateMenuSceneButtons(menuEl);
         });
-        
-        console.log(`Scene "${currentScene}" deleted successfully.`);
     }
 }
 
@@ -211,34 +170,26 @@ function duplicateScene() {
     const newSceneName = prompt('Enter name for the duplicated scene:', `${currentScene} Copy`);
     
     if (newSceneName && !scenes[newSceneName]) {
-        // Clone current scene elements
         scenes[newSceneName] = scenes[currentScene].map(el => el.cloneNode(true));
         
-        // Add new scene to selector
         const option = document.createElement('option');
         option.value = newSceneName;
         option.textContent = newSceneName;
         sceneSelector.appendChild(option);
         
-        // Switch to the new scene
         sceneSelector.value = newSceneName;
         currentScene = newSceneName;
         
-        // Update UI and selectors
         updateSceneChangeSelector();
         loadScene(newSceneName);
         
-        // Update menus
         document.querySelectorAll('.menu').forEach(menuEl => {
             updateMenuSceneButtons(menuEl);
         });
-        
-        console.log(`Scene duplicated as "${newSceneName}"`);
     } else if (scenes[newSceneName]) {
         alert('A scene with that name already exists. Please choose a different name.');
     }
 }
-
 
 function updateSceneChangeSelector() {
     sceneChangeSelector.innerHTML = '';
@@ -259,6 +210,16 @@ document.addEventListener('DOMContentLoaded', () => {
     updateSceneChangeSelector();
     updateCanvasSize();
     
+    // Dark mode toggle
+    darkModeToggle.addEventListener('click', () => {
+        document.body.classList.toggle('dark-mode');
+        if (document.body.classList.contains('dark-mode')) {
+            darkModeToggle.textContent = '☀️ Light Mode';
+        } else {
+            darkModeToggle.textContent = '🌙 Dark Mode';
+        }
+    });
+
     // Add "Scene 1" to the scene selector
     const option = document.createElement('option');
     option.value = 'Scene 1';
@@ -267,22 +228,10 @@ document.addEventListener('DOMContentLoaded', () => {
     sceneSelector.value = 'Scene 1';
 
     // Add menu to initial scene
-    setTimeout(() => { // Wait for canvas size to update
+    setTimeout(() => {
         const canvasHeight = canvas.offsetHeight;
         addElement('menu', 0, canvasHeight - 50);
     }, 0);
-
-     // Dark mode toggle
-     darkModeToggle.addEventListener('click', () => {
-        document.body.classList.toggle('dark-mode');
-        // Update button text based on current mode
-        if (document.body.classList.contains('dark-mode')) {
-            darkModeToggle.textContent = '☀️ Light Mode';
-        } else {
-            darkModeToggle.textContent = '🌙 Dark Mode';
-        }
-    });
-
 });
 
 function setupToolbar() {
@@ -348,7 +297,6 @@ function renameVariable() {
     }
 }
 
-// Function to change variable
 function changeVariable() {
     const variableName = variableSelector.value;
     document.getElementById('variableValueInput').value = variables[variableName];
@@ -361,17 +309,6 @@ function showVariableControls() {
     document.getElementById('changeValueButton').style.display = 'inline';
 }
 
-// Function to show Change Value button and input field
-function showChangeValue() {
-    const variableName = variableSelector.value;
-    const variableValue = prompt('Enter new variable value:', variables[variableName]);
-    if (variableValue !== null) {
-        variables[variableName] = variableValue;
-        document.getElementById('variableValueInput').value = variables[variableName];
-        updateVariableText();
-    }
-}
-
 function showTooltip(event) {
     const target = event.target;
     const variableNames = target.getAttribute('data-variable');
@@ -379,7 +316,7 @@ function showTooltip(event) {
         let tooltip = document.createElement('div');
         tooltip.className = 'tooltip';
         let tooltipText = '';
-        const addedVariables = new Set(); // To track added variables and avoid duplicates
+        const addedVariables = new Set();
         variableNames.split(',').forEach(variableName => {
             if (variables[variableName] !== undefined && !addedVariables.has(variableName)) {
                 tooltipText += `$${variableName}:${variables[variableName]} `;
@@ -395,7 +332,6 @@ function showTooltip(event) {
     }
 }
 
-
 function hideTooltip(event) {
     const target = event.target;
     if (target._tooltip) {
@@ -409,7 +345,6 @@ function setupHoverEvents(el) {
     el.addEventListener('mouseleave', hideTooltip);
 }
 
-// Event listener for variable selector
 variableSelector.addEventListener('change', changeVariable);
 
 function updateElementFontSizes() {
@@ -426,8 +361,7 @@ function updateVariableText() {
         if (el.getAttribute('data-type') === 'button' || el.getAttribute('data-type') === 'label' || el.getAttribute('data-type') === 'input' || el.getAttribute('data-type') === 'image') {
             let textSpan = el.querySelector('.text-content');
             let text = textSpan.textContent;
-            // Keep $variable names and show tooltip on hover
-            const addedVariables = new Set(); // To track added variables and avoid duplicates
+            const addedVariables = new Set();
             Object.keys(variables).forEach(key => {
                 const variablePlaceholder = `$${key}`;
                 if (text.includes(variablePlaceholder) && !addedVariables.has(key)) {
@@ -436,11 +370,10 @@ function updateVariableText() {
                     setupHoverEvents(el);
                 }
             });
-            textSpan.textContent = text; // Ensure text remains unchanged
+            textSpan.textContent = text;
         }
     });
 }
-
 
 canvas.addEventListener('dragover', event => {
     event.preventDefault();
@@ -459,7 +392,7 @@ function setupElementEvents(el) {
     setupHoverEvents(el);
 
     el.addEventListener('mousedown', event => {
-        if (event.button === 2) { // Right mouse button
+        if (event.button === 2) { // Right mouse button for resize
             el.style.cursor = 'nwse-resize';
             const startX = event.clientX;
             const startY = event.clientY;
@@ -473,6 +406,12 @@ function setupElementEvents(el) {
                 el.style.height = `${newHeight}px`;
                 el.setAttribute('data-width', newWidth);
                 el.setAttribute('data-height', newHeight);
+                
+                // Update controls in real-time
+                if (currentElement === el) {
+                    dataWidth.value = newWidth;
+                    dataHeight.value = newHeight;
+                }
             }
 
             function onMouseUp() {
@@ -483,7 +422,7 @@ function setupElementEvents(el) {
 
             document.addEventListener('mousemove', onMouseMove);
             document.addEventListener('mouseup', onMouseUp);
-        } else { // Left mouse button
+        } else { // Left mouse button for drag
             el.style.cursor = 'grabbing';
             const xOffset = event.clientX - el.offsetLeft;
             const yOffset = event.clientY - el.offsetTop;
@@ -492,7 +431,6 @@ function setupElementEvents(el) {
                 let newX = event.clientX - xOffset;
                 let newY = event.clientY - yOffset;
 
-                // Prevent dragging outside the canvas
                 const canvasRect = canvas.getBoundingClientRect();
                 const elRect = el.getBoundingClientRect();
 
@@ -508,6 +446,12 @@ function setupElementEvents(el) {
                 el.style.top = `${newY}px`;
                 el.setAttribute('data-x', newX);
                 el.setAttribute('data-y', newY);
+                
+                // Update controls in real-time
+                if (currentElement === el) {
+                    datax.value = newX;
+                    datay.value = newY;
+                }
             }
 
             function onMouseUp() {
@@ -522,19 +466,21 @@ function setupElementEvents(el) {
     });
 
     el.addEventListener('contextmenu', event => {
-        event.preventDefault(); // Prevent the context menu from appearing
+        event.preventDefault();
     });
 
     el.addEventListener('dblclick', event => {
-        event.stopPropagation(); // Prevent the click from bubbling up
+        event.stopPropagation();
         const textSpan = el.querySelector('.text-content');
-        if (el.getAttribute('data-type') === 'button' || el.getAttribute('data-type') === 'label' || el.getAttribute('data-type') === 'input') {
+        const type = el.getAttribute('data-type');
+        
+        if (type === 'button' || type === 'label' || type === 'input') {
             const newText = prompt("Enter new text:", textSpan.textContent);
             if (newText !== null) {
-                textSpan.textContent = newText; // Change only the text span content
+                textSpan.textContent = newText;
                 updateVariableText();
             }
-        } else if (el.getAttribute('data-type') === 'image') {
+        } else if (type === 'image' || type === 'button') {
             const fileInput = document.createElement('input');
             fileInput.type = 'file';
             fileInput.accept = 'image/*';
@@ -547,8 +493,14 @@ function setupElementEvents(el) {
                     const reader = new FileReader();
                     reader.onload = function(event) {
                         el.style.backgroundImage = `url(${event.target.result})`;
-                        el.style.backgroundSize = "cover"
+                        el.style.backgroundSize = "cover";
                         el.setAttribute('data-image', file.name);
+                        
+                        // For buttons, center text over image
+                        if (type === 'button' && textSpan) {
+                            textSpan.style.position = 'relative';
+                            textSpan.style.zIndex = '10';
+                        }
                     };
                     reader.readAsDataURL(file);
                 }
@@ -560,34 +512,32 @@ function setupElementEvents(el) {
     });
 
     el.addEventListener('click', () => {
-        // Deselect all other elements
         document.querySelectorAll('.element').forEach(otherEl => {
             otherEl.classList.remove('selected');
         });
-        // Select clicked element
         el.classList.add('selected');
-        hideControls(); // Hide all controls first
+        currentElement = el;
+        hideControls();
 
         // Position controls
         document.getElementById('xLabel').style.display = 'block';
         datax.style.display = 'block';
-        datax.innerText = el.getAttribute('data-x');
+        datax.value = el.getAttribute('data-x');
 
         document.getElementById('yLabel').style.display = 'block';
         datay.style.display = 'block';
-        datay.innerText = el.getAttribute('data-y');
-
-
+        datay.value = el.getAttribute('data-y');
+        
         // Size controls
         document.getElementById('widthLabel').style.display = 'block';
         dataWidth.style.display = 'block';
-        dataWidth.innerText = `${el.offsetWidth}px`;
+        dataWidth.value = el.offsetWidth;
         
         document.getElementById('heightLabel').style.display = 'block';
         dataHeight.style.display = 'block';
-        dataHeight.innerText = `${el.offsetHeight}px`;
+        dataHeight.value = el.offsetHeight;
 
-
+        // Text styling controls
         if (el.getAttribute('data-type') !== 'image' && el.getAttribute('data-type') !== "input") {
             document.querySelector('.control-label[for="colorPicker"]').style.display = 'block';
             colorPicker.value = el.getAttribute('data-color') || '#000000';
@@ -606,22 +556,39 @@ function setupElementEvents(el) {
             };
 
             if (el.getAttribute('data-type') !== 'label') {
-            document.querySelector('.control-label[for="bgColorPicker"]').style.display = 'block';
-            bgColorPicker.value = el.getAttribute('data-bg-color') || '#ffffff';
-            bgColorPicker.style.display = 'block';
-            bgColorPicker.oninput = function() {
-                el.style.backgroundColor = bgColorPicker.value;
-                el.setAttribute('data-bg-color', bgColorPicker.value);
+                document.querySelector('.control-label[for="bgColorPicker"]').style.display = 'block';
+                bgColorPicker.value = el.getAttribute('data-bg-color') || '#ffffff';
+                bgColorPicker.style.display = 'block';
+                bgColorPicker.oninput = function() {
+                    el.style.backgroundColor = bgColorPicker.value;
+                    el.setAttribute('data-bg-color', bgColorPicker.value);
+                };
+            }
+        }
+
+        // Transparency control (for images and buttons)
+        if (el.getAttribute('data-type') === 'image' || el.getAttribute('data-type') === 'button') {
+            document.querySelector('.control-label[for="opacitySlider"]').style.display = 'block';
+            opacitySlider.style.display = 'block';
+            opacityValue.style.display = 'inline-block';
+            const opacity = el.getAttribute('data-opacity') || '100';
+            opacitySlider.value = opacity;
+            opacityValue.textContent = `${opacity}%`;
+            opacitySlider.oninput = function() {
+                const value = opacitySlider.value;
+                el.style.opacity = value / 100;
+                el.setAttribute('data-opacity', value);
+                opacityValue.textContent = `${value}%`;
             };
         }
 
+        // Trigger controls
         if (el.getAttribute('data-type') !== 'label') {
             document.querySelector('.control-label[for="triggerSelector"]').style.display = 'block';
             triggerSelector.value = el.getAttribute('data-trigger') || '';
             triggerSelector.style.display = 'block';
             triggerSelector.onchange = function() {
                 el.setAttribute('data-trigger', triggerSelector.value);
-                // Hide all trigger-related fields initially
                 sceneChangeSelector.style.display = 'none';
                 externalAppPath.style.display = 'none';
                 variableChangeSelector.style.display = 'none';
@@ -679,20 +646,43 @@ function setupElementEvents(el) {
                 externalAppPath.value = el.getAttribute('data-trigger-target') || '';
             }
         }
-        } else {
-            document.querySelector('.control-label[for="colorPicker"]').style.display = 'none';
-            colorPicker.style.display = 'none';
-            document.querySelector('.control-label[for="fontSizePicker"]').style.display = 'none';
-            fontSizePicker.style.display = 'none';
-            document.querySelector('.control-label[for="bgColorPicker"]').style.display = 'none';
-            bgColorPicker.style.display = 'none';
-            document.querySelector('.control-label[for="triggerSelector"]').style.display = 'none';
-            triggerSelector.style.display = 'none';
+    });
+
+    // Position/size input handlers
+    datax.addEventListener('input', () => {
+        if (currentElement === el) {
+            const newX = parseInt(datax.value) || 0;
+            el.style.left = `${newX}px`;
+            el.setAttribute('data-x', newX);
+        }
+    });
+    
+    datay.addEventListener('input', () => {
+        if (currentElement === el) {
+            const newY = parseInt(datay.value) || 0;
+            el.style.top = `${newY}px`;
+            el.setAttribute('data-y', newY);
+        }
+    });
+    
+    dataWidth.addEventListener('input', () => {
+        if (currentElement === el) {
+            const newWidth = parseInt(dataWidth.value) || 100;
+            el.style.width = `${newWidth}px`;
+            el.setAttribute('data-width', newWidth);
+        }
+    });
+    
+    dataHeight.addEventListener('input', () => {
+        if (currentElement === el) {
+            const newHeight = parseInt(dataHeight.value) || 100;
+            el.style.height = `${newHeight}px`;
+            el.setAttribute('data-height', newHeight);
         }
     });
 
     el.addEventListener('contextmenu', event => {
-        event.preventDefault(); // Prevent the context menu from appearing
+        event.preventDefault();
     });
     
     const removeButton = el.querySelector('.remove-button');
@@ -710,8 +700,6 @@ function setupElementEvents(el) {
     }
 }
 
-
-
 function addElement(type, x, y) {
   const el = document.createElement('div');
   el.classList.add('element');
@@ -719,7 +707,6 @@ function addElement(type, x, y) {
   el.style.left = `${x}px`;
   el.style.top = `${y}px`;
 
-  // Setting default width and height
   let defaultWidth = 'auto';
   let defaultHeight = type === 'menu' ? '50px' : 'auto';
   
@@ -728,20 +715,18 @@ function addElement(type, x, y) {
     defaultHeight = '100px';
   } else if (type === 'menu') {
     defaultWidth = '100%';
-    // Position at bottom of canvas
     const canvasRect = canvas.getBoundingClientRect();
     y = canvasRect.height - parseInt(defaultHeight);
     el.style.top = `${y}px`;
     el.style.left = '0px';
   }
 
-  // Set width and height
   el.style.width = defaultWidth;
   el.style.height = defaultHeight;
+  el.setAttribute('data-opacity', '100');
+  el.style.opacity = 1;
 
-  // Add content based on element type
   if (type === 'menu') {
-    // Create menu structure
     el.innerHTML = `
       <div class="menu-scene-buttons"></div>
       <button class="menu-language">EN</button>
@@ -749,14 +734,9 @@ function addElement(type, x, y) {
     `;
     el.style.fontSize = `${smallSizeInput.value}px`;
     el.classList.add('menu');
-    
-    // Initialize the menu
     initializeMenu(el);
-    
-    // Start the clock
     updateMenuClock(el.querySelector('.menu-clock'));
   } else {
-    // For non-menu elements, add the text content and remove button as before
     const textSpan = document.createElement('span');
     textSpan.classList.add('text-content');
     textSpan.textContent = type.charAt(0).toUpperCase() + type.slice(1);
@@ -771,38 +751,35 @@ function addElement(type, x, y) {
   el.setAttribute('data-type', type);
   el.setAttribute('data-x', x | 0);
   el.setAttribute('data-y', y | 0);
+  el.setAttribute('data-width', defaultWidth.replace('px', '') || '100');
+  el.setAttribute('data-height', defaultHeight.replace('px', '') || '100');
   
   if (type !== 'menu') {
-    el.setAttribute('data-color', '#000000'); // Default text color
-    el.setAttribute('data-bg-color', type === 'button' ? '#ffffff' : ''); // Default background color for buttons
-    el.setAttribute('data-font', 'medium'); // Default font size
-    
-    if (type === 'image') {
-      el.setAttribute('data-width', defaultWidth);
-      el.setAttribute('data-height', defaultHeight);
-    }
-    
-    el.style.fontSize = '24px'; // Setting a default font size for buttons and labels
-    el.style.padding = '5px'; // Adjusting padding to make elements fit the text size
+    el.setAttribute('data-color', '#000000');
+    el.setAttribute('data-bg-color', type === 'button' ? '#ffffff' : '');
+    el.setAttribute('data-font', 'medium');
+    el.style.fontSize = '24px';
+    el.style.padding = '5px';
     
     if (type === 'label') {
-      el.style.background = 'none'; // No background for labels
+      el.style.background = 'none';
+    }
+    
+    if (type === 'image' || type === 'button') {
+        el.setAttribute('data-image', '');
     }
   } else {
     el.setAttribute('data-height', defaultHeight.replace('px', ''));
   }
 
-  // Attach event listeners
   if (type === 'menu') {
     setupMenuEvents(el);
   } else {
     setupElementEvents(el);
   }
 
-  // Append element to canvas
   canvas.appendChild(el);
 
-  // Save to the current scene
   if (!scenes[currentScene]) {
     scenes[currentScene] = [];
   }
@@ -811,15 +788,10 @@ function addElement(type, x, y) {
   return el;
 }
 
-
-
-
-
 function initializeMenu(menuEl) {
   updateMenuSceneButtons(menuEl);
 }
 
-// Update the scene buttons in the menu
 function updateMenuSceneButtons(menuEl) {
   const sceneButtonsContainer = menuEl.querySelector('.menu-scene-buttons');
   sceneButtonsContainer.innerHTML = '';
@@ -835,7 +807,6 @@ function updateMenuSceneButtons(menuEl) {
       sceneSelector.value = sceneName;
       changeScene();
       
-      // Update active button
       menuEl.querySelectorAll('.menu-scene-button').forEach(btn => {
         btn.classList.remove('active');
       });
@@ -845,7 +816,6 @@ function updateMenuSceneButtons(menuEl) {
   });
 }
 
-// Update the clock in the menu
 function updateMenuClock(clockEl) {
   const updateTime = () => {
     const now = new Date();
@@ -856,14 +826,10 @@ function updateMenuClock(clockEl) {
   };
   
   updateTime();
-  setInterval(updateTime, 6000); // Update every minute
+  setInterval(updateTime, 60000);
 }
 
-
-// Set up event listeners for the menu
 function setupMenuEvents(menuEl) {
-
-  // Add the remove button
   const removeButton = document.createElement('span');
   removeButton.textContent = '✕';
   removeButton.classList.add('remove-button');
@@ -881,9 +847,6 @@ function setupMenuEvents(menuEl) {
   });
 }
 
-
-
-
 function getFontSize(fontSize) {
     const sizes = {
         title: titleSizeInput.value,
@@ -891,7 +854,7 @@ function getFontSize(fontSize) {
         medium: mediumSizeInput.value,
         small: smallSizeInput.value
     };
-    return sizes[fontSize] || 24; // Default to medium size if undefined
+    return sizes[fontSize] || 24;
 }
 
 function setBackground() {
@@ -901,7 +864,7 @@ function setBackground() {
         reader.onload = function(event) {
             canvas.style.backgroundImage = `url(${event.target.result})`;
             canvas.style.backgroundSize = canvas.style.width + ' ' + canvas.style.height;
-            backgroundPath = event.target.result; // Store data URL instead of filename
+            backgroundPath = event.target.result;
         };
         reader.readAsDataURL(file);
     }
@@ -909,8 +872,7 @@ function setBackground() {
 
 function createJukaApp() {
     updateScenes();
-const elements = Array.from(canvas.getElementsByClassName('element'));
-  const config = {
+    const config = {
     title: document.getElementById('title').value,
     author: document.getElementById('author').value,
     description: document.getElementById('description').value,
@@ -948,7 +910,7 @@ const elements = Array.from(canvas.getElementsByClassName('element'));
             height: parseInt(el.getAttribute('data-height'), 10) || 50
           };
         } else {
-          return {
+          const elementConfig = {
             ...baseElement,
             text: el.querySelector('.text-content')?.textContent || '',
             color: el.getAttribute('data-color'),
@@ -961,6 +923,13 @@ const elements = Array.from(canvas.getElementsByClassName('element'));
             width: el.getAttribute('data-width'),
             height: el.getAttribute('data-height')
           };
+          
+          // Add opacity for images and buttons
+          if (elementType === 'image' || elementType === 'button') {
+            elementConfig.opacity = parseInt(el.getAttribute('data-opacity'), 10) / 100;
+          }
+          
+          return elementConfig;
         }
       })
     }))
@@ -975,26 +944,22 @@ const elements = Array.from(canvas.getElementsByClassName('element'));
   downloadAnchorNode.remove();
 };
 
-
 canvas.addEventListener('click', (event) => {
     if (event.target === canvas) {
         hideControls();
+        currentElement = null;
     }
 });
 
 function hideControls() {
-    // Position controls
     document.getElementById('xLabel').style.display = 'none';
     datax.style.display = 'none';
     document.getElementById('yLabel').style.display = 'none';
     datay.style.display = 'none';
-    
-    // Size controls
     document.getElementById('widthLabel').style.display = 'none';
     dataWidth.style.display = 'none';
     document.getElementById('heightLabel').style.display = 'none';
     dataHeight.style.display = 'none';
-    
     document.querySelector('.control-label[for="colorPicker"]').style.display = 'none';
     colorPicker.style.display = 'none';
     document.querySelector('.control-label[for="bgColorPicker"]').style.display = 'none';
@@ -1007,10 +972,10 @@ function hideControls() {
     externalAppPath.style.display = 'none';
     variableChangeSelector.style.display = 'none';
     variableChangeValue.style.display = 'none';
+    document.querySelector('.control-label[for="opacitySlider"]').style.display = 'none';
+    opacitySlider.style.display = 'none';
+    opacityValue.style.display = 'none';
 }
-
-
-
 
 document.getElementById('loadFile').addEventListener('change', function(event) {
     const file = event.target.files[0];
@@ -1028,12 +993,10 @@ function loadJukaApp(data) {
     variableSelector.innerHTML = '';
     variableChangeSelector.innerHTML = '';
 
-    // Update title, author, description
     document.getElementById('title').value = data.title || '';
     document.getElementById('author').value = data.author || '';
     document.getElementById('description').value = data.description || '';
 
-    // Update font sizes
     if (data.variables && data.variables.fontSizes) {
         document.getElementById('titleSize').value = data.variables.fontSizes.title || 48;
         document.getElementById('bigSize').value = data.variables.fontSizes.big || 36;
@@ -1047,23 +1010,17 @@ function loadJukaApp(data) {
         backgroundPath = data.variables.backgroundImage;
     }
 
-    // Clear the scenes object
     scenes = {};
-
-    // Clear the canvas and scene selector
     canvas.innerHTML = '';
     const sceneSelector = document.getElementById('sceneSelector');
     sceneSelector.innerHTML = '';
 
-    // Load variables if they exist
     variables = {};
     if (data.variables) {
-        // Extract any custom variables (excluding predefined ones)
         Object.keys(data.variables).forEach(key => {
             if (!['buttonColor', 'labelColor', 'backgroundImage', 'fonts', 'fontSizes'].includes(key)) {
                 variables[key] = data.variables[key];
                 
-                // Add to variable selectors
                 const option = document.createElement('option');
                 option.value = key;
                 option.textContent = key;
@@ -1075,7 +1032,6 @@ function loadJukaApp(data) {
                 variableChangeSelector.appendChild(variableOption);
             }
         });
-        // Show controls if variables exist
         if (Object.keys(variables).length > 0) {
             showVariableControls();
             variableSelector.value = Object.keys(variables)[0];
@@ -1083,151 +1039,128 @@ function loadJukaApp(data) {
         }
     }
 
-    // Load scenes and elements
     data.scenes.forEach(scene => {
-        // Create a new scene entry
         scenes[scene.name] = [];
         
-        // Process each element in the scene
-scene.elements.forEach(element => {
-    let el;
-    
-    // Handle menu elements differently
-    if (element.type === 'menu') {
-        el = document.createElement('div');
-        el.classList.add('element', 'menu');
-        el.style.position = 'absolute';
-        el.style.left = '0px';  // Force to 0px horizontal position
-        el.style.top = `${element.y}px`;
-        el.style.width = '100%';
-        el.style.height = `${element.height || 50}px`;
+        scene.elements.forEach(element => {
+            let el;
+            
+            if (element.type === 'menu') {
+                el = document.createElement('div');
+                el.classList.add('element', 'menu');
+                el.style.position = 'absolute';
+                el.style.left = '0px';
+                el.style.top = `${element.y}px`;
+                el.style.width = '100%';
+                el.style.height = `${element.height || 50}px`;
+                
+                el.innerHTML = `
+          <div class="menu-scene-buttons"></div>
+          <button class="menu-language">EN</button>
+          <div class="menu-clock">00:00</div>
+                `;
+                el.style.fontSize = `${smallSizeInput.value}px`;
+                
+                el.setAttribute('data-height', element.height || 50);
+                el.setAttribute('data-type', element.type);
+                el.setAttribute('data-x', 0);
+                el.setAttribute('data-y', element.y);
+                
+                setupMenuEvents(el);
+                initializeMenu(el);
+                updateMenuClock(el.querySelector('.menu-clock'));
+            } else {
+                el = document.createElement('div');
+                el.classList.add('element');
+                el.style.position = 'absolute';
+                el.style.left = `${element.x}px`;
+                el.style.top = `${element.y}px`;
+                
+                const textSpan = document.createElement('span');
+                textSpan.classList.add('text-content');
+                textSpan.textContent = element.text || element.type.charAt(0).toUpperCase() + element.type.slice(1);
+                el.appendChild(textSpan);
+                
+                const removeButton = document.createElement('span');
+                removeButton.textContent = '✕';
+                removeButton.classList.add('remove-button');
+                el.appendChild(removeButton);
+                
+                el.setAttribute('data-type', element.type);
+                el.setAttribute('data-x', element.x);
+                el.setAttribute('data-y', element.y);
+                el.setAttribute('data-opacity', '100');
+                el.style.opacity = 1;
+                
+                if (element.type === 'button' || element.type === 'label') {
+                    el.setAttribute('data-color', element.color || '#000000');
+                    el.style.color = element.color || '#000000';
+                    el.setAttribute('data-font', element.font || 'medium');
+                    el.style.fontSize = `${getFontSize(element.font || 'medium')}px`;
         
-        // Create menu structure
-        el.innerHTML = `
-      <div class="menu-scene-buttons"></div>
-      <button class="menu-language">EN</button>
-      <div class="menu-clock">00:00</div>
-        `;
-        el.style.fontSize = `${smallSizeInput.value}px`;
-        
-        // Set attribute for height
-        el.setAttribute('data-height', element.height || 50);
-        el.setAttribute('data-type', element.type);
-        el.setAttribute('data-x', 0);  // Set to 0 regardless of saved value
-        el.setAttribute('data-y', element.y);
-        
-        // Initialize the menu
-        setupMenuEvents(el);
-        initializeMenu(el);
-        
-        // Start the clock
-        updateMenuClock(el.querySelector('.menu-clock'));
-    } else {
-        // Create a regular element (button, label, image)
-        el = document.createElement('div');
-        el.classList.add('element');
-        el.style.position = 'absolute';
-        el.style.left = `${element.x}px`;
-        el.style.top = `${element.y}px`;
-        
-        // Add the text content span
-        const textSpan = document.createElement('span');
-        textSpan.classList.add('text-content');
-        textSpan.textContent = element.text || element.type.charAt(0).toUpperCase() + element.type.slice(1);
-        el.appendChild(textSpan);
-        
-        // Add the remove button
-        const removeButton = document.createElement('span');
-        removeButton.textContent = '✕';
-        removeButton.classList.add('remove-button');
-        el.appendChild(removeButton);
-        
-        // Set attributes
-        el.setAttribute('data-type', element.type);
-        el.setAttribute('data-x', element.x);
-        el.setAttribute('data-y', element.y);
-        
-        // Apply specific styling based on element type
-        if (element.type === 'button' || element.type === 'label') {
-            el.setAttribute('data-color', element.color || '#000000');
-            el.style.color = element.color || '#000000';
-            el.setAttribute('data-font', element.font || 'medium');
-            el.style.fontSize = `${getFontSize(element.font || 'medium')}px`;
-    
-            if (element.type === 'button') {
-                el.setAttribute('data-bg-color', element.bgColor || '#ffffff');
-                el.style.backgroundColor = element.bgColor || '#ffffff';
-                el.setAttribute('data-trigger', element.trigger || '');
-                el.setAttribute('data-trigger-target', element.triggerTarget || '');
-                el.setAttribute('data-trigger-value', element.triggerValue || '');
-            } else if (element.type === 'label') {
-                // Ensure labels have transparent background
-                el.style.background = 'none';
-            }
-        } else if (element.type === 'image') {
-            if (element.image) {
-                el.style.backgroundImage = `url(${element.image})`;
-                el.style.backgroundSize = 'contain';
-                el.setAttribute('data-image', element.image);
+                    if (element.type === 'button') {
+                        el.setAttribute('data-bg-color', element.bgColor || '#ffffff');
+                        el.style.backgroundColor = element.bgColor || '#ffffff';
+                        el.setAttribute('data-trigger', element.trigger || '');
+                        el.setAttribute('data-trigger-target', element.triggerTarget || '');
+                        el.setAttribute('data-trigger-value', element.triggerValue || '');
+                    } else if (element.type === 'label') {
+                        el.style.background = 'none';
+                    }
+                } else if (element.type === 'image') {
+                    if (element.image) {
+                        el.style.backgroundImage = `url(${element.image})`;
+                        el.style.backgroundSize = 'contain';
+                        el.setAttribute('data-image', element.image);
+                    }
+                    
+                    el.style.width = `${element.width || 100}px`;
+                    el.style.height = `${element.height || 100}px`;
+                    el.setAttribute('data-width', element.width || 100);
+                    el.setAttribute('data-height', element.height || 100);
+                }
+                
+                // Set opacity if exists
+                if (element.opacity !== undefined) {
+                    el.style.opacity = element.opacity;
+                    el.setAttribute('data-opacity', element.opacity * 100);
+                }
+                
+                setupElementEvents(el);
             }
             
-            el.style.width = `${element.width || 100}px`;
-            el.style.height = `${element.height || 100}px`;
-            el.setAttribute('data-width', element.width || 100);
-            el.setAttribute('data-height', element.height || 100);
-        }
-        
-        // Set up the event listeners
-        setupElementEvents(el);
-    }
-    
-    // Add the element to the canvas
-    canvas.appendChild(el);
-    
-    // Add to the scene array (store the cloned DOM element)
-    scenes[scene.name].push(el.cloneNode(true));
-});
+            canvas.appendChild(el);
+            scenes[scene.name].push(el.cloneNode(true));
+        });
 
-        // Add scene to the scene selector
         const option = document.createElement('option');
         option.value = scene.name;
         option.textContent = scene.name;
         sceneSelector.appendChild(option);
     });
 
-    // Set the background if available
     if (data.scenes.length > 0) {
-        const firstScene = data.scenes[0];
-        if (firstScene.background) {
-            canvas.style.backgroundImage = `url(${firstScene.background})`;
+        if (data.scenes[0].background) {
+            canvas.style.backgroundImage = `url(${data.scenes[0].background})`;
             canvas.style.backgroundSize = canvas.style.width + ' ' + canvas.style.height;
-            backgroundPath = firstScene.background;
+            backgroundPath = data.scenes[0].background;
         }
     }
 
-    // Show the first scene by default
     if (data.scenes.length > 0) {
         currentScene = data.scenes[0].name;
         sceneSelector.value = currentScene;
     }
 
     loadScene(currentScene);
-
-    // Update scene change selector with all available scenes
     updateSceneChangeSelector();
-    
-    // Apply font sizes to all elements
     updateElementFontSizes();
-    
-    // Update any variable references in text
     updateVariableText();
   document.querySelectorAll('.menu').forEach(menuEl => {
     initializeMenu(menuEl);
   });
 }
 
-
-// Automatically load jukaconfig.json
 window.addEventListener('load', () => {
     fetch('player/jukaconfig.json')
         .then(response => response.json())
@@ -1238,7 +1171,6 @@ window.addEventListener('load', () => {
     customHeightInput.addEventListener('change', updateCanvasSize);
 });
 
-// Add a button to clear everything and start new
 document.getElementById('clearButton').addEventListener('click', () => {
     if (confirm('Are you sure you want to clear everything and start new?')) {
         scenes = { 'Scene 1': [] };
@@ -1260,7 +1192,6 @@ document.getElementById('clearButton').addEventListener('click', () => {
         document.getElementById('bigSize').value = 36;
         document.getElementById('mediumSize').value = 24;
         document.getElementById('smallSize').value = 18;
-        // Add menu to new scene
         const canvasHeight = canvas.offsetHeight;
         addElement('menu', 0, canvasHeight - 50);
         
@@ -1270,10 +1201,7 @@ document.getElementById('clearButton').addEventListener('click', () => {
     }
 });
 
-
-// Add a dialogue when closing the tab
 window.addEventListener('beforeunload', (event) => {
     event.preventDefault();
     event.returnValue = 'Are you sure you want to leave? Changes you made may not be saved.';
 });
-

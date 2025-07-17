@@ -208,6 +208,13 @@ footer {
   background-color: #333447;
   min-width:150px;
   color:rgb(255, 255, 255);
+  background-size: contain;
+  background-position: center;
+}
+
+.element[data-type="button"] {
+  background-size: cover;
+  background-position: center;
 }
 
 .remove-button {
@@ -304,6 +311,18 @@ input[type="color"] {
   height: 40px;
   border: none;
   cursor: pointer;
+}
+
+input[type="number"] {
+  width: 70px;
+  padding: 5px;
+}
+
+/* Coordinate inputs */
+.coordinate-input {
+  width: 70px;
+  padding: 5px;
+  margin-right: 10px;
 }
 
 /* === Steps Box === */
@@ -518,22 +537,6 @@ input[type="color"] {
 }
 
 /* === New Features === */
-/* Size display styling */
-.size-display {
-  display: inline-block;
-  padding: 2px 8px;
-  background: rgba(0,0,0,0.7);
-  color: white;
-  border-radius: 4px;
-  min-width: 60px;
-  text-align: center;
-  margin-left: 5px;
-}
-
-body.dark-mode .size-display {
-  background: rgba(255,255,255,0.2);
-}
-
 /* Opacity slider styling */
 .opacity-slider {
   vertical-align: middle;
@@ -545,14 +548,8 @@ body.dark-mode .size-display {
 .control-label {
   font-weight: bold;
   margin-right: 5px;
-}
-
-/* Image transparency support */
-.element[data-type="image"],
-.element[data-type="button"] {
-  background-size: contain;
-  background-position: center;
-  background-repeat: no-repeat;
+  display: inline-block;
+  min-width: 60px;
 }
 
 /* Dark mode adjustments for text */
@@ -562,4 +559,10 @@ body.dark-mode h2,
 body.dark-mode h3,
 body.dark-mode label {
   color: var(--dark-text);
+}
+
+/* For image buttons */
+.element[data-type="button"] .text-content {
+  position: relative;
+  z-index: 2;
 }
