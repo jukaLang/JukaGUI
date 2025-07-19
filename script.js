@@ -1,815 +1,683 @@
+// DOM Elements
 const canvas = document.getElementById('canvas');
-const output = document.getElementById('output');
-const datax = document.getElementById('datax');
-const datay = document.getElementById('datay');
-const dataWidth = document.getElementById('dataWidth');
-const dataHeight = document.getElementById('dataHeight');
-const colorPicker = document.getElementById('colorPicker');
-const bgColorPicker = document.getElementById('bgColorPicker');
-const fontSizePicker = document.getElementById('fontSizePicker');
-const triggerSelector = document.getElementById('triggerSelector');
-const sceneChangeSelector = document.getElementById('sceneChangeSelector');
-const externalAppPath = document.getElementById('externalAppPath');
-const variableChangeSelector = document.getElementById('variableChangeSelector');
-const variableChangeValue = document.getElementById('variableChangeValue');
-const backgroundFileInput = document.getElementById('backgroundFile');
-const canvasSizeSelect = document.getElementById('canvasSize');
+const darkModeToggle = document.getElementById('darkModeToggle');
 const sceneSelector = document.getElementById('sceneSelector');
+const toggleGuide = document.getElementById('toggleGuide');
+const closeGuide = document.getElementById('closeGuide');
+const guidePanel = document.getElementById('guidePanel');
+const toggleAppInfo = document.getElementById('toggleAppInfo');
+const appInfoPanel = document.getElementById('appInfoPanel');
+const noSelection = document.getElementById('noSelection');
+const elementProperties = document.getElementById('elementProperties');
+const canvasSizeSelect = document.getElementById('canvasSize');
+const customWidthInput = document.getElementById('customWidth');
+const customHeightInput = document.getElementById('customHeight');
+const backgroundFileInput = document.getElementById('backgroundFile');
+const toggleProperties = document.getElementById('toggleProperties');
+const propertiesContent = document.getElementById('propertiesContent');
 const titleSizeInput = document.getElementById('titleSize');
 const bigSizeInput = document.getElementById('bigSize');
 const mediumSizeInput = document.getElementById('mediumSize');
 const smallSizeInput = document.getElementById('smallSize');
-const variableSelector = document.getElementById('variableSelector');
-const customWidthInput = document.getElementById('customWidth');
-const customHeightInput = document.getElementById('customHeight');
-const opacitySlider = document.getElementById('opacitySlider');
-const opacityValue = document.getElementById('opacityValue');
-const darkModeToggle = document.getElementById('darkModeToggle');
+const addVariableButton = document.getElementById('addVariableButton');
+const variablesList = document.getElementById('variablesList');
+const loadFileInput = document.getElementById('loadFile');
+const clearButton = document.getElementById('clearButton');
+
+// Global State
 let backgroundPath = '';
 let scenes = { 'Scene 1': [] };
 let currentScene = 'Scene 1';
 let variables = {};
 let currentElement = null;
+let canvasWidth = 1280;
+let canvasHeight = 720;
 
-function toggleCustomFields() {
-    const select = document.getElementById('canvasSize');
-    const customFields = document.getElementById('customSizeFields');
-    
-    if (select.value === 'custom') {
-        customFields.style.display = 'inline-block';
-    } else {
-        customFields.style.display = 'none';
+// Initialize the editor
+document.addEventListener('DOMContentLoaded', () => {
+  // Set initial canvas size
+  updateCanvasSize();
+  
+  // Add initial scene
+  const option = document.createElement('option');
+  option.value = 'Scene 1';
+  option.textContent = 'Scene 1';
+  sceneSelector.appendChild(option);
+  
+  // Add initial menu
+  addElement('menu', 0, canvasHeight - 50);
+  
+  // Set up event listeners
+  setupEventListeners();
+  
+  // Try to load initial config
+  loadInitialConfig();
+  
+  // Initialize properties panel as expanded
+  propertiesContent.classList.remove('collapsed');
+  
+  // Update scene change selector
+  updateSceneChangeSelector();
+  
+  // Update variable change selector
+  updateVariableChangeSelector();
+});
+
+// Set up all event listeners
+function setupEventListeners() {
+  // Dark mode toggle
+  darkModeToggle.addEventListener('click', () => {
+    document.body.classList.toggle('dark-mode');
+    darkModeToggle.innerHTML = document.body.classList.contains('dark-mode') ? 
+      '<i class="fas fa-sun"></i> Light Mode' : 
+      '<i class="fas fa-moon"></i> Dark Mode';
+  });
+  
+  // Guide panel toggle
+  toggleGuide.addEventListener('click', () => {
+    guidePanel.style.display = guidePanel.style.display === 'none' ? 'block' : 'block';
+  });
+  
+  closeGuide.addEventListener('click', () => {
+    guidePanel.style.display = 'none';
+  });
+  
+  // App info toggle
+  toggleAppInfo.addEventListener('click', () => {
+    appInfoPanel.style.display = appInfoPanel.style.display === 'none' ? 'block' : 'none';
+  });
+
+  const closeAppInfo = document.getElementById('closeAppInfo');
+if (closeAppInfo) {
+  closeAppInfo.addEventListener('click', () => {
+    appInfoPanel.style.display = 'none';
+  });
+}
+  
+  // Canvas drop zone
+  canvas.addEventListener('dragover', e => e.preventDefault());
+  
+  canvas.addEventListener('drop', e => {
+    e.preventDefault();
+    const type = e.dataTransfer.getData('type');
+    const rect = canvas.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    addElement(type, x, y);
+  });
+  
+  // Canvas click to deselect
+  canvas.addEventListener('click', e => {
+    if (e.target === canvas) {
+      currentElement = null;
+      document.querySelectorAll('.element').forEach(el => el.classList.remove('selected'));
+      noSelection.style.display = 'block';
+      elementProperties.classList.remove('visible');
     }
+  });
+  
+  // Initialize drag events for elements
+  document.querySelectorAll('.left-sidebar .element').forEach(el => {
+    el.addEventListener('dragstart', e => {
+      e.dataTransfer.setData('type', e.target.getAttribute('data-type'));
+    });
+  });
+  
+  // Canvas size controls
+  canvasSizeSelect.addEventListener('change', updateCanvasSize);
+  customWidthInput.addEventListener('change', updateCanvasSize);
+  customHeightInput.addEventListener('change', updateCanvasSize);
+  
+  // Background image
+  backgroundFileInput.addEventListener('change', setBackground);
+  
+  // Properties panel toggle
+  toggleProperties.addEventListener('click', () => {
+    propertiesContent.classList.toggle('collapsed');
+    const icon = toggleProperties.querySelector('i');
+    icon.className = propertiesContent.classList.contains('collapsed') ? 
+      'fas fa-chevron-up' : 'fas fa-chevron-down';
+  });
+  
+  // Add variable button
+  addVariableButton.addEventListener('click', addVariable);
+  
+  // Load file
+  loadFileInput.addEventListener('change', function(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    
+    const reader = new FileReader();
+    reader.onload = e => {
+      try {
+        const config = JSON.parse(e.target.result);
+        loadJukaApp(config);
+      } catch (error) {
+        alert('Error loading config: ' + error.message);
+      }
+    };
+    reader.readAsText(file);
+  });
+  
+  // Clear button
+  clearButton.addEventListener('click', clearAll);
 }
 
+// Update canvas size based on selection
 function updateCanvasSize() {
-    const canvasSize = canvasSizeSelect.value;
-    
-    if (canvasSize === 'custom') {
-        const width = parseInt(customWidthInput.value) || 1280;
-        const height = parseInt(customHeightInput.value) || 720;
-        canvas.style.width = `${width}px`;
-        canvas.style.height = `${height}px`;
-    } else {
-        const [width, height] = canvasSize.split('x').map(Number);
-        canvas.style.width = `${width}px`;
-        canvas.style.height = `${height}px`;
-    }
-    toggleCustomFields();
+  if (canvasSizeSelect.value === 'custom') {
+    canvasWidth = parseInt(customWidthInput.value) || 1280;
+    canvasHeight = parseInt(customHeightInput.value) || 720;
+    document.getElementById('customSizeFields').style.display = 'grid';
+  } else {
+    const [width, height] = canvasSizeSelect.value.split('x').map(Number);
+    canvasWidth = width;
+    canvasHeight = height;
+    document.getElementById('customSizeFields').style.display = 'none';
+  }
+  
+  // Apply new size
+  canvas.style.width = `${canvasWidth}px`;
+  canvas.style.height = `${canvasHeight}px`;
+  
+  // Update menu position
+  document.querySelectorAll('.element[data-type="menu"]').forEach(menu => {
+    menu.style.top = `${canvasHeight - 50}px`;
+  });
 }
 
-function updateScenes() {
-    if (!scenes[currentScene]) {
-        scenes[currentScene] = [];
-    }
-    scenes[currentScene] = Array.from(canvas.children).map(el => el.cloneNode(true));
-}
-
-function changeScene() {
-    updateScenes();
-    currentScene = sceneSelector.value;
-    loadScene(currentScene);
-    updateElementFontSizes();
-    updateVariableText();
-    document.querySelectorAll('.menu').forEach(menuEl => {
-        updateMenuSceneButtons(menuEl);
-    });
-}
-
-function loadScene(sceneName) {
-    canvas.innerHTML = '';
-    if (scenes[sceneName]) {
-        scenes[sceneName].forEach(el => {
-            const clonedEl = el.cloneNode(true);
-            setupElementEvents(clonedEl);
-            canvas.appendChild(clonedEl);
-        });
-    }
-}
-
+// Scene Management
 function addScene() {
-    const newSceneName = 'Scene ' + (Object.keys(scenes).length + 1);
-    scenes[newSceneName] = [];
-    const option = document.createElement('option');
-    option.value = newSceneName;
-    option.textContent = newSceneName;
-    sceneSelector.appendChild(option);
-    sceneSelector.value = newSceneName;
-    updateSceneChangeSelector();
-    changeScene();
-    
-    const canvasHeight = canvas.offsetHeight;
-    addElement('menu', 0, canvasHeight - 50);
-    
-    document.querySelectorAll('.menu').forEach(menuEl => {
-        updateMenuSceneButtons(menuEl);
-    });
+  saveCurrentScene();
+  const newSceneName = `Scene ${Object.keys(scenes).length + 1}`;
+  scenes[newSceneName] = [];
+  
+  const option = document.createElement('option');
+  option.value = newSceneName;
+  option.textContent = newSceneName;
+  sceneSelector.appendChild(option);
+  sceneSelector.value = newSceneName;
+  
+  currentScene = newSceneName;
+  loadScene(currentScene);
+  
+  // Add menu to new scene
+  addElement('menu', 0, canvasHeight - 50);
+  
+  // Update scene change selector
+  updateSceneChangeSelector();
 }
 
 function renameScene() {
-    const newName = prompt('Enter new scene name:', currentScene);
-    if (newName && !scenes[newName]) {
-        scenes[newName] = scenes[currentScene];
-        delete scenes[currentScene];
-        currentScene = newName;
+  const newName = prompt('Enter new scene name:', currentScene);
+  if (!newName || scenes[newName]) return;
+  
+  scenes[newName] = scenes[currentScene];
+  delete scenes[currentScene];
+  currentScene = newName;
 
-        const selectedOption = sceneSelector.querySelector(`option[value="${sceneSelector.value}"]`);
-        if (selectedOption) {
-            selectedOption.value = newName;
-            selectedOption.textContent = newName;
-        }
-
-        sceneSelector.querySelector(`option[value="${sceneSelector.value}"]`).value = newName;
-        sceneSelector.querySelector(`option[value="${sceneSelector.value}"]`).textContent = newName;
-
-        sceneSelector.value = newName;
-        updateSceneChangeSelector();
-        loadScene(newName);
-    }
+  const option = sceneSelector.querySelector(`option[value="${sceneSelector.value}"]`);
+  if (option) {
+    option.value = newName;
+    option.textContent = newName;
+    sceneSelector.value = newName;
+  }
+  
+  // Update scene change selector
+  updateSceneChangeSelector();
 }
 
 function deleteScene() {
-    if (Object.keys(scenes).length <= 1) {
-        alert('Cannot delete the only scene. You must have at least one scene.');
-        return;
-    }
+  saveCurrentScene();
+  if (Object.keys(scenes).length <= 1) {
+    alert('Cannot delete the only scene.');
+    return;
+  }
 
-    if (confirm(`Are you sure you want to delete scene "${currentScene}"?`)) {
-        const sceneNames = Object.keys(scenes);
-        const currentIndex = sceneNames.indexOf(currentScene);
-        
-        delete scenes[currentScene];
-        
-        const optionToRemove = sceneSelector.querySelector(`option[value="${currentScene}"]`);
-        if (optionToRemove) {
-            sceneSelector.removeChild(optionToRemove);
-        }
-        
-        let nextSceneIndex = currentIndex > 0 ? currentIndex - 1 : 0;
-        if (nextSceneIndex >= sceneNames.length - 1) {
-            nextSceneIndex = sceneNames.length - 2;
-        }
-        
-        const nextScene = sceneNames[nextSceneIndex] === currentScene ? 
-            sceneNames[(nextSceneIndex + 1) % (sceneNames.length - 1)] : 
-            sceneNames[nextSceneIndex];
-            
-        currentScene = nextScene;
-        sceneSelector.value = currentScene;
-        
-        updateSceneChangeSelector();
-        loadScene(currentScene);
-        
-        document.querySelectorAll('.menu').forEach(menuEl => {
-            updateMenuSceneButtons(menuEl);
-        });
-    }
+  if (!confirm(`Delete scene "${currentScene}"?`)) return;
+  
+  const sceneNames = Object.keys(scenes);
+  const currentIndex = sceneNames.indexOf(currentScene);
+  delete scenes[currentScene];
+  
+  const optionToRemove = sceneSelector.querySelector(`option[value="${currentScene}"]`);
+  if (optionToRemove) sceneSelector.removeChild(optionToRemove);
+  
+  const nextScene = currentIndex > 0 ? sceneNames[currentIndex - 1] : sceneNames[1];
+  currentScene = nextScene;
+  sceneSelector.value = currentScene;
+  
+  loadScene(currentScene);
+  
+  // Update scene change selector
+  updateSceneChangeSelector();
 }
 
 function duplicateScene() {
-    const newSceneName = prompt('Enter name for the duplicated scene:', `${currentScene} Copy`);
-    
-    if (newSceneName && !scenes[newSceneName]) {
-        scenes[newSceneName] = scenes[currentScene].map(el => el.cloneNode(true));
-        
-        const option = document.createElement('option');
-        option.value = newSceneName;
-        option.textContent = newSceneName;
-        sceneSelector.appendChild(option);
-        
-        sceneSelector.value = newSceneName;
-        currentScene = newSceneName;
-        
-        updateSceneChangeSelector();
-        loadScene(newSceneName);
-        
-        document.querySelectorAll('.menu').forEach(menuEl => {
-            updateMenuSceneButtons(menuEl);
-        });
-    } else if (scenes[newSceneName]) {
-        alert('A scene with that name already exists. Please choose a different name.');
-    }
+  saveCurrentScene();
+  const newSceneName = prompt('Name for duplicated scene:', `${currentScene} Copy`);
+  if (!newSceneName || scenes[newSceneName]) return;
+  
+  scenes[newSceneName] = scenes[currentScene].map(el => el.cloneNode(true));
+  
+  const option = document.createElement('option');
+  option.value = newSceneName;
+  option.textContent = newSceneName;
+  sceneSelector.appendChild(option);
+  sceneSelector.value = newSceneName;
+  currentScene = newSceneName;
+  
+  loadScene(newSceneName);
+  
+  // Update scene change selector
+  updateSceneChangeSelector();
 }
 
-function updateSceneChangeSelector() {
-    sceneChangeSelector.innerHTML = '';
-    Object.keys(scenes).forEach(sceneName => {
-        const option = document.createElement('option');
-        option.value = sceneName;
-        option.textContent = sceneName;
-        sceneChangeSelector.appendChild(option);
-    });
+function changeScene() {
+  currentScene = sceneSelector.value;
+  loadScene(currentScene);
 }
 
-document.addEventListener('DOMContentLoaded', () => {
-    setupToolbar();
-    setupFontSizeControls();
-    backgroundFileInput.addEventListener('change', setBackground);
-    canvasSizeSelect.addEventListener('change', updateCanvasSize);
-    setupVariableControls();
-    updateSceneChangeSelector();
-    updateCanvasSize();
-    
-    // Dark mode toggle
-    darkModeToggle.addEventListener('click', () => {
-        document.body.classList.toggle('dark-mode');
-        if (document.body.classList.contains('dark-mode')) {
-            darkModeToggle.textContent = '☀️ Light Mode';
-        } else {
-            darkModeToggle.textContent = '🌙 Dark Mode';
-        }
+function loadScene(sceneName) {
+  canvas.innerHTML = '';
+  if (scenes[sceneName]) {
+    scenes[sceneName].forEach(el => {
+      const clonedEl = el.cloneNode(true);
+      setupElementEvents(clonedEl);
+      canvas.appendChild(clonedEl);
     });
-
-    // Add "Scene 1" to the scene selector
-    const option = document.createElement('option');
-    option.value = 'Scene 1';
-    option.textContent = 'Scene 1';
-    sceneSelector.appendChild(option);
-    sceneSelector.value = 'Scene 1';
-
-    // Add menu to initial scene
-    setTimeout(() => {
-        const canvasHeight = canvas.offsetHeight;
-        addElement('menu', 0, canvasHeight - 50);
-    }, 0);
-});
-
-function setupToolbar() {
-    document.querySelectorAll('.toolbar .element').forEach(el => {
-        el.addEventListener('dragstart', event => {
-            event.dataTransfer.setData('type', event.target.getAttribute('data-type'));
-        });
-    });
+  }
+  
+  // Update menu buttons
+  document.querySelectorAll('.menu').forEach(menu => {
+    updateMenuSceneButtons(menu);
+  });
 }
 
-function setupFontSizeControls() {
-    const fontSizeInputs = document.querySelectorAll('.font-size-controls input');
-    fontSizeInputs.forEach(input => {
-        input.addEventListener('input', () => {
-            updateElementFontSizes();
-            updateScenes();
-        });
-    });
-}
-
-function setupVariableControls() {
-    variableSelector.addEventListener('change', changeVariable);
-    variableChangeSelector.addEventListener('change', () => {
-        variableChangeValue.style.display = 'block';
-    });
-}
-
-function addVariable() {
-    const variableName = prompt('Enter variable name:');
-    if (variableName && !variables[variableName]) {
-        variables[variableName] = '';
-        const option = document.createElement('option');
-        option.value = variableName;
-        option.textContent = variableName;
-        variableSelector.appendChild(option);
-        const variableOption = document.createElement('option');
-        variableOption.value = variableName;
-        variableOption.textContent = variableName;
-        variableChangeSelector.appendChild(variableOption);
-        variableSelector.value = variableName;
-        showVariableControls();
-        changeVariable();
-    }
-}
-
-function renameVariable() {
-    const newName = prompt('Enter new variable name:', variableSelector.value);
-    if (newName && !variables[newName]) {
-        variables[newName] = variables[variableSelector.value];
-        delete variables[variableSelector.value];
-
-        const selectedOption = variableSelector.querySelector(`option[value="${variableSelector.value}"]`);
-        selectedOption.value = newName;
-        selectedOption.textContent = newName;
-
-        const selectedChangeOption = variableChangeSelector.querySelector(`option[value="${variableSelector.value}"]`);
-        selectedChangeOption.value = newName;
-        selectedChangeOption.textContent = newName;
-
-        variableSelector.value = newName;
-        variableChangeSelector.value = newName;
-        changeVariable();
-    }
-}
-
-function changeVariable() {
-    const variableName = variableSelector.value;
-    document.getElementById('variableValueInput').value = variables[variableName];
-}
-
-function showVariableControls() {
-    document.getElementById('variableSelector').style.display = 'inline';
-    document.getElementById('variableValueInput').style.display = 'inline';
-    document.getElementById('renameVariableButton').style.display = 'inline';
-    document.getElementById('changeValueButton').style.display = 'inline';
-}
-
-function showTooltip(event) {
-    const target = event.target;
-    const variableNames = target.getAttribute('data-variable');
-    if (variableNames) {
-        let tooltip = document.createElement('div');
-        tooltip.className = 'tooltip';
-        let tooltipText = '';
-        const addedVariables = new Set();
-        variableNames.split(',').forEach(variableName => {
-            if (variables[variableName] !== undefined && !addedVariables.has(variableName)) {
-                tooltipText += `$${variableName}:${variables[variableName]} `;
-                addedVariables.add(variableName);
-            }
-        });
-        tooltip.textContent = tooltipText.trim();
-        document.body.appendChild(tooltip);
-        const rect = target.getBoundingClientRect();
-        tooltip.style.left = `${rect.left + window.scrollX}px`;
-        tooltip.style.top = `${rect.top + window.scrollY - tooltip.offsetHeight}px`;
-        target._tooltip = tooltip;
-    }
-}
-
-function hideTooltip(event) {
-    const target = event.target;
-    if (target._tooltip) {
-        document.body.removeChild(target._tooltip);
-        delete target._tooltip;
-    }
-}
-
-function setupHoverEvents(el) {
-    el.addEventListener('mouseenter', showTooltip);
-    el.addEventListener('mouseleave', hideTooltip);
-}
-
-variableSelector.addEventListener('change', changeVariable);
-
-function updateElementFontSizes() {
-    const elements = document.querySelectorAll('.canvas .element');
-    elements.forEach(el => {
-        const fontType = el.getAttribute('data-font');
-        el.style.fontSize = `${getFontSize(fontType)}px`;
-    });
-}
-
-function updateVariableText() {
-    const elements = document.querySelectorAll('.canvas .element');
-    elements.forEach(el => {
-        if (el.getAttribute('data-type') === 'button' || el.getAttribute('data-type') === 'label' || el.getAttribute('data-type') === 'input' || el.getAttribute('data-type') === 'image') {
-            let textSpan = el.querySelector('.text-content');
-            let text = textSpan.textContent;
-            const addedVariables = new Set();
-            Object.keys(variables).forEach(key => {
-                const variablePlaceholder = `$${key}`;
-                if (text.includes(variablePlaceholder) && !addedVariables.has(key)) {
-                    addedVariables.add(key);
-                    el.setAttribute('data-variable', `${el.getAttribute('data-variable') ? el.getAttribute('data-variable') + ',' : ''}${key}`);
-                    setupHoverEvents(el);
-                }
-            });
-            textSpan.textContent = text;
-        }
-    });
-}
-
-canvas.addEventListener('dragover', event => {
-    event.preventDefault();
-});
-
-canvas.addEventListener('drop', event => {
-    event.preventDefault();
-    const type = event.dataTransfer.getData('type');
-    const canvasRect = canvas.getBoundingClientRect();
-    const x = event.clientX - canvasRect.left;
-    const y = event.clientY - canvasRect.top;
-    addElement(type, x, y);
-});
-
-function setupElementEvents(el) {
-    setupHoverEvents(el);
-
-    el.addEventListener('mousedown', event => {
-        if (event.button === 2) { // Right mouse button for resize
-            el.style.cursor = 'nwse-resize';
-            const startX = event.clientX;
-            const startY = event.clientY;
-            const startWidth = el.offsetWidth;
-            const startHeight = el.offsetHeight;
-
-            function onMouseMove(event) {
-                const newWidth = startWidth + (event.clientX - startX);
-                const newHeight = startHeight + (event.clientY - startY);
-                el.style.width = `${newWidth}px`;
-                el.style.height = `${newHeight}px`;
-                el.setAttribute('data-width', newWidth);
-                el.setAttribute('data-height', newHeight);
-                
-                // Update controls in real-time
-                if (currentElement === el) {
-                    dataWidth.value = newWidth;
-                    dataHeight.value = newHeight;
-                }
-            }
-
-            function onMouseUp() {
-                el.style.cursor = 'grab';
-                document.removeEventListener('mousemove', onMouseMove);
-                document.removeEventListener('mouseup', onMouseUp);
-            }
-
-            document.addEventListener('mousemove', onMouseMove);
-            document.addEventListener('mouseup', onMouseUp);
-        } else { // Left mouse button for drag
-            el.style.cursor = 'grabbing';
-            const xOffset = event.clientX - el.offsetLeft;
-            const yOffset = event.clientY - el.offsetTop;
-
-            function onMouseMove(event) {
-                let newX = event.clientX - xOffset;
-                let newY = event.clientY - yOffset;
-
-                const canvasRect = canvas.getBoundingClientRect();
-                const elRect = el.getBoundingClientRect();
-
-                if (newX < 0) newX = 0;
-                if (newY < 0) newY = 0;
-                if (newX + elRect.width > canvasRect.width) newX = canvasRect.width - elRect.width;
-                if (newY + elRect.height > canvasRect.height) newY = canvasRect.height - elRect.height;
-
-                newX = parseInt(newX)
-                newY = parseInt(newY)
-
-                el.style.left = `${newX}px`;
-                el.style.top = `${newY}px`;
-                el.setAttribute('data-x', newX);
-                el.setAttribute('data-y', newY);
-                
-                // Update controls in real-time
-                if (currentElement === el) {
-                    datax.value = newX;
-                    datay.value = newY;
-                }
-            }
-
-            function onMouseUp() {
-                el.style.cursor = 'grab';
-                document.removeEventListener('mousemove', onMouseMove);
-                document.removeEventListener('mouseup', onMouseUp);
-            }
-
-            document.addEventListener('mousemove', onMouseMove);
-            document.addEventListener('mouseup', onMouseUp);
-        }
-    });
-
-    el.addEventListener('contextmenu', event => {
-        event.preventDefault();
-    });
-
-    el.addEventListener('dblclick', event => {
-        event.stopPropagation();
-        const textSpan = el.querySelector('.text-content');
-        const type = el.getAttribute('data-type');
-        
-        if (type === 'button' || type === 'label' || type === 'input') {
-            const newText = prompt("Enter new text:", textSpan.textContent);
-            if (newText !== null) {
-                textSpan.textContent = newText;
-                updateVariableText();
-            }
-        } else if (type === 'image' || type === 'button') {
-            const fileInput = document.createElement('input');
-            fileInput.type = 'file';
-            fileInput.accept = 'image/*';
-            fileInput.style.display = 'none';
-            document.body.appendChild(fileInput);
-
-            fileInput.onchange = function(event) {
-                const file = event.target.files[0];
-                if (file) {
-                    const reader = new FileReader();
-                    reader.onload = function(event) {
-                        el.style.backgroundImage = `url(${event.target.result})`;
-                        el.style.backgroundSize = "cover";
-                        el.setAttribute('data-image', file.name);
-                        
-                        // For buttons, center text over image
-                        if (type === 'button' && textSpan) {
-                            textSpan.style.position = 'relative';
-                            textSpan.style.zIndex = '10';
-                        }
-                    };
-                    reader.readAsDataURL(file);
-                }
-            };
-
-            fileInput.click();
-            document.body.removeChild(fileInput);
-        }
-    });
-
-    el.addEventListener('click', () => {
-        document.querySelectorAll('.element').forEach(otherEl => {
-            otherEl.classList.remove('selected');
-        });
-        el.classList.add('selected');
-        currentElement = el;
-        hideControls();
-
-        // Position controls
-        document.getElementById('xLabel').style.display = 'block';
-        datax.style.display = 'block';
-        datax.value = el.getAttribute('data-x');
-
-        document.getElementById('yLabel').style.display = 'block';
-        datay.style.display = 'block';
-        datay.value = el.getAttribute('data-y');
-        
-        // Size controls
-        document.getElementById('widthLabel').style.display = 'block';
-        dataWidth.style.display = 'block';
-        dataWidth.value = el.offsetWidth;
-        
-        document.getElementById('heightLabel').style.display = 'block';
-        dataHeight.style.display = 'block';
-        dataHeight.value = el.offsetHeight;
-
-        // Text styling controls
-        if (el.getAttribute('data-type') !== 'image' && el.getAttribute('data-type') !== "input") {
-            document.querySelector('.control-label[for="colorPicker"]').style.display = 'block';
-            colorPicker.value = el.getAttribute('data-color') || '#000000';
-            colorPicker.style.display = 'block';
-            colorPicker.oninput = function() {
-                el.style.color = colorPicker.value;
-                el.setAttribute('data-color', colorPicker.value);
-            };
-
-            document.querySelector('.control-label[for="fontSizePicker"]').style.display = 'block';
-            fontSizePicker.value = el.getAttribute('data-font') || 'medium';
-            fontSizePicker.style.display = 'block';
-            fontSizePicker.onchange = function() {
-                el.setAttribute('data-font', fontSizePicker.value);
-                el.style.fontSize = getFontSize(fontSizePicker.value) + 'px';
-            };
-
-            if (el.getAttribute('data-type') !== 'label') {
-                document.querySelector('.control-label[for="bgColorPicker"]').style.display = 'block';
-                bgColorPicker.value = el.getAttribute('data-bg-color') || '#ffffff';
-                bgColorPicker.style.display = 'block';
-                bgColorPicker.oninput = function() {
-                    el.style.backgroundColor = bgColorPicker.value;
-                    el.setAttribute('data-bg-color', bgColorPicker.value);
-                };
-            }
-        }
-
-        // Transparency control (for images and buttons)
-        if (el.getAttribute('data-type') === 'image' || el.getAttribute('data-type') === 'button') {
-            document.querySelector('.control-label[for="opacitySlider"]').style.display = 'block';
-            opacitySlider.style.display = 'block';
-            opacityValue.style.display = 'inline-block';
-            const opacity = el.getAttribute('data-opacity') || '100';
-            opacitySlider.value = opacity;
-            opacityValue.textContent = `${opacity}%`;
-            opacitySlider.oninput = function() {
-                const value = opacitySlider.value;
-                el.style.opacity = value / 100;
-                el.setAttribute('data-opacity', value);
-                opacityValue.textContent = `${value}%`;
-            };
-        }
-
-        // Trigger controls
-        if (el.getAttribute('data-type') !== 'label') {
-            document.querySelector('.control-label[for="triggerSelector"]').style.display = 'block';
-            triggerSelector.value = el.getAttribute('data-trigger') || '';
-            triggerSelector.style.display = 'block';
-            triggerSelector.onchange = function() {
-                el.setAttribute('data-trigger', triggerSelector.value);
-                sceneChangeSelector.style.display = 'none';
-                externalAppPath.style.display = 'none';
-                variableChangeSelector.style.display = 'none';
-                variableChangeValue.style.display = 'none';
-                
-                if (triggerSelector.value === 'change_scene') {
-                    sceneChangeSelector.style.display = 'block';
-                    sceneChangeSelector.value = el.getAttribute('data-trigger-target') || '';
-                    sceneChangeSelector.onchange = function() {
-                        el.setAttribute('data-trigger-target', sceneChangeSelector.value);
-                    };
-                } else if (triggerSelector.value === 'external_app') {
-                    externalAppPath.style.display = 'block';
-                    externalAppPath.value = el.getAttribute('data-trigger-target') || '';
-                    externalAppPath.oninput = function() {
-                        el.setAttribute('data-trigger-target', externalAppPath.value);
-                    };
-                    variableChangeValue.style.display = 'block';
-                    variableChangeValue.value = el.getAttribute('data-trigger-value') || '';
-                    variableChangeValue.oninput = function() {
-                        el.setAttribute('data-trigger-value', variableChangeValue.value);
-                    };
-                } else if (triggerSelector.value === 'set_variable') {
-                    variableChangeSelector.style.display = 'block';
-                    variableChangeValue.style.display = 'block';
-                    variableChangeSelector.value = el.getAttribute('data-trigger-target') || '';
-                    variableChangeValue.value = el.getAttribute('data-trigger-value') || '';
-                } else if (triggerSelector.value === 'play_video') {
-                    externalAppPath.style.display = 'block';
-                    externalAppPath.value = el.getAttribute('data-trigger-target') || '';
-                } else if (triggerSelector.value === 'play_image') {
-                    externalAppPath.style.display = 'block';
-                    externalAppPath.value = el.getAttribute('data-trigger-target') || '';
-                }
-            };
-
-            // Set initial state based on the current trigger
-            if (el.getAttribute('data-trigger') === 'change_scene') {
-                sceneChangeSelector.style.display = 'block';
-                sceneChangeSelector.value = el.getAttribute('data-trigger-target') || '';
-            } else if (el.getAttribute('data-trigger') === 'external_app') {
-                externalAppPath.style.display = 'block';
-                externalAppPath.value = el.getAttribute('data-trigger-target') || '';
-            } else if (el.getAttribute('data-trigger') === 'set_variable') {
-                variableChangeSelector.style.display = 'block';
-                variableChangeValue.style.display = 'block';
-                variableChangeSelector.value = el.getAttribute('data-trigger-target') || '';
-                variableChangeValue.value = el.getAttribute('data-trigger-value') || '';
-            }else if (el.getAttribute('data-trigger') === 'play_video') {
-                externalAppPath.style.display = 'block';
-                externalAppPath.value = el.getAttribute('data-trigger-target') || '';
-            }
-            else if (el.getAttribute('data-trigger') === 'play_image') {
-                externalAppPath.style.display = 'block';
-                externalAppPath.value = el.getAttribute('data-trigger-target') || '';
-            }
-        }
-    });
-
-    // Position/size input handlers
-    datax.addEventListener('input', () => {
-        if (currentElement === el) {
-            const newX = parseInt(datax.value) || 0;
-            el.style.left = `${newX}px`;
-            el.setAttribute('data-x', newX);
-        }
-    });
-    
-    datay.addEventListener('input', () => {
-        if (currentElement === el) {
-            const newY = parseInt(datay.value) || 0;
-            el.style.top = `${newY}px`;
-            el.setAttribute('data-y', newY);
-        }
-    });
-    
-    dataWidth.addEventListener('input', () => {
-        if (currentElement === el) {
-            const newWidth = parseInt(dataWidth.value) || 100;
-            el.style.width = `${newWidth}px`;
-            el.setAttribute('data-width', newWidth);
-        }
-    });
-    
-    dataHeight.addEventListener('input', () => {
-        if (currentElement === el) {
-            const newHeight = parseInt(dataHeight.value) || 100;
-            el.style.height = `${newHeight}px`;
-            el.setAttribute('data-height', newHeight);
-        }
-    });
-
-    el.addEventListener('contextmenu', event => {
-        event.preventDefault();
-    });
-    
-    const removeButton = el.querySelector('.remove-button');
-    if (removeButton) {
-        removeButton.addEventListener('click', (event) => {
-            event.stopPropagation();
-            const parent = el.parentNode;
-            parent.removeChild(el);
-            const sceneElements = scenes[currentScene];
-            const elementIndex = sceneElements.indexOf(el);
-            if (elementIndex > -1) {
-                sceneElements.splice(elementIndex, 1);
-            }
-        });
-    }
-}
-
+// Element Management
 function addElement(type, x, y) {
   const el = document.createElement('div');
-  el.classList.add('element');
+  el.className = 'element';
   el.style.position = 'absolute';
   el.style.left = `${x}px`;
   el.style.top = `${y}px`;
-
-  let defaultWidth = 'auto';
-  let defaultHeight = type === 'menu' ? '50px' : 'auto';
-  
-  if (type === 'image') {
-    defaultWidth = '100px';
-    defaultHeight = '100px';
-  } else if (type === 'menu') {
-    defaultWidth = '100%';
-    const canvasRect = canvas.getBoundingClientRect();
-    y = canvasRect.height - parseInt(defaultHeight);
-    el.style.top = `${y}px`;
-    el.style.left = '0px';
-  }
-
-  el.style.width = defaultWidth;
-  el.style.height = defaultHeight;
   el.setAttribute('data-opacity', '100');
   el.style.opacity = 1;
+  el.style.fontFamily = 'Roboto, sans-serif';
+  el.style.fontWeight = '900';
 
+  // Set default dimensions
+  const dimensions = {
+    menu: { width: '100%', height: '50px', y: canvasHeight - 50 },
+    image: { width: '100px', height: '100px' },
+    input: { width: '150px', height: '40px' },
+    default: { width: 'auto', height: 'auto' }
+  };
+
+  const { width, height } = dimensions[type] || dimensions.default;
+  el.style.width = width;
+  el.style.height = height;
+  
   if (type === 'menu') {
+    el.style.top = `${dimensions.menu.y}px`;
+    el.style.left = '0px';
     el.innerHTML = `
       <div class="menu-scene-buttons"></div>
       <button class="menu-language">EN</button>
       <div class="menu-clock">00:00</div>
+      <span class="remove-button">✕</span>
     `;
-    el.style.fontSize = `${smallSizeInput.value}px`;
-    el.classList.add('menu');
-    initializeMenu(el);
+    el.style.fontSize = '16px';
+    el.setAttribute('data-type', 'menu');
+    setupMenuEvents(el);
+    updateMenuSceneButtons(el);
     updateMenuClock(el.querySelector('.menu-clock'));
   } else {
     const textSpan = document.createElement('span');
-    textSpan.classList.add('text-content');
+    textSpan.className = 'text-content';
     textSpan.textContent = type.charAt(0).toUpperCase() + type.slice(1);
     el.appendChild(textSpan);
     
     const removeButton = document.createElement('span');
     removeButton.textContent = '✕';
-    removeButton.classList.add('remove-button');
+    removeButton.className = 'remove-button';
     el.appendChild(removeButton);
-  }
-
-  el.setAttribute('data-type', type);
-  el.setAttribute('data-x', x | 0);
-  el.setAttribute('data-y', y | 0);
-  el.setAttribute('data-width', defaultWidth.replace('px', '') || '100');
-  el.setAttribute('data-height', defaultHeight.replace('px', '') || '100');
-  
-  if (type !== 'menu') {
-    el.setAttribute('data-color', '#000000');
-    el.setAttribute('data-bg-color', type === 'button' ? '#ffffff' : '');
-    el.setAttribute('data-font', 'medium');
-    el.style.fontSize = '24px';
-    el.style.padding = '5px';
     
+    el.setAttribute('data-type', type);
+    
+    // Special handling for input elements
+    if (type === 'input') {
+      textSpan.style.display = 'none';
+      const input = document.createElement('input');
+      input.type = 'text';
+      input.className = 'element-input';
+      input.placeholder = 'Input text';
+      el.appendChild(input);
+    }
+    
+    // Special handling for image elements
+    if (type === 'image') {
+      const img = document.createElement('img');
+      img.className = 'element-image';
+      img.src = '';
+      el.appendChild(img);
+      textSpan.style.display = 'none';
+    }
+    
+    // Labels should have no background
     if (type === 'label') {
       el.style.background = 'none';
     }
+  }
+
+  // Set element attributes
+  el.setAttribute('data-x', x | 0);
+  el.setAttribute('data-y', y | 0);
+  el.setAttribute('data-width', width.replace('px', '') || '100');
+  el.setAttribute('data-height', height.replace('px', '') || '100');
+  
+  if (type !== 'menu') {
+    el.setAttribute('data-color', '#000000');
+    el.setAttribute('data-font', 'medium');
+    el.style.fontSize = getFontSize('medium') + 'px';
+    el.style.padding = '4px';
     
-    if (type === 'image' || type === 'button') {
-        el.setAttribute('data-image', '');
+    if (type === 'button') {
+      el.setAttribute('data-bg-color', '#ffffff');
+      el.style.backgroundColor = '#ffffff';
     }
-  } else {
-    el.setAttribute('data-height', defaultHeight.replace('px', ''));
   }
 
-  if (type === 'menu') {
-    setupMenuEvents(el);
-  } else {
-    setupElementEvents(el);
-  }
-
+  // Add to canvas
   canvas.appendChild(el);
-
-  if (!scenes[currentScene]) {
-    scenes[currentScene] = [];
-  }
+  setupElementEvents(el);
+  
+  if (!scenes[currentScene]) scenes[currentScene] = [];
   scenes[currentScene].push(el.cloneNode(true));
 
   return el;
 }
 
-function initializeMenu(menuEl) {
-  updateMenuSceneButtons(menuEl);
+function setupElementEvents(el) {
+  // Mouse events for dragging and resizing
+  el.addEventListener('mousedown', (event) => {
+    if (event.button === 2) { // Right click for resize
+      handleResize(el, event);
+    } else { // Left click for drag
+      handleDrag(el, event);
+    }
+  });
+
+  // Context menu prevention
+  el.addEventListener('contextmenu', (event) => event.preventDefault());
+
+  // Double click for editing
+  el.addEventListener('dblclick', (event) => {
+    event.stopPropagation();
+    const type = el.getAttribute('data-type');
+    if (['button', 'label'].includes(type)) {
+      const textSpan = el.querySelector('.text-content');
+      const newText = prompt("Edit text:", textSpan.textContent);
+      if (newText !== null) {
+        textSpan.textContent = newText;
+        processTextForVariables(textSpan);
+      }
+    } else if (type === 'image') {
+      const fileInput = document.createElement('input');
+      fileInput.type = 'file';
+      fileInput.accept = 'image/*';
+      fileInput.style.display = 'none';
+      
+      fileInput.onchange = (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          const img = el.querySelector('.element-image');
+          if (img) img.src = e.target.result;
+          const textSpan = el.querySelector('.text-content');
+          if (textSpan) textSpan.style.display = 'none';
+        };
+        reader.readAsDataURL(file);
+      };
+      
+      document.body.appendChild(fileInput);
+      fileInput.click();
+      document.body.removeChild(fileInput);
+    } else if (type === 'input') {
+      const input = el.querySelector('.element-input');
+      if (input) input.focus();
+    }
+  });
+
+  // Selection
+  el.addEventListener('click', (e) => {
+    if (e.target.classList.contains('remove-button') || 
+        e.target.classList.contains('menu-scene-button') ||
+        e.target.classList.contains('menu-language') ||
+        e.target.classList.contains('element-input')) {
+      return;
+    }
+    
+    document.querySelectorAll('.element').forEach(otherEl => {
+      otherEl.classList.remove('selected');
+    });
+    el.classList.add('selected');
+    currentElement = el;
+    showElementProperties(el);
+  });
+
+  // Remove button
+  const removeButton = el.querySelector('.remove-button');
+  if (removeButton) {
+    removeButton.addEventListener('click', (event) => {
+      event.stopPropagation();
+      el.remove();
+      const sceneElements = scenes[currentScene];
+      const index = sceneElements.findIndex(item => item.isEqualNode(el));
+      if (index > -1) sceneElements.splice(index, 1);
+    });
+  }
+  
+  // Process text for variables
+  const textSpan = el.querySelector('.text-content');
+  if (textSpan) {
+    processTextForVariables(textSpan);
+  }
+}
+
+function handleResize(el, event) {
+  el.style.cursor = 'nwse-resize';
+  const startX = event.clientX;
+  const startY = event.clientY;
+  const startWidth = el.offsetWidth;
+  const startHeight = el.offsetHeight;
+
+  const onMouseMove = (e) => {
+    const newWidth = Math.max(50, startWidth + (e.clientX - startX));
+    const newHeight = Math.max(50, startHeight + (e.clientY - startY));
+    el.style.width = `${newWidth}px`;
+    el.style.height = `${newHeight}px`;
+    el.setAttribute('data-width', newWidth);
+    el.setAttribute('data-height', newHeight);
+  };
+
+  const onMouseUp = () => {
+    el.style.cursor = 'grab';
+    document.removeEventListener('mousemove', onMouseMove);
+    document.removeEventListener('mouseup', onMouseUp);
+  };
+
+  document.addEventListener('mousemove', onMouseMove);
+  document.addEventListener('mouseup', onMouseUp);
+}
+
+function handleDrag(el, event) {
+  el.style.cursor = 'grabbing';
+  const xOffset = event.clientX - el.offsetLeft;
+  const yOffset = event.clientY - el.offsetTop;
+  const canvasRect = canvas.getBoundingClientRect();
+
+  const onMouseMove = (e) => {
+    let newX = e.clientX - xOffset;
+    let newY = e.clientY - yOffset;
+    const elRect = el.getBoundingClientRect();
+
+    newX = Math.max(0, Math.min(newX, canvasRect.width - elRect.width));
+    newY = Math.max(0, Math.min(newY, canvasRect.height - elRect.height));
+
+    el.style.left = `${newX}px`;
+    el.style.top = `${newY}px`;
+    el.setAttribute('data-x', newX);
+    el.setAttribute('data-y', newY);
+  };
+
+  const onMouseUp = () => {
+    el.style.cursor = 'grab';
+    document.removeEventListener('mousemove', onMouseMove);
+    document.removeEventListener('mouseup', onMouseUp);
+  };
+
+  document.addEventListener('mousemove', onMouseMove);
+  document.addEventListener('mouseup', onMouseUp);
+}
+
+function showElementProperties(el) {
+  noSelection.style.display = 'none';
+  elementProperties.classList.add('visible');
+
+  const bgColorPicker = document.getElementById('bgColorPicker');
+  const bgColorGroup = bgColorPicker.closest('.control-group');
+
+  if (el.getAttribute('data-type') === 'label') {
+    bgColorGroup.style.display = 'none';
+    el.style.backgroundColor = 'transparent';
+    el.removeAttribute('data-bg-color');
+  } else {
+    bgColorGroup.style.display = 'block';
+  }
+  
+  // Position/size
+  const datax = document.getElementById('datax');
+  const datay = document.getElementById('datay');
+  const dataWidth = document.getElementById('dataWidth');
+  const dataHeight = document.getElementById('dataHeight');
+  
+  datax.value = el.getAttribute('data-x') || 0;
+  datay.value = el.getAttribute('data-y') || 0;
+  dataWidth.value = el.getAttribute('data-width') || 100;
+  dataHeight.value = el.getAttribute('data-height') || 100;
+  
+  // Update position/size when inputs change
+  const updatePositionSize = () => {
+    el.style.left = `${datax.value}px`;
+    el.setAttribute('data-x', datax.value);
+    el.style.top = `${datay.value}px`;
+    el.setAttribute('data-y', datay.value);
+    el.style.width = `${dataWidth.value}px`;
+    el.setAttribute('data-width', dataWidth.value);
+    el.style.height = `${dataHeight.value}px`;
+    el.setAttribute('data-height', dataHeight.value);
+  };
+  
+  [datax, datay, dataWidth, dataHeight].forEach(input => {
+    input.oninput = updatePositionSize;
+  });
+  
+  // Text styling
+  if (!['image', 'input'].includes(el.getAttribute('data-type'))) {
+    const colorPicker = document.getElementById('colorPicker');
+    const fontSizePicker = document.getElementById('fontSizePicker');
+    
+    colorPicker.value = el.getAttribute('data-color') || '#000000';
+    colorPicker.oninput = () => {
+      el.style.color = colorPicker.value;
+      el.setAttribute('data-color', colorPicker.value);
+    };
+
+    fontSizePicker.value = el.getAttribute('data-font') || 'medium';
+    fontSizePicker.onchange = () => {
+      el.setAttribute('data-font', fontSizePicker.value);
+      el.style.fontSize = getFontSize(fontSizePicker.value) + 'px';
+    };
+
+    if (el.getAttribute('data-type') !== 'label') {
+      const bgColorPicker = document.getElementById('bgColorPicker');
+      bgColorPicker.value = el.getAttribute('data-bg-color') || '#ffffff';
+      bgColorPicker.oninput = () => {
+        el.style.backgroundColor = bgColorPicker.value;
+        el.setAttribute('data-bg-color', bgColorPicker.value);
+      };
+    }
+  }
+
+  // Transparency
+  if (['image', 'button'].includes(el.getAttribute('data-type'))) {
+    const opacitySlider = document.getElementById('opacitySlider');
+    const opacityValue = document.getElementById('opacityValue');
+    
+    const opacity = el.getAttribute('data-opacity') || '100';
+    opacitySlider.value = opacity;
+    opacityValue.textContent = `${opacity}%`;
+    opacitySlider.oninput = () => {
+      const value = opacitySlider.value;
+      el.style.opacity = value / 100;
+      el.setAttribute('data-opacity', value);
+      opacityValue.textContent = `${value}%`;
+    };
+  }
+  
+  // Trigger controls
+  const triggerSelector = document.getElementById('triggerSelector');
+  triggerSelector.value = el.getAttribute('data-trigger') || '';
+  
+  // Hide all trigger options first
+  document.querySelectorAll('#triggerOptions > *').forEach(el => {
+    el.style.display = 'none';
+  });
+  
+  // Show relevant options based on selected trigger
+  if (triggerSelector.value === 'change_scene') {
+    document.getElementById('sceneChangeSelector').style.display = 'block';
+  } else if (triggerSelector.value === 'external_app') {
+    document.getElementById('externalAppPath').style.display = 'block';
+  } else if (triggerSelector.value === 'set_variable') {
+    document.getElementById('variableChangeSelector').style.display = 'block';
+    document.getElementById('variableChangeValue').style.display = 'block';
+  }
+}
+
+// Menu Functions
+function setupMenuEvents(menuEl) {
+  // Remove button
+  const removeButton = menuEl.querySelector('.remove-button');
+  if (removeButton) {
+    removeButton.addEventListener('click', (event) => {
+      event.stopPropagation();
+      menuEl.remove();
+      const sceneElements = scenes[currentScene];
+      const index = sceneElements.findIndex(item => item.isEqualNode(menuEl));
+      if (index > -1) sceneElements.splice(index, 1);
+    });
+  }
 }
 
 function updateMenuSceneButtons(menuEl) {
   const sceneButtonsContainer = menuEl.querySelector('.menu-scene-buttons');
+  if (!sceneButtonsContainer) return;
+  
   sceneButtonsContainer.innerHTML = '';
   
   Object.keys(scenes).forEach(sceneName => {
     const button = document.createElement('button');
-    button.classList.add('menu-scene-button');
-    if (sceneName === currentScene) {
-      button.classList.add('active');
-    }
+    button.className = 'menu-scene-button';
+    if (sceneName === currentScene) button.classList.add('active');
     button.textContent = sceneName;
     button.addEventListener('click', () => {
       sceneSelector.value = sceneName;
       changeScene();
-      
-      menuEl.querySelectorAll('.menu-scene-button').forEach(btn => {
-        btn.classList.remove('active');
-      });
+      menuEl.querySelectorAll('.menu-scene-button').forEach(btn => btn.classList.remove('active'));
       button.classList.add('active');
     });
     sceneButtonsContainer.appendChild(button);
@@ -817,76 +685,214 @@ function updateMenuSceneButtons(menuEl) {
 }
 
 function updateMenuClock(clockEl) {
+  if (!clockEl) return;
+  
   const updateTime = () => {
     const now = new Date();
     const hours = now.getHours().toString().padStart(2, '0');
     const minutes = now.getMinutes().toString().padStart(2, '0');
     clockEl.textContent = `${hours}:${minutes}`;
-    clockEl.style.fontSize = `${smallSizeInput.value}px`;
   };
   
   updateTime();
   setInterval(updateTime, 60000);
 }
 
-function setupMenuEvents(menuEl) {
-  const removeButton = document.createElement('span');
-  removeButton.textContent = '✕';
-  removeButton.classList.add('remove-button');
-  menuEl.appendChild(removeButton);
+// Variable Management
+function addVariable() {
+  const variableName = prompt('Enter variable name:');
+  if (variableName && !variables[variableName]) {
+    variables[variableName] = '';
+    
+    // Create variable item
+    const variableItem = document.createElement('div');
+    variableItem.className = 'variable-item';
+    variableItem.innerHTML = `
+      <div>
+        <span class="variable-name">${variableName}</span>
+        <span class="variable-value">${variables[variableName]}</span>
+      </div>
+      <div class="variable-actions">
+        <button onclick="editVariable('${variableName}')"><i class="fas fa-edit"></i></button>
+        <button onclick="deleteVariable('${variableName}')"><i class="fas fa-trash"></i></button>
+      </div>
+    `;
+    
+    variablesList.appendChild(variableItem);
+    
+    // Update variable change selector
+    updateVariableChangeSelector();
+  }
+}
+
+function editVariable(name) {
+  const newValue = prompt(`Enter new value for ${name}:`, variables[name]);
+  if (newValue !== null) {
+    variables[name] = newValue;
+    
+    // Update UI
+    document.querySelectorAll('.variable-item').forEach(item => {
+      if (item.querySelector('.variable-name').textContent === name) {
+        item.querySelector('.variable-value').textContent = newValue;
+      }
+    });
+    
+    // Update all elements with variables
+    document.querySelectorAll('.text-content').forEach(textEl => {
+      processTextForVariables(textEl);
+    });
+
+
+  }
+}
+
+function deleteVariable(name) {
+  if (confirm(`Delete variable ${name}?`)) {
+    delete variables[name];
+    
+    // Remove from UI
+    document.querySelectorAll('.variable-item').forEach(item => {
+      if (item.querySelector('.variable-name').textContent === name) {
+        item.remove();
+      }
+    });
+    
+    // Update variable change selector
+    updateVariableChangeSelector();
+    
+    // Update all elements with variables
+    document.querySelectorAll('.text-content').forEach(textEl => {
+      processTextForVariables(textEl);
+    });
+  }
+}
+
+function updateVariableChangeSelector() {
+  const selector = document.getElementById('variableChangeSelector');
+  selector.innerHTML = '';
   
-  removeButton.addEventListener('click', (event) => {
-    event.stopPropagation();
-    const parent = menuEl.parentNode;
-    parent.removeChild(menuEl);
-    const sceneElements = scenes[currentScene];
-    const elementIndex = sceneElements.indexOf(menuEl);
-    if (elementIndex > -1) {
-      sceneElements.splice(elementIndex, 1);
-    }
+  Object.keys(variables).forEach(variableName => {
+    const option = document.createElement('option');
+    option.value = variableName;
+    option.textContent = variableName;
+    selector.appendChild(option);
   });
 }
 
-function getFontSize(fontSize) {
-    const sizes = {
-        title: titleSizeInput.value,
-        big: bigSizeInput.value,
-        medium: mediumSizeInput.value,
-        small: smallSizeInput.value
-    };
-    return sizes[fontSize] || 24;
+function updateSceneChangeSelector() {
+  const selector = document.getElementById('sceneChangeSelector');
+  selector.innerHTML = '';
+  
+  Object.keys(scenes).forEach(sceneName => {
+    const option = document.createElement('option');
+    option.value = sceneName;
+    option.textContent = sceneName;
+    selector.appendChild(option);
+  });
 }
 
-function setBackground() {
-    const file = backgroundFileInput.files[0];
-    if (file) {
-        const reader = new FileReader();
-        reader.onload = function(event) {
-            canvas.style.backgroundImage = `url(${event.target.result})`;
-            canvas.style.backgroundSize = canvas.style.width + ' ' + canvas.style.height;
-            backgroundPath = event.target.result;
-        };
-        reader.readAsDataURL(file);
+// Process text for variables and add tooltips
+function processTextForVariables(textElement) {
+  let text = textElement.textContent;
+  const regex = /{{(.*?)}}/g;
+  let matches = [];
+  let match;
+  
+  // Find all variables in the text
+  while ((match = regex.exec(text)) !== null) {
+    matches.push(match[1]);
+  }
+  
+  let newHTML = text;
+  let tooltipContent = '';
+  
+  // Process each variable
+  matches.forEach(varName => {
+    const value = variables[varName] || '';
+    newHTML = newHTML.replace(
+      new RegExp(`{{${varName}}}`, 'g'),
+      `<span class="variable-hover" data-value="${varName}: ${value}">{{${varName}}}</span>`
+    );
+    
+    // Add to tooltip
+    if (tooltipContent) tooltipContent += '\n';
+    tooltipContent += `${varName}: ${value}`;
+  });
+  
+  textElement.innerHTML = newHTML;
+  
+  // Add tooltip for the entire element
+  if (matches.length > 0) {
+    const parent = textElement.parentElement;
+    parent.classList.add('variable-hover');
+    parent.setAttribute('data-value', tooltipContent);
+    
+    // Create variable value display
+    let displayEl = parent.querySelector('.variable-display');
+    if (!displayEl) {
+      displayEl = document.createElement('div');
+      displayEl.className = 'variable-display';
+      parent.appendChild(displayEl);
     }
+    
+    // Update display content
+    displayEl.textContent = tooltipContent.replace(/\n/g, ', ');
+  }
 }
 
+
+
+
+
+// File Operations
+function setBackground() {
+  const file = backgroundFileInput.files[0];
+  if (!file) return;
+  
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    canvas.style.backgroundImage = `url(${e.target.result})`;
+    canvas.style.backgroundSize = 'cover';
+    backgroundPath = e.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+function getFontSize(fontSize) {
+  const sizes = {
+    title: parseInt(titleSizeInput.value) || 48,
+    big: parseInt(bigSizeInput.value) || 36,
+    medium: parseInt(mediumSizeInput.value) || 24,
+    small: parseInt(smallSizeInput.value) || 18
+  };
+  
+  return sizes[fontSize] || 24;
+}
+
+// Load initial config
+function loadInitialConfig() {
+  fetch('player/jukaconfig.json')
+    .then(response => {
+      if (!response.ok) throw new Error('Config not found');
+      return response.json();
+    })
+    .then(data => loadJukaApp(data))
+    .catch(error => {
+      console.log('Using default configuration');
+    });
+}
+
+// Load JukaApp from config
+
+// Export functionality
 function createJukaApp() {
-    updateScenes();
-    const config = {
+  const config = {
     title: document.getElementById('title').value,
     author: document.getElementById('author').value,
     description: document.getElementById('description').value,
     variables: {
       ...variables,
-      buttonColor: { r: 255, g: 0, b: 0 },
-      labelColor: { r: 255, g: 255, b: 255 },
       backgroundImage: backgroundPath,
-      fonts: {
-        title: 'Roboto-Black.ttf',
-        big: 'Roboto-Black.ttf',
-        medium: 'Roboto-Black.ttf',
-        small: 'Roboto-Black.ttf'
-      },
       fontSizes: {
         title: parseInt(titleSizeInput.value, 10),
         big: parseInt(bigSizeInput.value, 10),
@@ -897,311 +903,310 @@ function createJukaApp() {
     scenes: Object.keys(scenes).map(sceneName => ({
       name: sceneName,
       elements: scenes[sceneName].map(el => {
-        const elementType = el.getAttribute('data-type');
-        const baseElement = {
-          type: elementType,
-          x: parseInt(el.getAttribute('data-x'), 10),
-          y: parseInt(el.getAttribute('data-y'), 10)
+        const element = {
+          type: el.getAttribute('data-type'),
+          x: parseInt(el.getAttribute('data-x')),
+          y: parseInt(el.getAttribute('data-y')),
+          width: parseInt(el.getAttribute('data-width')),
+          height: parseInt(el.getAttribute('data-height'))
         };
         
-        if (elementType === 'menu') {
-          return {
-            ...baseElement,
-            height: parseInt(el.getAttribute('data-height'), 10) || 50
-          };
-        } else {
-          const elementConfig = {
-            ...baseElement,
-            text: el.querySelector('.text-content')?.textContent || '',
-            color: el.getAttribute('data-color'),
-            font: el.getAttribute('data-font'),
-            bgColor: el.getAttribute('data-type') === 'button' ? el.getAttribute('data-bg-color') : undefined,
-            trigger: el.getAttribute('data-trigger'),
-            triggerTarget: el.getAttribute('data-trigger-target'),
-            triggerValue: el.getAttribute('data-trigger-value'),
-            image: el.getAttribute('data-image'),
-            width: el.getAttribute('data-width'),
-            height: el.getAttribute('data-height')
-          };
-          
-          // Add opacity for images and buttons
-          if (elementType === 'image' || elementType === 'button') {
-            elementConfig.opacity = parseInt(el.getAttribute('data-opacity'), 10) / 100;
-          }
-          
-          return elementConfig;
+        if (el.getAttribute('data-color')) {
+          element.color = el.getAttribute('data-color');
         }
+        
+        if (el.getAttribute('data-bg-color')) {
+          element.bgColor = el.getAttribute('data-bg-color');
+        }
+        
+        if (el.getAttribute('data-font')) {
+          element.font = el.getAttribute('data-font');
+        }
+        
+        if (el.getAttribute('data-opacity')) {
+          element.opacity = parseInt(el.getAttribute('data-opacity')) / 100;
+        }
+        
+        const type = el.getAttribute('data-type');
+        if (type === 'input') {
+          const input = el.querySelector('.element-input');
+          if (input) element.text = input.value;
+        } else {
+          const textSpan = el.querySelector('.text-content');
+          if (textSpan) element.text = textSpan.textContent;
+        }
+        
+        if (type === 'image') {
+          const img = el.querySelector('.element-image');
+          if (img && img.src) element.image = img.src;
+        }
+        
+        return element;
       })
     }))
   };
 
   const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(config, null, 2));
   const downloadAnchorNode = document.createElement('a');
-  downloadAnchorNode.setAttribute("href", dataStr);
-  downloadAnchorNode.setAttribute("download", "jukaconfig.json");
+  downloadAnchorNode.href = dataStr;
+  downloadAnchorNode.download = "jukaconfig.json";
   document.body.appendChild(downloadAnchorNode);
   downloadAnchorNode.click();
   downloadAnchorNode.remove();
-};
-
-canvas.addEventListener('click', (event) => {
-    if (event.target === canvas) {
-        hideControls();
-        currentElement = null;
-    }
-});
-
-function hideControls() {
-    document.getElementById('xLabel').style.display = 'none';
-    datax.style.display = 'none';
-    document.getElementById('yLabel').style.display = 'none';
-    datay.style.display = 'none';
-    document.getElementById('widthLabel').style.display = 'none';
-    dataWidth.style.display = 'none';
-    document.getElementById('heightLabel').style.display = 'none';
-    dataHeight.style.display = 'none';
-    document.querySelector('.control-label[for="colorPicker"]').style.display = 'none';
-    colorPicker.style.display = 'none';
-    document.querySelector('.control-label[for="bgColorPicker"]').style.display = 'none';
-    bgColorPicker.style.display = 'none';
-    document.querySelector('.control-label[for="fontSizePicker"]').style.display = 'none';
-    fontSizePicker.style.display = 'none';
-    document.querySelector('.control-label[for="triggerSelector"]').style.display = 'none';
-    triggerSelector.style.display = 'none';
-    sceneChangeSelector.style.display = 'none';
-    externalAppPath.style.display = 'none';
-    variableChangeSelector.style.display = 'none';
-    variableChangeValue.style.display = 'none';
-    document.querySelector('.control-label[for="opacitySlider"]').style.display = 'none';
-    opacitySlider.style.display = 'none';
-    opacityValue.style.display = 'none';
 }
 
-document.getElementById('loadFile').addEventListener('change', function(event) {
-    const file = event.target.files[0];
-    if (file) {
-        const reader = new FileReader();
-        reader.onload = function(event) {
-            const data = JSON.parse(event.target.result);
-            loadJukaApp(data);
-        };
-        reader.readAsText(file);
-    }
-});
-
-function loadJukaApp(data) {
-    variableSelector.innerHTML = '';
-    variableChangeSelector.innerHTML = '';
-
-    document.getElementById('title').value = data.title || '';
-    document.getElementById('author').value = data.author || '';
-    document.getElementById('description').value = data.description || '';
-
-    if (data.variables && data.variables.fontSizes) {
-        document.getElementById('titleSize').value = data.variables.fontSizes.title || 48;
-        document.getElementById('bigSize').value = data.variables.fontSizes.big || 36;
-        document.getElementById('mediumSize').value = data.variables.fontSizes.medium || 24;
-        document.getElementById('smallSize').value = data.variables.fontSizes.small || 18;
-    }
-
-    if (data.variables && data.variables.backgroundImage) {
-        canvas.style.backgroundImage = `url(${data.variables.backgroundImage})`;
-        canvas.style.backgroundSize = canvas.style.width + ' ' + canvas.style.height;
-        backgroundPath = data.variables.backgroundImage;
-    }
-
-    scenes = {};
-    canvas.innerHTML = '';
-    const sceneSelector = document.getElementById('sceneSelector');
-    sceneSelector.innerHTML = '';
-
+function clearAll() {
+  if (confirm('Are you sure you want to clear everything and start new?')) {
+    scenes = { 'Scene 1': [] };
+    currentScene = 'Scene 1';
     variables = {};
-    if (data.variables) {
-        Object.keys(data.variables).forEach(key => {
-            if (!['buttonColor', 'labelColor', 'backgroundImage', 'fonts', 'fontSizes'].includes(key)) {
-                variables[key] = data.variables[key];
-                
-                const option = document.createElement('option');
-                option.value = key;
-                option.textContent = key;
-                variableSelector.appendChild(option);
-                
-                const variableOption = document.createElement('option');
-                variableOption.value = key;
-                variableOption.textContent = key;
-                variableChangeSelector.appendChild(variableOption);
-            }
-        });
-        if (Object.keys(variables).length > 0) {
-            showVariableControls();
-            variableSelector.value = Object.keys(variables)[0];
-            changeVariable();
-        }
-    }
+    canvas.innerHTML = '';
+    sceneSelector.innerHTML = '';
+    variablesList.innerHTML = '';
+    
+    const option = document.createElement('option');
+    option.value = 'Scene 1';
+    option.textContent = 'Scene 1';
+    sceneSelector.appendChild(option);
+    sceneSelector.value = 'Scene 1';
+    
+    document.getElementById('title').value = '';
+    document.getElementById('author').value = '';
+    document.getElementById('description').value = '';
+    titleSizeInput.value = 48;
+    bigSizeInput.value = 36;
+    mediumSizeInput.value = 24;
+    smallSizeInput.value = 18;
+    
+    canvas.style.backgroundImage = '';
+    backgroundPath = '';
+    
+    updateCanvasSize();
+    addElement('menu', 0, canvasHeight - 50);
+    
+    document.querySelectorAll('.menu').forEach(menu => {
+      updateMenuSceneButtons(menu);
+    });
+    
+    updateSceneChangeSelector();
+    updateVariableChangeSelector();
+  }
+}
 
-    data.scenes.forEach(scene => {
-        scenes[scene.name] = [];
+
+function saveCurrentScene() {
+  scenes[currentScene] = Array.from(canvas.children).map(el => el.cloneNode(true));
+}
+
+
+// Fix element duplication in loadJukaApp
+function loadJukaApp(data) {
+  // Reset state
+  scenes = {};
+  currentScene = 'Scene 1';
+  variables = {};
+  sceneSelector.innerHTML = '';
+  canvas.innerHTML = '';
+  variablesList.innerHTML = '';
+  
+  // Set app info
+  document.getElementById('title').value = data.title || '';
+  document.getElementById('author').value = data.author || '';
+  document.getElementById('description').value = data.description || '';
+  
+  // Set font sizes
+  if (data.variables?.fontSizes) {
+    titleSizeInput.value = data.variables.fontSizes.title || 48;
+    bigSizeInput.value = data.variables.fontSizes.big || 36;
+    mediumSizeInput.value = data.variables.fontSizes.medium || 24;
+    smallSizeInput.value = data.variables.fontSizes.small || 18;
+  }
+  
+  // Set canvas size
+  if (data.variables?.backgroundImage) {
+    canvas.style.backgroundImage = `url(${data.variables.backgroundImage})`;
+    canvas.style.backgroundSize = 'cover';
+    backgroundPath = data.variables.backgroundImage;
+  }
+  
+  // Load variables
+  if (data.variables) {
+    for (const [key, value] of Object.entries(data.variables)) {
+      if (!['buttonColor', 'labelColor', 'backgroundImage', 'fonts', 'fontSizes'].includes(key)) {
+        variables[key] = value;
         
-        scene.elements.forEach(element => {
-            let el;
-            
-            if (element.type === 'menu') {
-                el = document.createElement('div');
-                el.classList.add('element', 'menu');
-                el.style.position = 'absolute';
-                el.style.left = '0px';
-                el.style.top = `${element.y}px`;
-                el.style.width = '100%';
-                el.style.height = `${element.height || 50}px`;
-                
-                el.innerHTML = `
+        // Add to UI
+        const variableItem = document.createElement('div');
+        variableItem.className = 'variable-item';
+        variableItem.innerHTML = `
+          <div>
+            <span class="variable-name">${key}</span>
+            <span class="variable-value">${value}</span>
+          </div>
+          <div class="variable-actions">
+            <button onclick="editVariable('${key}')"><i class="fas fa-edit"></i></button>
+            <button onclick="deleteVariable('${key}')"><i class="fas fa-trash"></i></button>
+          </div>
+        `;
+        
+        variablesList.appendChild(variableItem);
+      }
+    }
+  }
+  
+  // Create scenes
+  data.scenes.forEach(scene => {
+    scenes[scene.name] = [];
+    
+    // Add scene to selector
+    const option = document.createElement('option');
+    option.value = scene.name;
+    option.textContent = scene.name;
+    sceneSelector.appendChild(option);
+    
+    // Create elements for this scene
+    scene.elements.forEach(element => {
+      // Create element container
+      const el = document.createElement('div');
+      el.className = 'element';
+      el.style.position = 'absolute';
+      el.style.left = `${element.x}px`;
+      el.style.top = `${element.y}px`;
+      el.setAttribute('data-type', element.type);
+      el.setAttribute('data-x', element.x);
+      el.setAttribute('data-y', element.y);
+      
+      // Set dimensions
+      if (element.width) {
+        el.style.width = `${element.width}px`;
+        el.setAttribute('data-width', element.width);
+      }
+      
+      if (element.height) {
+        el.style.height = `${element.height}px`;
+        el.setAttribute('data-height', element.height);
+      }
+      
+      // Set colors
+      if (element.color) {
+        el.setAttribute('data-color', element.color);
+        el.style.color = element.color;
+      }
+      
+      // Set font size
+      if (element.font) {
+        el.setAttribute('data-font', element.font);
+        el.style.fontSize = getFontSize(element.font) + 'px';
+      }
+      
+      // Set background color
+      if (element.bgColor) {
+        el.setAttribute('data-bg-color', element.bgColor);
+        el.style.backgroundColor = element.bgColor;
+      }
+      
+      // Handle different element types
+      if (element.type === 'menu') {
+        // Menu element
+        el.innerHTML = `
           <div class="menu-scene-buttons"></div>
           <button class="menu-language">EN</button>
           <div class="menu-clock">00:00</div>
-                `;
-                el.style.fontSize = `${smallSizeInput.value}px`;
-                
-                el.setAttribute('data-height', element.height || 50);
-                el.setAttribute('data-type', element.type);
-                el.setAttribute('data-x', 0);
-                el.setAttribute('data-y', element.y);
-                
-                setupMenuEvents(el);
-                initializeMenu(el);
-                updateMenuClock(el.querySelector('.menu-clock'));
-            } else {
-                el = document.createElement('div');
-                el.classList.add('element');
-                el.style.position = 'absolute';
-                el.style.left = `${element.x}px`;
-                el.style.top = `${element.y}px`;
-                
-                const textSpan = document.createElement('span');
-                textSpan.classList.add('text-content');
-                textSpan.textContent = element.text || element.type.charAt(0).toUpperCase() + element.type.slice(1);
-                el.appendChild(textSpan);
-                
-                const removeButton = document.createElement('span');
-                removeButton.textContent = '✕';
-                removeButton.classList.add('remove-button');
-                el.appendChild(removeButton);
-                
-                el.setAttribute('data-type', element.type);
-                el.setAttribute('data-x', element.x);
-                el.setAttribute('data-y', element.y);
-                el.setAttribute('data-opacity', '100');
-                el.style.opacity = 1;
-                
-                if (element.type === 'button' || element.type === 'label') {
-                    el.setAttribute('data-color', element.color || '#000000');
-                    el.style.color = element.color || '#000000';
-                    el.setAttribute('data-font', element.font || 'medium');
-                    el.style.fontSize = `${getFontSize(element.font || 'medium')}px`;
+          <span class="remove-button">✕</span>
+        `;
+        setupMenuEvents(el);
+        scenes[scene.name].push(el);
+      } else {
+        // Regular elements
+        const textSpan = document.createElement('span');
+        textSpan.className = 'text-content';
+        textSpan.textContent = element.text || element.type;
         
-                    if (element.type === 'button') {
-                        el.setAttribute('data-bg-color', element.bgColor || '#ffffff');
-                        el.style.backgroundColor = element.bgColor || '#ffffff';
-                        el.setAttribute('data-trigger', element.trigger || '');
-                        el.setAttribute('data-trigger-target', element.triggerTarget || '');
-                        el.setAttribute('data-trigger-value', element.triggerValue || '');
-                    } else if (element.type === 'label') {
-                        el.style.background = 'none';
-                    }
-                } else if (element.type === 'image') {
-                    if (element.image) {
-                        el.style.backgroundImage = `url(${element.image})`;
-                        el.style.backgroundSize = 'contain';
-                        el.setAttribute('data-image', element.image);
-                    }
-                    
-                    el.style.width = `${element.width || 100}px`;
-                    el.style.height = `${element.height || 100}px`;
-                    el.setAttribute('data-width', element.width || 100);
-                    el.setAttribute('data-height', element.height || 100);
-                }
-                
-                // Set opacity if exists
-                if (element.opacity !== undefined) {
-                    el.style.opacity = element.opacity;
-                    el.setAttribute('data-opacity', element.opacity * 100);
-                }
-                
-                setupElementEvents(el);
-            }
-            
-            canvas.appendChild(el);
-            scenes[scene.name].push(el.cloneNode(true));
-        });
-
-        const option = document.createElement('option');
-        option.value = scene.name;
-        option.textContent = scene.name;
-        sceneSelector.appendChild(option);
-    });
-
-    if (data.scenes.length > 0) {
-        if (data.scenes[0].background) {
-            canvas.style.backgroundImage = `url(${data.scenes[0].background})`;
-            canvas.style.backgroundSize = canvas.style.width + ' ' + canvas.style.height;
-            backgroundPath = data.scenes[0].background;
+        const removeButton = document.createElement('span');
+        removeButton.textContent = '✕';
+        removeButton.className = 'remove-button';
+        
+        el.appendChild(textSpan);
+        el.appendChild(removeButton);
+        
+        // Special handling for input elements
+        if (element.type === 'input') {
+          textSpan.style.display = 'none';
+          const input = document.createElement('input');
+          input.type = 'text';
+          input.className = 'element-input';
+          input.value = element.text || '';
+          el.appendChild(input);
         }
-    }
-
-    if (data.scenes.length > 0) {
-        currentScene = data.scenes[0].name;
-        sceneSelector.value = currentScene;
-    }
-
+        
+        // Special handling for image elements
+        if (element.type === 'image') {
+          const img = document.createElement('img');
+          img.className = 'element-image';
+          img.src = element.image || '';
+          el.appendChild(img);
+          textSpan.style.display = 'none';
+        }
+        
+        // Labels should have no background
+        if (element.type === 'label') {
+          el.style.background = 'none';
+        }
+        
+        scenes[scene.name].push(el);
+      }
+    });
+  });
+  
+  // Set current scene
+  if (data.scenes.length > 0) {
+    currentScene = data.scenes[0].name;
+    sceneSelector.value = currentScene;
     loadScene(currentScene);
-    updateSceneChangeSelector();
-    updateElementFontSizes();
-    updateVariableText();
-  document.querySelectorAll('.menu').forEach(menuEl => {
-    initializeMenu(menuEl);
+  }
+  
+  // Update selectors
+  updateSceneChangeSelector();
+  updateVariableChangeSelector();
+}
+
+// Fix menu scene buttons
+function updateMenuSceneButtons(menuEl) {
+  const sceneButtonsContainer = menuEl.querySelector('.menu-scene-buttons');
+  if (!sceneButtonsContainer) return;
+  
+  sceneButtonsContainer.innerHTML = '';
+  
+  Object.keys(scenes).forEach(sceneName => {
+    const button = document.createElement('button');
+    button.className = 'menu-scene-button';
+    if (sceneName === currentScene) button.classList.add('active');
+    button.textContent = sceneName;
+    button.addEventListener('click', () => {
+      sceneSelector.value = sceneName;
+      changeScene();
+    });
+    sceneButtonsContainer.appendChild(button);
   });
 }
 
-window.addEventListener('load', () => {
-    fetch('player/jukaconfig.json')
-        .then(response => response.json())
-        .then(data => loadJukaApp(data))
-        .catch(error => console.error('Error loading jukaconfig.json:', error));
-
-    customWidthInput.addEventListener('change', updateCanvasSize);
-    customHeightInput.addEventListener('change', updateCanvasSize);
-});
-
-document.getElementById('clearButton').addEventListener('click', () => {
-    if (confirm('Are you sure you want to clear everything and start new?')) {
-        scenes = { 'Scene 1': [] };
-        currentScene = 'Scene 1';
-        variables = {};
-        canvas.innerHTML = '';
-        sceneSelector.innerHTML = '';
-        const option = document.createElement('option');
-        option.value = 'Scene 1';
-        option.textContent = 'Scene 1';
-        sceneSelector.appendChild(option);
-        sceneSelector.value = 'Scene 1';
-        updateSceneChangeSelector();
-        updateCanvasSize();
-        document.getElementById('title').value = '';
-        document.getElementById('author').value = '';
-        document.getElementById('description').value = '';
-        document.getElementById('titleSize').value = 48;
-        document.getElementById('bigSize').value = 36;
-        document.getElementById('mediumSize').value = 24;
-        document.getElementById('smallSize').value = 18;
-        const canvasHeight = canvas.offsetHeight;
-        addElement('menu', 0, canvasHeight - 50);
-        
-        document.querySelectorAll('.menu').forEach(menuEl => {
-            updateMenuSceneButtons(menuEl);
-        });
-    }
-});
-
-window.addEventListener('beforeunload', (event) => {
-    event.preventDefault();
-    event.returnValue = 'Are you sure you want to leave? Changes you made may not be saved.';
-});
+// Fix scene switching
+function changeScene() {
+  // Save current scene elements
+  scenes[currentScene] = Array.from(canvas.children).map(el => el.cloneNode(true));
+  
+  // Load new scene
+  currentScene = sceneSelector.value;
+  loadScene(currentScene);
+  
+  // Update menu buttons to show current scene as active
+  document.querySelectorAll('.menu').forEach(menu => {
+    const buttons = menu.querySelectorAll('.menu-scene-button');
+    buttons.forEach(button => {
+      button.classList.remove('active');
+      if (button.textContent === currentScene) {
+        button.classList.add('active');
+      }
+    });
+  });
+}

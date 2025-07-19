@@ -5,148 +5,294 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>JukaGUI Generator</title>
     <link data-rh="true" rel="icon" href="/favicon.png">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="style.css">
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto:wght@900&display=swap">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap">
 </head>
 <body>
     <header>
-        <h1>JukaGUI Generator</h1>
-        <button id="darkModeToggle" class="dark-mode-toggle">🌙 Dark Mode</button>
-        
-        <div class="steps-box">
-            <ol>
-                <li>Move elements to screen and double click to rename.
-                    <ul>
-                        <li>You can resize image with right click.</li>
-                        <li>You can change font sizes.</li>
-                    </ul>
-                </li>
-                <li>Once ready, click "Create and Download JukaConfig" which will download jukaconfig.json.</li>
-                <li>Download JukaGUI-Trimui.zip template at <a href="https://github.com/jukaLang/JukaGUI/releases">JukaGUI releases</a>.</li>
-                <li>Extract template and combine it with jukaconfig.json.</li>
-                <li>Put the folder under Apps on SD card.</li>
-                <li><b>NOTE:</b> If images are used, make sure to combine them with the template.</li>
-            </ol>
-            <button id="clearButton" class="create-button">Clear and Start New</button>
-            <label for="loadFile">&nbsp;&nbsp;&nbsp;Load jukaconfig.json:</label>
-            <input type="file" id="loadFile" accept="application/json">
-        </div>
-    </header>
-    <main>
-        <section class="section">
-            <label for="title">Title:</label>
-            <input type="text" id="title" placeholder="Enter title">
-            <label for="author">Author:</label>
-            <input type="text" id="author" placeholder="Enter author">
-            <label for="description">Description:</label>
-            <input type="text" id="description" placeholder="Enter description">
-        </section>
-        <section class="section font-sizes">
-            <label for="titleSize">Title Size:</label>
-            <input type="number" id="titleSize" value="48">
-            <label for="bigSize">Big Size:</label>
-            <input type="number" id="bigSize" value="36">
-            <label for="mediumSize">Medium Size:</label>
-            <input type="number" id="mediumSize" value="24">
-            <label for="smallSize">Small Size:</label>
-            <input type="number" id="smallSize" value="18">
-        </section>
-        <section class="section device-background">
-            <label for="canvasSize">Device:</label>
-            <select id="canvasSize">
-                <option value="1280x720">TSP (1280 x 720)</option>
-                <option value="1024x768">Brick (1024 x 768)</option>
-                <option value="custom">Custom</option>
-            </select>
-            <div id="customSizeFields" style="display: none; margin-left: 10px;">
-                <input type="number" id="customWidth" placeholder="Width" min="1" style="width: 100px;">
-                <span>x</span>
-                <input type="number" id="customHeight" placeholder="Height" min="1" style="width: 100px;">
+        <div class="header-content">
+            <div class="title-container">
+                <h1><i class="fas fa-paint-brush"></i> JukaGUI Generator</h1>
+                <p class="subtitle">Create beautiful interfaces for your Juka applications</p>
             </div>
-            <label for="backgroundFile">&nbsp;&nbsp;&nbsp;Change Background:</label>
+            <div class="header-actions">
+                <button id="darkModeToggle" class="dark-mode-toggle">
+                    <i class="fas fa-moon"></i> Dark Mode
+                </button>
+                <button id="toggleGuide" class="action-button">
+                    <i class="fas fa-question-circle"></i> Guide
+                </button>
+                <button id="toggleAppInfo" class="action-button">
+                    <i class="fas fa-info-circle"></i> App Info
+                </button>
+            </div>
+        </div>
+        
+        <div id="guidePanel" class="steps-box">
+            <div class="steps-header">
+                <h2><i class="fas fa-lightbulb"></i> Getting Started Guide</h2>
+                <button id="closeGuide" class="close-button">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="steps-content">
+                <ol>
+                    <li>Drag elements from the left sidebar to the canvas
+                        <ul>
+                            <li>Double-click elements to edit</li>
+                            <li>Right-click + drag to resize images</li>
+                            <li>Drag elements to reposition</li>
+                        </ul>
+                    </li>
+                    <li>Select elements to edit properties in the right sidebar</li>
+                    <li>Use the "Download Config" button when finished</li>
+                    <li>Combine with the JukaGUI template from <a href="https://github.com/jukaLang/JukaGUI/releases">GitHub releases</a></li>
+                </ol>
+                <div class="file-actions">
+                    <button id="clearButton" class="action-button danger">
+                        <i class="fas fa-trash"></i> Clear and Start New
+                    </button>
+                    <div class="file-input-container">
+                        <label for="loadFile" class="file-button">
+                            <i class="fas fa-upload"></i> Load jukaconfig.json
+                        </label>
+                        <input type="file" id="loadFile" accept="application/json">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+<!-- Update the Application Information section -->
+<div id="appInfoPanel" class="app-info-section">
+    <div class="steps-header">
+      <h2><i class="fas fa-info-circle"></i> Application Information</h2>
+      <button id="closeAppInfo" class="close-button">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+    <div class="steps-content">
+      <div class="input-container">
+        <div class="input-group">
+          <label for="title"><i class="fas fa-heading"></i> Title:</label>
+          <input type="text" id="title" placeholder="App Title">
+        </div>
+        <div class="input-group">
+          <label for="author"><i class="fas fa-user"></i> Author:</label>
+          <input type="text" id="author" placeholder="Your Name">
+        </div>
+        <div class="input-group">
+          <label for="description"><i class="fas fa-align-left"></i> Description:</label>
+          <input type="text" id="description" placeholder="App description">
+        </div>
+        <div class="input-group">
+          <label for="canvasSize"><i class="fas fa-mobile-alt"></i> Device:</label>
+          <select id="canvasSize">
+            <option value="1280x720">TSP (1280 x 720)</option>
+            <option value="1024x768">Brick (1024 x 768)</option>
+            <option value="custom">Custom</option>
+          </select>
+        </div>
+        <div id="customSizeFields" class="custom-size-fields">
+          <input type="number" id="customWidth" placeholder="Width" min="1">
+          <span>x</span>
+          <input type="number" id="customHeight" placeholder="Height" min="1">
+        </div>
+        <div class="input-group file-input-group">
+          <label for="backgroundFile"><i class="fas fa-image"></i> Background:</label>
+          <div class="file-input-container">
+            <label for="backgroundFile" class="file-button">
+              <i class="fas fa-upload"></i> Choose Image
+            </label>
             <input type="file" id="backgroundFile" accept="image/*">
-        </section>
-        <section class="scene-controls">
-            <button onclick="addScene()">Add Scene</button>
-            <select id="sceneSelector" onchange="changeScene()"></select>
-            <button onclick="renameScene()">Rename Scene</button>
-            <button onclick="deleteScene()">Delete Scene</button>
-            <button onclick="duplicateScene()">Duplicate Scene</button>
-        </section>
-        <section  class="scene-controls">
-            <button id="addVariableButton" onclick="addVariable()">Add Variable</button>
-            <select id="variableSelector" style="display: none;" onchange="changeVariable()"></select>
-            <input type="text" id="variableValueInput" style="display: none;" readonly>
-            <button id="renameVariableButton" style="display: none;" onclick="renameVariable()">Rename Variable</button>
-            <button id="changeValueButton" style="display: none;" onclick="showChangeValue()">Change Value</button>
-        </section>
-        <section class="toolbar">
-            <div class="element" draggable="true" data-type="button">Button</div>
-            <div class="element" draggable="true" data-type="label">Label</div>
-            <div class="element" draggable="true" data-type="image">Image</div>
-            <div class="element" draggable="true" data-type="input">Input</div>
-            <div class="element" draggable="true" data-type="menu">Menu</div>
-        </section>
-        <section class="color-controls">
-            <label for="hiddenSetting" class="control-label" style="display:inline;">Attributes:</label>
-            <select id="hiddenSetting" class="trigger-selector" style="visibility: hidden;"></select>
-            
-            <!-- Editable position and size controls -->
-            <span class="control-label" id="xLabel" style="display:none;">X:</span>
-            <input type="number" id="datax" class="coordinate-input" style="display:none; width: 70px;">
-            
-            <span class="control-label" id="yLabel" style="display:none;">Y:</span>
-            <input type="number" id="datay" class="coordinate-input" style="display:none; width: 70px;">
-            
-            <span class="control-label" id="widthLabel" style="display:none;">W:</span>
-            <input type="number" id="dataWidth" class="coordinate-input" style="display:none; width: 70px;">
-            
-            <span class="control-label" id="heightLabel" style="display:none;">H:</span>
-            <input type="number" id="dataHeight" class="coordinate-input" style="display:none; width: 70px;">
-            
-            <label for="colorPicker" class="control-label" style="display:none;">Font Color:</label>
-            <input type="color" id="colorPicker" class="color-picker" value="#000000" style="display:none;">
-            
-            <label for="bgColorPicker" class="control-label" style="display:none;">BG Color:</label>
-            <input type="color" id="bgColorPicker" class="bg-color-picker" value="#ffffff" style="display:none;">
-            
-            <label for="fontSizePicker" class="control-label" style="display:none;">Text Size:</label>
-            <select id="fontSizePicker" class="font-size-picker" style="display:none;">
-                <option value="title">Title</option>
-                <option value="big">Big</option>
-                <option value="medium">Medium</option>
-                <option value="small">Small</option>
-            </select>
-            
-            <label for="opacitySlider" class="control-label" style="display:none;">Opacity:</label>
-            <input type="range" id="opacitySlider" min="0" max="100" value="100" class="opacity-slider" style="display:none; width: 100px;">
-            <span id="opacityValue" style="display:none; margin-left: 5px;">100%</span>
-            
-            <label for="triggerSelector" class="control-label" style="display:none;">Trigger:</label>
-            <select id="triggerSelector" class="trigger-selector" style="display:none;">
-                <option value="">None</option>
-                <option value="change_scene">Change Scene</option>
-                <option value="exit">Exit</option>
-                <option value="external_app">Trigger External App</option>
-                <option value="set_variable">Set Variable</option>
-                <option value="play_video">Play Video</option>
-                <option value="play_image">Fullscreen Image</option>
-            </select>
-            
-            <select id="sceneChangeSelector" class="scene-change-selector" style="display:none;"></select>
-            <input type="text" id="externalAppPath" class="external-app-path" placeholder="Enter path to external app" style="display:none;">
-            <select id="variableChangeSelector" class="variable-change-selector" style="display:none;"></select>
-            <input type="text" id="variableChangeValue" class="variable-change-value" placeholder="Enter new variable value" style="display:none;">
-        </section>
-        <div class="canvas" id="canvas"></div>
-        <section>
-            <button class="create-button" onclick="createJukaApp()">Create and Download JukaConfig</button>
-        </section>
-        <pre id="output"></pre>
+          </div>
+        </div>
+      </div>
+      <div class="font-size-controls">
+        <h4><i class="fas fa-text-height"></i> Font Sizes</h4>
+        <div class="size-inputs">
+          <div class="size-group">
+            <label for="titleSize">Title:</label>
+            <input type="number" id="titleSize" value="48" min="10">
+          </div>
+          <div class="size-group">
+            <label for="bigSize">Big:</label>
+            <input type="number" id="bigSize" value="36" min="10">
+          </div>
+          <div class="size-group">
+            <label for="mediumSize">Medium:</label>
+            <input type="number" id="mediumSize" value="24" min="10">
+          </div>
+          <div class="size-group">
+            <label for="smallSize">Small:</label>
+            <input type="number" id="smallSize" value="18" min="10">
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+    </header>
+
+    <main>
+        <div class="editor-container">
+            <!-- Left Sidebar - UI Elements -->
+            <div class="sidebar left-sidebar">
+                <div class="sidebar-header">
+                    <h3><i class="fas fa-shapes"></i> UI Elements</h3>
+                </div>
+                <div class="elements-container">
+                    <div class="element" draggable="true" data-type="button" title="Button">
+                        <i class="fas fa-square"></i> Button
+                    </div>
+                    <div class="element" draggable="true" data-type="label" title="Label">
+                        <i class="fas fa-font"></i> Label
+                    </div>
+                    <div class="element" draggable="true" data-type="image" title="Image">
+                        <i class="fas fa-image"></i> Image
+                    </div>
+                    <div class="element" draggable="true" data-type="input" title="Input">
+                        <i class="fas fa-edit"></i> Input
+                    </div>
+                    <div class="element" draggable="true" data-type="menu" title="Menu">
+                        <i class="fas fa-bars"></i> Menu
+                    </div>
+                </div>
+                <div class="variables-panel">
+                    <div class="sidebar-header">
+                        <h3><i class="fas fa-code"></i> Variables</h3>
+                        <button id="addVariableButton" class="action-button small">
+                            <i class="fas fa-plus"></i>
+                        </button>
+                    </div>
+                    <div id="variablesList" class="variables-list">
+                        <!-- Variables will be added here -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Main Canvas Area -->
+            <div class="canvas-area">
+                <div class="canvas-header">
+                    <div class="canvas-controls">
+                        <div class="scene-controls">
+                            <button class="action-button" onclick="addScene()">
+                                <i class="fas fa-plus"></i> Add Scene
+                            </button>
+                            <select id="sceneSelector" onchange="changeScene()"></select>
+                            <button class="action-button" onclick="renameScene()">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button class="action-button danger" onclick="deleteScene()">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                            <button class="action-button" onclick="duplicateScene()">
+                                <i class="fas fa-copy"></i>
+                            </button>
+                        </div>
+                        
+                        <button class="action-button primary" onclick="createJukaApp()">
+                            <i class="fas fa-download"></i> Download Config
+                        </button>
+                    </div>
+                </div>
+                <div class="canvas" id="canvas"></div>
+            </div>
+
+            <!-- Right Sidebar - Properties -->
+            <div class="sidebar right-sidebar">
+                <div class="sidebar-header">
+                    <h3><i class="fas fa-sliders-h"></i> Properties</h3>
+                    <button id="toggleProperties" class="toggle-button">
+                        <i class="fas fa-chevron-down"></i>
+                    </button>
+                </div>
+                <div id="propertiesContent" class="properties-content">
+                    <div id="noSelection" class="no-selection">
+                        <i class="fas fa-mouse-pointer"></i>
+                        <p>Select an element to edit properties</p>
+                    </div>
+                    
+                    <div id="elementProperties" class="element-properties">
+                        <div class="position-controls">
+                            <div class="control-group">
+                                <label for="datax"><i class="fas fa-arrows-alt-h"></i> X:</label>
+                                <input type="number" id="datax" class="coordinate-input">
+                            </div>
+                            <div class="control-group">
+                                <label for="datay"><i class="fas fa-arrows-alt-v"></i> Y:</label>
+                                <input type="number" id="datay" class="coordinate-input">
+                            </div>
+                            <div class="control-group">
+                                <label for="dataWidth"><i class="fas fa-arrows-alt-h"></i> Width:</label>
+                                <input type="number" id="dataWidth" class="coordinate-input">
+                            </div>
+                            <div class="control-group">
+                                <label for="dataHeight"><i class="fas fa-arrows-alt-v"></i> Height:</label>
+                                <input type="number" id="dataHeight" class="coordinate-input">
+                            </div>
+                        </div>
+
+                        <div class="style-controls">
+                            <div class="control-group">
+                                <label for="colorPicker"><i class="fas fa-palette"></i> Text Color:</label>
+                                <input type="color" id="colorPicker" class="color-picker" value="#000000">
+                            </div>
+                            <div class="control-group">
+                                <label for="bgColorPicker"><i class="fas fa-fill"></i> BG Color:</label>
+                                <input type="color" id="bgColorPicker" class="bg-color-picker" value="#ffffff">
+                            </div>
+                            <div class="control-group">
+                                <label for="fontSizePicker"><i class="fas fa-text-height"></i> Font Size:</label>
+                                <select id="fontSizePicker" class="font-size-picker">
+                                    <option value="title">Title</option>
+                                    <option value="big">Big</option>
+                                    <option value="medium">Medium</option>
+                                    <option value="small">Small</option>
+                                </select>
+                            </div>
+                            <div class="control-group">
+                                <label for="opacitySlider"><i class="fas fa-adjust"></i> Opacity:</label>
+                                <input type="range" id="opacitySlider" min="0" max="100" value="100" class="opacity-slider">
+                                <span id="opacityValue">100%</span>
+                            </div>
+                        </div>
+
+                        <div class="trigger-controls">
+                            <div class="control-group">
+                                <label for="triggerSelector"><i class="fas fa-bolt"></i> Trigger:</label>
+                                <select id="triggerSelector" class="trigger-selector">
+                                    <option value="">None</option>
+                                    <option value="change_scene">Change Scene</option>
+                                    <option value="exit">Exit</option>
+                                    <option value="external_app">External App</option>
+                                    <option value="set_variable">Set Variable</option>
+                                    <option value="play_video">Play Video</option>
+                                    <option value="play_image">Fullscreen Image</option>
+                                </select>
+                            </div>
+                            
+                            <div id="triggerOptions">
+                                <select id="sceneChangeSelector" class="scene-change-selector"></select>
+                                <input type="text" id="externalAppPath" class="external-app-path" placeholder="App path">
+                                <select id="variableChangeSelector" class="variable-change-selector"></select>
+                                <input type="text" id="variableChangeValue" class="variable-change-value" placeholder="New value">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
     </main>
+
     <footer>
-        <p class="contribute-banner">Need help or want to join the conversation? Join us on <a href="https://discord.gg/R9qgJjh5jG">Discord</a>! Want to contribute to the code? Visit our <a href="https://github.com/jukaLang/JukaGUI">GitHub</a></p>
+        <div class="contribute-banner">
+            <p>
+                Need help? Join us on <a href="https://discord.gg/R9qgJjh5jG"><i class="fab fa-discord"></i> Discord</a>! 
+                Want to contribute? Visit our <a href="https://github.com/jukaLang/JukaGUI"><i class="fab fa-github"></i> GitHub</a>
+            </p>
+        </div>
     </footer>
+
     <script src="script.js"></script>
 </body>
 </html>
