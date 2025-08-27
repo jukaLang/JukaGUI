@@ -1,0 +1,10 @@
+{
+  "go.toolsEnvVars": {
+    "CGO_ENABLED": "1",
+    "CC": "gcc",
+    "CXX": "g++",
+    "CGO_CFLAGS": "-IA:/anaconda3/Library/mingw-w64/x86_64-w64-mingw32/include/SDL2",
+    "CGO_LDFLAGS": "-LA:/anaconda3/Library/mingw-w64/lib -lSDL2 -lSDL2_image -lSDL2_ttf",
+    "PATH": "A:\\anaconda3\\Library\\mingw-w64\\bin;${env:PATH}"
+  }
+}

@@ -5,16 +5,12 @@ const sceneSelector = document.getElementById('sceneSelector');
 const toggleGuide = document.getElementById('toggleGuide');
 const closeGuide = document.getElementById('closeGuide');
 const guidePanel = document.getElementById('guidePanel');
-const toggleAppInfo = document.getElementById('toggleAppInfo');
-const appInfoPanel = document.getElementById('appInfoPanel');
 const noSelection = document.getElementById('noSelection');
 const elementProperties = document.getElementById('elementProperties');
 const canvasSizeSelect = document.getElementById('canvasSize');
 const customWidthInput = document.getElementById('customWidth');
 const customHeightInput = document.getElementById('customHeight');
 const backgroundFileInput = document.getElementById('backgroundFile');
-const toggleProperties = document.getElementById('toggleProperties');
-const propertiesContent = document.getElementById('propertiesContent');
 const titleSizeInput = document.getElementById('titleSize');
 const bigSizeInput = document.getElementById('bigSize');
 const mediumSizeInput = document.getElementById('mediumSize');
@@ -23,6 +19,11 @@ const addVariableButton = document.getElementById('addVariableButton');
 const variablesList = document.getElementById('variablesList');
 const loadFileInput = document.getElementById('loadFile');
 const clearButton = document.getElementById('clearButton');
+const executeProgramBtn = document.getElementById('executeProgram');
+const externalProgramPath = document.getElementById('externalProgramPath');
+const programOutput = document.getElementById('programOutput');
+const videoList = document.getElementById('videoList');
+const propertiesTabs = document.querySelectorAll('.properties-tab');
 
 // Global State
 let backgroundPath = '';
@@ -35,1178 +36,1008 @@ let canvasHeight = 720;
 
 // Initialize the editor
 document.addEventListener('DOMContentLoaded', () => {
-  // Set initial canvas size
-  updateCanvasSize();
-  
-  // Add initial scene
-  const option = document.createElement('option');
-  option.value = 'Scene 1';
-  option.textContent = 'Scene 1';
-  sceneSelector.appendChild(option);
-  
-  // Add initial menu
-  addElement('menu', 0, canvasHeight - 50);
-  
-  // Set up event listeners
-  setupEventListeners();
-  
-  // Try to load initial config
-  loadInitialConfig();
-  
-  // Initialize properties panel as expanded
-  propertiesContent.classList.remove('collapsed');
-  
-  // Update scene change selector
-  updateSceneChangeSelector();
-  
-  // Update variable change selector
-  updateVariableChangeSelector();
-});
-
-// Set up all event listeners
-function setupEventListeners() {
-  // Dark mode toggle
-  darkModeToggle.addEventListener('click', () => {
-    document.body.classList.toggle('dark-mode');
-    darkModeToggle.innerHTML = document.body.classList.contains('dark-mode') ? 
-      '<i class="fas fa-sun"></i> Light Mode' : 
-      '<i class="fas fa-moon"></i> Dark Mode';
-  });
-  
-  // Guide panel toggle
-  toggleGuide.addEventListener('click', () => {
-    guidePanel.style.display = guidePanel.style.display === 'none' ? 'block' : 'block';
-  });
-  
-  closeGuide.addEventListener('click', () => {
-    guidePanel.style.display = 'none';
-  });
-  
-  // App info toggle
-  toggleAppInfo.addEventListener('click', () => {
-    appInfoPanel.style.display = appInfoPanel.style.display === 'none' ? 'block' : 'none';
-  });
-
-  const closeAppInfo = document.getElementById('closeAppInfo');
-if (closeAppInfo) {
-  closeAppInfo.addEventListener('click', () => {
-    appInfoPanel.style.display = 'none';
-  });
-}
-  
-  // Canvas drop zone
-  canvas.addEventListener('dragover', e => e.preventDefault());
-  
-  canvas.addEventListener('drop', e => {
-    e.preventDefault();
-    const type = e.dataTransfer.getData('type');
-    const rect = canvas.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
-    addElement(type, x, y);
-  });
-  
-  // Canvas click to deselect
-  canvas.addEventListener('click', e => {
-    if (e.target === canvas) {
-      currentElement = null;
-      document.querySelectorAll('.element').forEach(el => el.classList.remove('selected'));
-      noSelection.style.display = 'block';
-      elementProperties.classList.remove('visible');
-    }
-  });
-  
-  // Initialize drag events for elements
-  document.querySelectorAll('.left-sidebar .element').forEach(el => {
-    el.addEventListener('dragstart', e => {
-      e.dataTransfer.setData('type', e.target.getAttribute('data-type'));
-    });
-  });
-  
-  // Canvas size controls
-  canvasSizeSelect.addEventListener('change', updateCanvasSize);
-  customWidthInput.addEventListener('change', updateCanvasSize);
-  customHeightInput.addEventListener('change', updateCanvasSize);
-  
-  // Background image
-  backgroundFileInput.addEventListener('change', setBackground);
-  
-  // Properties panel toggle
-  toggleProperties.addEventListener('click', () => {
-    propertiesContent.classList.toggle('collapsed');
-    const icon = toggleProperties.querySelector('i');
-    icon.className = propertiesContent.classList.contains('collapsed') ? 
-      'fas fa-chevron-up' : 'fas fa-chevron-down';
-  });
-  
-  // Add variable button
-  addVariableButton.addEventListener('click', addVariable);
-  
-  // Load file
-  loadFileInput.addEventListener('change', function(e) {
-    const file = e.target.files[0];
-    if (!file) return;
+    // Set initial canvas size
+    updateCanvasSize();
     
-    const reader = new FileReader();
-    reader.onload = e => {
-      try {
-        const config = JSON.parse(e.target.result);
-        loadJukaApp(config);
-      } catch (error) {
-        alert('Error loading config: ' + error.message);
-      }
-    };
-    reader.readAsText(file);
-  });
-  
-  // Clear button
-  clearButton.addEventListener('click', clearAll);
-}
-
-// Update canvas size based on selection
-function updateCanvasSize() {
-  if (canvasSizeSelect.value === 'custom') {
-    canvasWidth = parseInt(customWidthInput.value) || 1280;
-    canvasHeight = parseInt(customHeightInput.value) || 720;
-    document.getElementById('customSizeFields').style.display = 'grid';
-  } else {
-    const [width, height] = canvasSizeSelect.value.split('x').map(Number);
-    canvasWidth = width;
-    canvasHeight = height;
-    document.getElementById('customSizeFields').style.display = 'none';
-  }
-  
-  // Apply new size
-  canvas.style.width = `${canvasWidth}px`;
-  canvas.style.height = `${canvasHeight}px`;
-  
-  // Update menu position
-  document.querySelectorAll('.element[data-type="menu"]').forEach(menu => {
-    menu.style.top = `${canvasHeight - 50}px`;
-  });
-}
-
-// Scene Management
-function addScene() {
-  saveCurrentScene();
-  const newSceneName = `Scene ${Object.keys(scenes).length + 1}`;
-  scenes[newSceneName] = [];
-  
-  const option = document.createElement('option');
-  option.value = newSceneName;
-  option.textContent = newSceneName;
-  sceneSelector.appendChild(option);
-  sceneSelector.value = newSceneName;
-  
-  currentScene = newSceneName;
-  loadScene(currentScene);
-  
-  // Add menu to new scene
-  addElement('menu', 0, canvasHeight - 50);
-  
-  // Update scene change selector
-  updateSceneChangeSelector();
-}
-
-function renameScene() {
-  const newName = prompt('Enter new scene name:', currentScene);
-  if (!newName || scenes[newName]) return;
-  
-  scenes[newName] = scenes[currentScene];
-  delete scenes[currentScene];
-  currentScene = newName;
-
-  const option = sceneSelector.querySelector(`option[value="${sceneSelector.value}"]`);
-  if (option) {
-    option.value = newName;
-    option.textContent = newName;
-    sceneSelector.value = newName;
-  }
-  
-  // Update scene change selector
-  updateSceneChangeSelector();
-}
-
-function deleteScene() {
-  saveCurrentScene();
-  if (Object.keys(scenes).length <= 1) {
-    alert('Cannot delete the only scene.');
-    return;
-  }
-
-  if (!confirm(`Delete scene "${currentScene}"?`)) return;
-  
-  const sceneNames = Object.keys(scenes);
-  const currentIndex = sceneNames.indexOf(currentScene);
-  delete scenes[currentScene];
-  
-  const optionToRemove = sceneSelector.querySelector(`option[value="${currentScene}"]`);
-  if (optionToRemove) sceneSelector.removeChild(optionToRemove);
-  
-  const nextScene = currentIndex > 0 ? sceneNames[currentIndex - 1] : sceneNames[1];
-  currentScene = nextScene;
-  sceneSelector.value = currentScene;
-  
-  loadScene(currentScene);
-  
-  // Update scene change selector
-  updateSceneChangeSelector();
-}
-
-function duplicateScene() {
-  saveCurrentScene();
-  const newSceneName = prompt('Name for duplicated scene:', `${currentScene} Copy`);
-  if (!newSceneName || scenes[newSceneName]) return;
-  
-  scenes[newSceneName] = scenes[currentScene].map(el => el.cloneNode(true));
-  
-  const option = document.createElement('option');
-  option.value = newSceneName;
-  option.textContent = newSceneName;
-  sceneSelector.appendChild(option);
-  sceneSelector.value = newSceneName;
-  currentScene = newSceneName;
-  
-  loadScene(newSceneName);
-  
-  // Update scene change selector
-  updateSceneChangeSelector();
-}
-
-function changeScene() {
-  currentScene = sceneSelector.value;
-  loadScene(currentScene);
-}
-
-function loadScene(sceneName) {
-  canvas.innerHTML = '';
-  if (scenes[sceneName]) {
-    scenes[sceneName].forEach(el => {
-      const clonedEl = el.cloneNode(true);
-      setupElementEvents(clonedEl);
-      canvas.appendChild(clonedEl);
-    });
-  }
-  
-  // Update menu buttons
-  document.querySelectorAll('.menu').forEach(menu => {
-    updateMenuSceneButtons(menu);
-  });
-}
-
-// Element Management
-function addElement(type, x, y) {
-  const el = document.createElement('div');
-  el.className = 'element';
-  el.style.position = 'absolute';
-  el.style.left = `${x}px`;
-  el.style.top = `${y}px`;
-  el.setAttribute('data-opacity', '100');
-  el.style.opacity = 1;
-  el.style.fontFamily = 'Roboto, sans-serif';
-  el.style.fontWeight = '900';
-
-  // Set default dimensions
-  const dimensions = {
-    menu: { width: '100%', height: '50px', y: canvasHeight - 50 },
-    image: { width: '100px', height: '100px' },
-    input: { width: '150px', height: '40px' },
-    default: { width: 'auto', height: 'auto' }
-  };
-
-  const { width, height } = dimensions[type] || dimensions.default;
-  el.style.width = width;
-  el.style.height = height;
-  
-  if (type === 'menu') {
-    el.style.top = `${dimensions.menu.y}px`;
-    el.style.left = '0px';
-    el.innerHTML = `
-      <div class="menu-scene-buttons"></div>
-      <button class="menu-language">EN</button>
-      <div class="menu-clock">00:00</div>
-      <span class="remove-button">✕</span>
-    `;
-    el.style.fontSize = '16px';
-    el.setAttribute('data-type', 'menu');
-    setupMenuEvents(el);
-    updateMenuSceneButtons(el);
-    updateMenuClock(el.querySelector('.menu-clock'));
-  } else {
-    const textSpan = document.createElement('span');
-    textSpan.className = 'text-content';
-    textSpan.textContent = type.charAt(0).toUpperCase() + type.slice(1);
-    el.appendChild(textSpan);
-    
-    const removeButton = document.createElement('span');
-    removeButton.textContent = '✕';
-    removeButton.className = 'remove-button';
-    el.appendChild(removeButton);
-    
-    el.setAttribute('data-type', type);
-    
-    // Special handling for input elements
-    if (type === 'input') {
-      textSpan.style.display = 'none';
-      const input = document.createElement('input');
-      input.type = 'text';
-      input.className = 'element-input';
-      input.placeholder = 'Input text';
-      el.appendChild(input);
-    }
-    
-    // Special handling for image elements
-    if (type === 'image') {
-      const img = document.createElement('img');
-      img.className = 'element-image';
-      img.src = '';
-      el.appendChild(img);
-      textSpan.style.display = 'none';
-    }
-    
-    // Labels should have no background
-    if (type === 'label') {
-      el.style.background = 'none';
-    }
-  }
-
-  // Set element attributes
-  el.setAttribute('data-x', x | 0);
-  el.setAttribute('data-y', y | 0);
-  el.setAttribute('data-width', width.replace('px', '') || '100');
-  el.setAttribute('data-height', height.replace('px', '') || '100');
-  
-  if (type !== 'menu') {
-    el.setAttribute('data-color', '#000000');
-    el.setAttribute('data-font', 'medium');
-    el.style.fontSize = getFontSize('medium') + 'px';
-    el.style.padding = '4px';
-    
-    if (type === 'button') {
-      el.setAttribute('data-bg-color', '#ffffff');
-      el.style.backgroundColor = '#ffffff';
-    }
-  }
-
-  // Add to canvas
-  canvas.appendChild(el);
-  setupElementEvents(el);
-  
-  if (!scenes[currentScene]) scenes[currentScene] = [];
-  scenes[currentScene].push(el.cloneNode(true));
-
-  return el;
-}
-
-function setupElementEvents(el) {
-  // Mouse events for dragging and resizing
-  el.addEventListener('mousedown', (event) => {
-    if (event.button === 2) { // Right click for resize
-      handleResize(el, event);
-    } else { // Left click for drag
-      handleDrag(el, event);
-    }
-  });
-
-  // Context menu prevention
-  el.addEventListener('contextmenu', (event) => event.preventDefault());
-
-  // Double click for editing
-  el.addEventListener('dblclick', (event) => {
-    event.stopPropagation();
-    const type = el.getAttribute('data-type');
-    if (['button', 'label'].includes(type)) {
-      const textSpan = el.querySelector('.text-content');
-      const newText = prompt("Edit text:", textSpan.textContent);
-      if (newText !== null) {
-        textSpan.textContent = newText;
-        processTextForVariables(textSpan);
-      }
-    } else if (type === 'image') {
-      const fileInput = document.createElement('input');
-      fileInput.type = 'file';
-      fileInput.accept = 'image/*';
-      fileInput.style.display = 'none';
-      
-      fileInput.onchange = (e) => {
-        const file = e.target.files[0];
-        if (!file) return;
-        
-        const reader = new FileReader();
-        reader.onload = (e) => {
-          const img = el.querySelector('.element-image');
-          if (img) img.src = e.target.result;
-          const textSpan = el.querySelector('.text-content');
-          if (textSpan) textSpan.style.display = 'none';
-        };
-        reader.readAsDataURL(file);
-      };
-      
-      document.body.appendChild(fileInput);
-      fileInput.click();
-      document.body.removeChild(fileInput);
-    } else if (type === 'input') {
-      const input = el.querySelector('.element-input');
-      if (input) input.focus();
-    }
-  });
-
-  // Selection
-  el.addEventListener('click', (e) => {
-    if (e.target.classList.contains('remove-button') || 
-        e.target.classList.contains('menu-scene-button') ||
-        e.target.classList.contains('menu-language') ||
-        e.target.classList.contains('element-input')) {
-      return;
-    }
-    
-    document.querySelectorAll('.element').forEach(otherEl => {
-      otherEl.classList.remove('selected');
-    });
-    el.classList.add('selected');
-    currentElement = el;
-    showElementProperties(el);
-  });
-
-  // Remove button
-  const removeButton = el.querySelector('.remove-button');
-  if (removeButton) {
-    removeButton.addEventListener('click', (event) => {
-      event.stopPropagation();
-      el.remove();
-      const sceneElements = scenes[currentScene];
-      const index = sceneElements.findIndex(item => item.isEqualNode(el));
-      if (index > -1) sceneElements.splice(index, 1);
-    });
-  }
-  
-  // Process text for variables
-  const textSpan = el.querySelector('.text-content');
-  if (textSpan) {
-    processTextForVariables(textSpan);
-  }
-}
-
-function handleResize(el, event) {
-  el.style.cursor = 'nwse-resize';
-  const startX = event.clientX;
-  const startY = event.clientY;
-  const startWidth = el.offsetWidth;
-  const startHeight = el.offsetHeight;
-
-  const onMouseMove = (e) => {
-    const newWidth = Math.max(50, startWidth + (e.clientX - startX));
-    const newHeight = Math.max(50, startHeight + (e.clientY - startY));
-    el.style.width = `${newWidth}px`;
-    el.style.height = `${newHeight}px`;
-    el.setAttribute('data-width', newWidth);
-    el.setAttribute('data-height', newHeight);
-  };
-
-  const onMouseUp = () => {
-    el.style.cursor = 'grab';
-    document.removeEventListener('mousemove', onMouseMove);
-    document.removeEventListener('mouseup', onMouseUp);
-  };
-
-  document.addEventListener('mousemove', onMouseMove);
-  document.addEventListener('mouseup', onMouseUp);
-}
-
-function handleDrag(el, event) {
-  el.style.cursor = 'grabbing';
-  const xOffset = event.clientX - el.offsetLeft;
-  const yOffset = event.clientY - el.offsetTop;
-  const canvasRect = canvas.getBoundingClientRect();
-
-  const onMouseMove = (e) => {
-    let newX = e.clientX - xOffset;
-    let newY = e.clientY - yOffset;
-    const elRect = el.getBoundingClientRect();
-
-    newX = Math.max(0, Math.min(newX, canvasRect.width - elRect.width));
-    newY = Math.max(0, Math.min(newY, canvasRect.height - elRect.height));
-
-    el.style.left = `${newX}px`;
-    el.style.top = `${newY}px`;
-    el.setAttribute('data-x', newX);
-    el.setAttribute('data-y', newY);
-  };
-
-  const onMouseUp = () => {
-    el.style.cursor = 'grab';
-    document.removeEventListener('mousemove', onMouseMove);
-    document.removeEventListener('mouseup', onMouseUp);
-  };
-
-  document.addEventListener('mousemove', onMouseMove);
-  document.addEventListener('mouseup', onMouseUp);
-}
-
-function showElementProperties(el) {
-  noSelection.style.display = 'none';
-  elementProperties.classList.add('visible');
-
-  const bgColorPicker = document.getElementById('bgColorPicker');
-  const bgColorGroup = bgColorPicker.closest('.control-group');
-
-  if (el.getAttribute('data-type') === 'label') {
-    bgColorGroup.style.display = 'none';
-    el.style.backgroundColor = 'transparent';
-    el.removeAttribute('data-bg-color');
-  } else {
-    bgColorGroup.style.display = 'block';
-  }
-  
-  // Position/size
-  const datax = document.getElementById('datax');
-  const datay = document.getElementById('datay');
-  const dataWidth = document.getElementById('dataWidth');
-  const dataHeight = document.getElementById('dataHeight');
-  
-  datax.value = el.getAttribute('data-x') || 0;
-  datay.value = el.getAttribute('data-y') || 0;
-  dataWidth.value = el.getAttribute('data-width') || 100;
-  dataHeight.value = el.getAttribute('data-height') || 100;
-  
-  // Update position/size when inputs change
-  const updatePositionSize = () => {
-    el.style.left = `${datax.value}px`;
-    el.setAttribute('data-x', datax.value);
-    el.style.top = `${datay.value}px`;
-    el.setAttribute('data-y', datay.value);
-    el.style.width = `${dataWidth.value}px`;
-    el.setAttribute('data-width', dataWidth.value);
-    el.style.height = `${dataHeight.value}px`;
-    el.setAttribute('data-height', dataHeight.value);
-  };
-  
-  [datax, datay, dataWidth, dataHeight].forEach(input => {
-    input.oninput = updatePositionSize;
-  });
-  
-  // Text styling
-  if (!['image', 'input'].includes(el.getAttribute('data-type'))) {
-    const colorPicker = document.getElementById('colorPicker');
-    const fontSizePicker = document.getElementById('fontSizePicker');
-    
-    colorPicker.value = el.getAttribute('data-color') || '#000000';
-    colorPicker.oninput = () => {
-      el.style.color = colorPicker.value;
-      el.setAttribute('data-color', colorPicker.value);
-    };
-
-    fontSizePicker.value = el.getAttribute('data-font') || 'medium';
-    fontSizePicker.onchange = () => {
-      el.setAttribute('data-font', fontSizePicker.value);
-      el.style.fontSize = getFontSize(fontSizePicker.value) + 'px';
-    };
-
-    if (el.getAttribute('data-type') !== 'label') {
-      const bgColorPicker = document.getElementById('bgColorPicker');
-      bgColorPicker.value = el.getAttribute('data-bg-color') || '#ffffff';
-      bgColorPicker.oninput = () => {
-        el.style.backgroundColor = bgColorPicker.value;
-        el.setAttribute('data-bg-color', bgColorPicker.value);
-      };
-    }
-  }
-
-  // Transparency
-  if (['image', 'button'].includes(el.getAttribute('data-type'))) {
-    const opacitySlider = document.getElementById('opacitySlider');
-    const opacityValue = document.getElementById('opacityValue');
-    
-    const opacity = el.getAttribute('data-opacity') || '100';
-    opacitySlider.value = opacity;
-    opacityValue.textContent = `${opacity}%`;
-    opacitySlider.oninput = () => {
-      const value = opacitySlider.value;
-      el.style.opacity = value / 100;
-      el.setAttribute('data-opacity', value);
-      opacityValue.textContent = `${value}%`;
-    };
-  }
-  
-  // Trigger controls
-  const triggerSelector = document.getElementById('triggerSelector');
-  triggerSelector.value = el.getAttribute('data-trigger') || '';
-  
-  // Hide all trigger options first
-  document.querySelectorAll('#triggerOptions > *').forEach(el => {
-    el.style.display = 'none';
-  });
-  
-  // Show relevant options based on selected trigger
-  if (triggerSelector.value === 'change_scene') {
-    document.getElementById('sceneChangeSelector').style.display = 'block';
-  } else if (triggerSelector.value === 'external_app') {
-    document.getElementById('externalAppPath').style.display = 'block';
-  } else if (triggerSelector.value === 'set_variable') {
-    document.getElementById('variableChangeSelector').style.display = 'block';
-    document.getElementById('variableChangeValue').style.display = 'block';
-  }
-}
-
-// Menu Functions
-function setupMenuEvents(menuEl) {
-  // Remove button
-  const removeButton = menuEl.querySelector('.remove-button');
-  if (removeButton) {
-    removeButton.addEventListener('click', (event) => {
-      event.stopPropagation();
-      menuEl.remove();
-      const sceneElements = scenes[currentScene];
-      const index = sceneElements.findIndex(item => item.isEqualNode(menuEl));
-      if (index > -1) sceneElements.splice(index, 1);
-    });
-  }
-}
-
-function updateMenuSceneButtons(menuEl) {
-  const sceneButtonsContainer = menuEl.querySelector('.menu-scene-buttons');
-  if (!sceneButtonsContainer) return;
-  
-  sceneButtonsContainer.innerHTML = '';
-  
-  Object.keys(scenes).forEach(sceneName => {
-    const button = document.createElement('button');
-    button.className = 'menu-scene-button';
-    if (sceneName === currentScene) button.classList.add('active');
-    button.textContent = sceneName;
-    button.addEventListener('click', () => {
-      sceneSelector.value = sceneName;
-      changeScene();
-      menuEl.querySelectorAll('.menu-scene-button').forEach(btn => btn.classList.remove('active'));
-      button.classList.add('active');
-    });
-    sceneButtonsContainer.appendChild(button);
-  });
-}
-
-function updateMenuClock(clockEl) {
-  if (!clockEl) return;
-  
-  const updateTime = () => {
-    const now = new Date();
-    const hours = now.getHours().toString().padStart(2, '0');
-    const minutes = now.getMinutes().toString().padStart(2, '0');
-    clockEl.textContent = `${hours}:${minutes}`;
-  };
-  
-  updateTime();
-  setInterval(updateTime, 60000);
-}
-
-// Variable Management
-function addVariable() {
-  const variableName = prompt('Enter variable name:');
-  if (variableName && !variables[variableName]) {
-    variables[variableName] = '';
-    
-    // Create variable item
-    const variableItem = document.createElement('div');
-    variableItem.className = 'variable-item';
-    variableItem.innerHTML = `
-      <div>
-        <span class="variable-name">${variableName}</span>
-        <span class="variable-value">${variables[variableName]}</span>
-      </div>
-      <div class="variable-actions">
-        <button onclick="editVariable('${variableName}')"><i class="fas fa-edit"></i></button>
-        <button onclick="deleteVariable('${variableName}')"><i class="fas fa-trash"></i></button>
-      </div>
-    `;
-    
-    variablesList.appendChild(variableItem);
-    
-    // Update variable change selector
-    updateVariableChangeSelector();
-  }
-}
-
-function editVariable(name) {
-  const newValue = prompt(`Enter new value for ${name}:`, variables[name]);
-  if (newValue !== null) {
-    variables[name] = newValue;
-    
-    // Update UI
-    document.querySelectorAll('.variable-item').forEach(item => {
-      if (item.querySelector('.variable-name').textContent === name) {
-        item.querySelector('.variable-value').textContent = newValue;
-      }
-    });
-    
-    // Update all elements with variables
-    document.querySelectorAll('.text-content').forEach(textEl => {
-      processTextForVariables(textEl);
-    });
-
-
-  }
-}
-
-function deleteVariable(name) {
-  if (confirm(`Delete variable ${name}?`)) {
-    delete variables[name];
-    
-    // Remove from UI
-    document.querySelectorAll('.variable-item').forEach(item => {
-      if (item.querySelector('.variable-name').textContent === name) {
-        item.remove();
-      }
-    });
-    
-    // Update variable change selector
-    updateVariableChangeSelector();
-    
-    // Update all elements with variables
-    document.querySelectorAll('.text-content').forEach(textEl => {
-      processTextForVariables(textEl);
-    });
-  }
-}
-
-function updateVariableChangeSelector() {
-  const selector = document.getElementById('variableChangeSelector');
-  selector.innerHTML = '';
-  
-  Object.keys(variables).forEach(variableName => {
-    const option = document.createElement('option');
-    option.value = variableName;
-    option.textContent = variableName;
-    selector.appendChild(option);
-  });
-}
-
-function updateSceneChangeSelector() {
-  const selector = document.getElementById('sceneChangeSelector');
-  selector.innerHTML = '';
-  
-  Object.keys(scenes).forEach(sceneName => {
-    const option = document.createElement('option');
-    option.value = sceneName;
-    option.textContent = sceneName;
-    selector.appendChild(option);
-  });
-}
-
-// Process text for variables and add tooltips
-function processTextForVariables(textElement) {
-  let text = textElement.textContent;
-  const regex = /{{(.*?)}}/g;
-  let matches = [];
-  let match;
-  
-  // Find all variables in the text
-  while ((match = regex.exec(text)) !== null) {
-    matches.push(match[1]);
-  }
-  
-  let newHTML = text;
-  let tooltipContent = '';
-  
-  // Process each variable
-  matches.forEach(varName => {
-    const value = variables[varName] || '';
-    newHTML = newHTML.replace(
-      new RegExp(`{{${varName}}}`, 'g'),
-      `<span class="variable-hover" data-value="${varName}: ${value}">{{${varName}}}</span>`
-    );
-    
-    // Add to tooltip
-    if (tooltipContent) tooltipContent += '\n';
-    tooltipContent += `${varName}: ${value}`;
-  });
-  
-  textElement.innerHTML = newHTML;
-  
-  // Add tooltip for the entire element
-  if (matches.length > 0) {
-    const parent = textElement.parentElement;
-    parent.classList.add('variable-hover');
-    parent.setAttribute('data-value', tooltipContent);
-    
-    // Create variable value display
-    let displayEl = parent.querySelector('.variable-display');
-    if (!displayEl) {
-      displayEl = document.createElement('div');
-      displayEl.className = 'variable-display';
-      parent.appendChild(displayEl);
-    }
-    
-    // Update display content
-    displayEl.textContent = tooltipContent.replace(/\n/g, ', ');
-  }
-}
-
-
-
-
-
-// File Operations
-function setBackground() {
-  const file = backgroundFileInput.files[0];
-  if (!file) return;
-  
-  const reader = new FileReader();
-  reader.onload = (e) => {
-    canvas.style.backgroundImage = `url(${e.target.result})`;
-    canvas.style.backgroundSize = 'cover';
-    backgroundPath = e.target.result;
-  };
-  reader.readAsDataURL(file);
-}
-
-function getFontSize(fontSize) {
-  const sizes = {
-    title: parseInt(titleSizeInput.value) || 48,
-    big: parseInt(bigSizeInput.value) || 36,
-    medium: parseInt(mediumSizeInput.value) || 24,
-    small: parseInt(smallSizeInput.value) || 18
-  };
-  
-  return sizes[fontSize] || 24;
-}
-
-// Load initial config
-function loadInitialConfig() {
-  fetch('player/jukaconfig.json')
-    .then(response => {
-      if (!response.ok) throw new Error('Config not found');
-      return response.json();
-    })
-    .then(data => loadJukaApp(data))
-    .catch(error => {
-      console.log('Using default configuration');
-    });
-}
-
-// Load JukaApp from config
-
-// Export functionality
-function createJukaApp() {
-  const config = {
-    title: document.getElementById('title').value,
-    author: document.getElementById('author').value,
-    description: document.getElementById('description').value,
-    variables: {
-      ...variables,
-      backgroundImage: backgroundPath,
-      fontSizes: {
-        title: parseInt(titleSizeInput.value, 10),
-        big: parseInt(bigSizeInput.value, 10),
-        medium: parseInt(mediumSizeInput.value, 10),
-        small: parseInt(smallSizeInput.value, 10)
-      }
-    },
-    scenes: Object.keys(scenes).map(sceneName => ({
-      name: sceneName,
-      elements: scenes[sceneName].map(el => {
-        const element = {
-          type: el.getAttribute('data-type'),
-          x: parseInt(el.getAttribute('data-x')),
-          y: parseInt(el.getAttribute('data-y')),
-          width: parseInt(el.getAttribute('data-width')),
-          height: parseInt(el.getAttribute('data-height'))
-        };
-        
-        if (el.getAttribute('data-color')) {
-          element.color = el.getAttribute('data-color');
-        }
-        
-        if (el.getAttribute('data-bg-color')) {
-          element.bgColor = el.getAttribute('data-bg-color');
-        }
-        
-        if (el.getAttribute('data-font')) {
-          element.font = el.getAttribute('data-font');
-        }
-        
-        if (el.getAttribute('data-opacity')) {
-          element.opacity = parseInt(el.getAttribute('data-opacity')) / 100;
-        }
-        
-        const type = el.getAttribute('data-type');
-        if (type === 'input') {
-          const input = el.querySelector('.element-input');
-          if (input) element.text = input.value;
-        } else {
-          const textSpan = el.querySelector('.text-content');
-          if (textSpan) element.text = textSpan.textContent;
-        }
-        
-        if (type === 'image') {
-          const img = el.querySelector('.element-image');
-          if (img && img.src) element.image = img.src;
-        }
-        
-        return element;
-      })
-    }))
-  };
-
-  const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(config, null, 2));
-  const downloadAnchorNode = document.createElement('a');
-  downloadAnchorNode.href = dataStr;
-  downloadAnchorNode.download = "jukaconfig.json";
-  document.body.appendChild(downloadAnchorNode);
-  downloadAnchorNode.click();
-  downloadAnchorNode.remove();
-}
-
-function clearAll() {
-  if (confirm('Are you sure you want to clear everything and start new?')) {
-    scenes = { 'Scene 1': [] };
-    currentScene = 'Scene 1';
-    variables = {};
-    canvas.innerHTML = '';
-    sceneSelector.innerHTML = '';
-    variablesList.innerHTML = '';
-    
+    // Add initial scene
     const option = document.createElement('option');
     option.value = 'Scene 1';
     option.textContent = 'Scene 1';
     sceneSelector.appendChild(option);
-    sceneSelector.value = 'Scene 1';
     
-    document.getElementById('title').value = '';
-    document.getElementById('author').value = '';
-    document.getElementById('description').value = '';
-    titleSizeInput.value = 48;
-    bigSizeInput.value = 36;
-    mediumSizeInput.value = 24;
-    smallSizeInput.value = 18;
-    
-    canvas.style.backgroundImage = '';
-    backgroundPath = '';
-    
-    updateCanvasSize();
+    // Add initial menu
     addElement('menu', 0, canvasHeight - 50);
     
-    document.querySelectorAll('.menu').forEach(menu => {
-      updateMenuSceneButtons(menu);
+    // Set up event listeners
+    setupEventListeners();
+    
+    // Initialize properties panel as expanded
+    updateSceneChangeSelector();
+    
+    // Update variable change selector
+    updateVariableChangeSelector();
+});
+
+// Set up all event listeners
+function setupEventListeners() {
+    // Dark mode toggle
+    darkModeToggle.addEventListener('click', () => {
+        document.body.classList.toggle('dark-mode');
+        darkModeToggle.innerHTML = document.body.classList.contains('dark-mode') ? 
+            '<i class="fas fa-sun"></i> Light Mode' : 
+            '<i class="fas fa-moon"></i> Dark Mode';
     });
     
-    updateSceneChangeSelector();
-    updateVariableChangeSelector();
-  }
+    // Guide panel toggle
+    toggleGuide.addEventListener('click', () => {
+        guidePanel.style.display = guidePanel.style.display === 'block' ? 'none' : 'block';
+    });
+    
+    closeGuide.addEventListener('click', () => {
+        guidePanel.style.display = 'none';
+    });
+    
+    // Properties tabs
+    propertiesTabs.forEach(tab => {
+        tab.addEventListener('click', () => {
+            const tabId = tab.getAttribute('data-tab');
+            
+            // Update active tab
+            propertiesTabs.forEach(t => t.classList.remove('active'));
+            tab.classList.add('active');
+            
+            // Show corresponding panel
+            document.querySelectorAll('.properties-panel').forEach(panel => {
+                panel.classList.remove('active');
+            });
+            document.getElementById(tabId + 'Panel').classList.add('active');
+        });
+    });
+    
+    // Canvas drop zone
+    canvas.addEventListener('dragover', e => e.preventDefault());
+    
+    canvas.addEventListener('drop', e => {
+        e.preventDefault();
+        const type = e.dataTransfer.getData('type');
+        const rect = canvas.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+        addElement(type, x, y);
+    });
+    
+    // Canvas click to deselect
+    canvas.addEventListener('click', e => {
+        if (e.target === canvas) {
+            currentElement = null;
+            document.querySelectorAll('.element').forEach(el => el.classList.remove('selected'));
+            noSelection.style.display = 'block';
+            elementProperties.classList.remove('visible');
+        }
+    });
+    
+    // Initialize drag events for elements
+    document.querySelectorAll('.left-sidebar .element').forEach(el => {
+        el.addEventListener('dragstart', e => {
+            e.dataTransfer.setData('type', e.target.getAttribute('data-type'));
+        });
+    });
+    
+    // Canvas size controls
+    canvasSizeSelect.addEventListener('change', updateCanvasSize);
+    customWidthInput.addEventListener('change', updateCanvasSize);
+    customHeightInput.addEventListener('change', updateCanvasSize);
+    
+    // Background image
+    backgroundFileInput.addEventListener('change', setBackground);
+    
+    // Add variable button
+    addVariableButton.addEventListener('click', addVariable);
+    
+    // Load file
+    loadFileInput.addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        if (!file) return;
+        
+        const reader = new FileReader();
+        reader.onload = e => {
+            try {
+                const config = JSON.parse(e.target.result);
+                loadJukaApp(config);
+            } catch (error) {
+                alert('Error loading config: ' + error.message);
+            }
+        };
+        reader.readAsText(file);
+    });
+    
+    // Clear button
+    clearButton.addEventListener('click', clearAll);
+    
+    // Execute program button
+    executeProgramBtn.addEventListener('click', executeExternalProgram);
 }
 
-
-function saveCurrentScene() {
-  scenes[currentScene] = Array.from(canvas.children).map(el => el.cloneNode(true));
-}
-
-
-// Fix element duplication in loadJukaApp
-function loadJukaApp(data) {
-  // Reset state
-  scenes = {};
-  currentScene = 'Scene 1';
-  variables = {};
-  sceneSelector.innerHTML = '';
-  canvas.innerHTML = '';
-  variablesList.innerHTML = '';
-  
-  // Set app info
-  document.getElementById('title').value = data.title || '';
-  document.getElementById('author').value = data.author || '';
-  document.getElementById('description').value = data.description || '';
-  
-  // Set font sizes
-  if (data.variables?.fontSizes) {
-    titleSizeInput.value = data.variables.fontSizes.title || 48;
-    bigSizeInput.value = data.variables.fontSizes.big || 36;
-    mediumSizeInput.value = data.variables.fontSizes.medium || 24;
-    smallSizeInput.value = data.variables.fontSizes.small || 18;
-  }
-  
-  // Set canvas size
-  if (data.variables?.backgroundImage) {
-    canvas.style.backgroundImage = `url(${data.variables.backgroundImage})`;
-    canvas.style.backgroundSize = 'cover';
-    backgroundPath = data.variables.backgroundImage;
-  }
-  
-  // Load variables
-  if (data.variables) {
-    for (const [key, value] of Object.entries(data.variables)) {
-      if (!['buttonColor', 'labelColor', 'backgroundImage', 'fonts', 'fontSizes'].includes(key)) {
-        variables[key] = value;
-        
-        // Add to UI
-        const variableItem = document.createElement('div');
-        variableItem.className = 'variable-item';
-        variableItem.innerHTML = `
-          <div>
-            <span class="variable-name">${key}</span>
-            <span class="variable-value">${value}</span>
-          </div>
-          <div class="variable-actions">
-            <button onclick="editVariable('${key}')"><i class="fas fa-edit"></i></button>
-            <button onclick="deleteVariable('${key}')"><i class="fas fa-trash"></i></button>
-          </div>
-        `;
-        
-        variablesList.appendChild(variableItem);
-      }
+// Update canvas size based on selection
+function updateCanvasSize() {
+    if (canvasSizeSelect.value === 'custom') {
+        canvasWidth = parseInt(customWidthInput.value) || 1280;
+        canvasHeight = parseInt(customHeightInput.value) || 720;
+        document.getElementById('customSizeFields').style.display = 'grid';
+    } else {
+        const [width, height] = canvasSizeSelect.value.split('x').map(Number);
+        canvasWidth = width;
+        canvasHeight = height;
+        document.getElementById('customSizeFields').style.display = 'none';
     }
-  }
-  
-  // Create scenes
-  data.scenes.forEach(scene => {
-    scenes[scene.name] = [];
     
-    // Add scene to selector
+    // Apply new size
+    canvas.style.width = `${canvasWidth}px`;
+    canvas.style.height = `${canvasHeight}px`;
+    
+    // Update menu position
+    document.querySelectorAll('.element[data-type="menu"]').forEach(menu => {
+        menu.style.top = `${canvasHeight - 50}px`;
+    });
+}
+
+// Execute external program
+async function executeExternalProgram() {
+    const programPath = externalProgramPath.value;
+    if (!programPath) {
+        alert('Please enter a program path');
+        return;
+    }
+    
+    try {
+        // Simulate program execution (replace with actual execution logic)
+        programOutput.innerHTML = '<div class="program-output-line">Executing program...</div>';
+        
+        // Simulate delay for program execution
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        
+        // Simulate program output (replace with actual output from program)
+        const mockVideos = [
+            { title: 'Introduction to Juka', path: '/videos/intro.mp4', duration: '2:30' },
+            { title: 'Advanced Features', path: '/videos/advanced.mp4', duration: '5:45' },
+            { title: 'Deployment Guide', path: '/videos/deploy.mp4', duration: '3:15' }
+        ];
+        
+        // Display program output
+        programOutput.innerHTML = '<div class="program-output-line">Program executed successfully!</div>' +
+                                  '<div class="program-output-line">Found 3 video files:</div>';
+        
+        // Populate video list
+        videoList.innerHTML = '';
+        mockVideos.forEach(video => {
+            const videoItem = document.createElement('div');
+            videoItem.className = 'video-item';
+            videoItem.innerHTML = `
+                <strong>${video.title}</strong>
+                <div>Path: ${video.path}</div>
+                <div>Duration: ${video.duration}</div>
+            `;
+            videoItem.addEventListener('click', () => {
+                // Add video element to canvas when clicked
+                addElement('video', 100, 100);
+                const videoElements = document.querySelectorAll('.element[data-type="video"]');
+                const latestVideo = videoElements[videoElements.length - 1];
+                latestVideo.querySelector('.text-content').textContent = video.title;
+                latestVideo.setAttribute('data-video-path', video.path);
+            });
+            videoList.appendChild(videoItem);
+        });
+        
+    } catch (error) {
+        programOutput.innerHTML = `<div class="program-output-line error">Error: ${error.message}</div>`;
+    }
+}
+
+// Scene Management
+function addScene() {
+    saveCurrentScene();
+    const newSceneName = `Scene ${Object.keys(scenes).length + 1}`;
+    scenes[newSceneName] = [];
+    
     const option = document.createElement('option');
-    option.value = scene.name;
-    option.textContent = scene.name;
+    option.value = newSceneName;
+    option.textContent = newSceneName;
     sceneSelector.appendChild(option);
+    sceneSelector.value = newSceneName;
     
-    // Create elements for this scene
-    scene.elements.forEach(element => {
-      // Create element container
-      const el = document.createElement('div');
-      el.className = 'element';
-      el.style.position = 'absolute';
-      el.style.left = `${element.x}px`;
-      el.style.top = `${element.y}px`;
-      el.setAttribute('data-type', element.type);
-      el.setAttribute('data-x', element.x);
-      el.setAttribute('data-y', element.y);
-      
-      // Set dimensions
-      if (element.width) {
-        el.style.width = `${element.width}px`;
-        el.setAttribute('data-width', element.width);
-      }
-      
-      if (element.height) {
-        el.style.height = `${element.height}px`;
-        el.setAttribute('data-height', element.height);
-      }
-      
-      // Set colors
-      if (element.color) {
-        el.setAttribute('data-color', element.color);
-        el.style.color = element.color;
-      }
-      
-      // Set font size
-      if (element.font) {
-        el.setAttribute('data-font', element.font);
-        el.style.fontSize = getFontSize(element.font) + 'px';
-      }
-      
-      // Set background color
-      if (element.bgColor) {
-        el.setAttribute('data-bg-color', element.bgColor);
-        el.style.backgroundColor = element.bgColor;
-      }
-      
-      // Handle different element types
-      if (element.type === 'menu') {
-        // Menu element
+    currentScene = newSceneName;
+    loadScene(currentScene);
+    
+    // Add menu to new scene
+    addElement('menu', 0, canvasHeight - 50);
+    
+    // Update scene change selector
+    updateSceneChangeSelector();
+}
+
+function renameScene() {
+    const newName = prompt('Enter new scene name:', currentScene);
+    if (!newName || scenes[newName]) return;
+    
+    scenes[newName] = scenes[currentScene];
+    delete scenes[currentScene];
+    currentScene = newName;
+
+    const option = sceneSelector.querySelector(`option[value="${sceneSelector.value}"]`);
+    if (option) {
+        option.value = newName;
+        option.textContent = newName;
+        sceneSelector.value = newName;
+    }
+    
+    // Update scene change selector
+    updateSceneChangeSelector();
+}
+
+function deleteScene() {
+    saveCurrentScene();
+    if (Object.keys(scenes).length <= 1) {
+        alert('Cannot delete the only scene.');
+        return;
+    }
+
+    if (!confirm(`Delete scene "${currentScene}"?`)) return;
+    
+    const sceneNames = Object.keys(scenes);
+    const currentIndex = sceneNames.indexOf(currentScene);
+    delete scenes[currentScene];
+    
+    const optionToRemove = sceneSelector.querySelector(`option[value="${currentScene}"]`);
+    if (optionToRemove) sceneSelector.removeChild(optionToRemove);
+    
+    const nextScene = currentIndex > 0 ? sceneNames[currentIndex - 1] : sceneNames[1];
+    currentScene = nextScene;
+    sceneSelector.value = currentScene;
+    
+    loadScene(currentScene);
+    
+    // Update scene change selector
+    updateSceneChangeSelector();
+}
+
+function duplicateScene() {
+    saveCurrentScene();
+    const newSceneName = prompt('Name for duplicated scene:', `${currentScene} Copy`);
+    if (!newSceneName || scenes[newSceneName]) return;
+    
+    scenes[newSceneName] = scenes[currentScene].map(el => el.cloneNode(true));
+    
+    const option = document.createElement('option');
+    option.value = newSceneName;
+    option.textContent = newSceneName;
+    sceneSelector.appendChild(option);
+    sceneSelector.value = newSceneName;
+    currentScene = newSceneName;
+    
+    loadScene(newSceneName);
+    
+    // Update scene change selector
+    updateSceneChangeSelector();
+}
+
+function changeScene() {
+    currentScene = sceneSelector.value;
+    loadScene(currentScene);
+}
+
+function loadScene(sceneName) {
+    canvas.innerHTML = '';
+    if (scenes[sceneName]) {
+        scenes[sceneName].forEach(el => {
+            const clonedEl = el.cloneNode(true);
+            setupElementEvents(clonedEl);
+            canvas.appendChild(clonedEl);
+        });
+    }
+    
+    // Update menu buttons
+    document.querySelectorAll('.menu').forEach(menu => {
+        updateMenuSceneButtons(menu);
+    });
+}
+
+// Element Management
+function addElement(type, x, y) {
+    const el = document.createElement('div');
+    el.className = 'element';
+    el.style.position = 'absolute';
+    el.style.left = `${x}px`;
+    el.style.top = `${y}px`;
+    el.setAttribute('data-opacity', '100');
+    el.style.opacity = 1;
+    el.style.fontFamily = 'Roboto, sans-serif';
+    el.style.fontWeight = '900';
+
+    // Set default dimensions
+    const dimensions = {
+        menu: { width: '100%', height: '50px', y: canvasHeight - 50 },
+        image: { width: '100px', height: '100px' },
+        input: { width: '150px', height: '40px' },
+        video: { width: '200px', height: '150px' },
+        default: { width: 'auto', height: 'auto' }
+    };
+
+    const { width, height } = dimensions[type] || dimensions.default;
+    el.style.width = width;
+    el.style.height = height;
+    
+    if (type === 'menu') {
+        el.style.top = `${dimensions.menu.y}px`;
+        el.style.left = '0px';
         el.innerHTML = `
-          <div class="menu-scene-buttons"></div>
-          <button class="menu-language">EN</button>
-          <div class="menu-clock">00:00</div>
-          <span class="remove-button">✕</span>
+            <div class="menu-scene-buttons"></div>
+            <button class="menu-language">EN</button>
+            <div class="menu-clock">00:00</div>
+            <span class="remove-button">✕</span>
         `;
+        el.style.fontSize = '16px';
+        el.setAttribute('data-type', 'menu');
         setupMenuEvents(el);
-        scenes[scene.name].push(el);
-      } else {
-        // Regular elements
+        updateMenuSceneButtons(el);
+        updateMenuClock(el.querySelector('.menu-clock'));
+    } else {
         const textSpan = document.createElement('span');
         textSpan.className = 'text-content';
-        textSpan.textContent = element.text || element.type;
+        textSpan.textContent = type.charAt(0).toUpperCase() + type.slice(1);
+        el.appendChild(textSpan);
         
         const removeButton = document.createElement('span');
         removeButton.textContent = '✕';
         removeButton.className = 'remove-button';
-        
-        el.appendChild(textSpan);
         el.appendChild(removeButton);
         
+        el.setAttribute('data-type', type);
+        
         // Special handling for input elements
-        if (element.type === 'input') {
-          textSpan.style.display = 'none';
-          const input = document.createElement('input');
-          input.type = 'text';
-          input.className = 'element-input';
-          input.value = element.text || '';
-          el.appendChild(input);
+        if (type === 'input') {
+            textSpan.style.display = 'none';
+            const input = document.createElement('input');
+            input.type = 'text';
+            input.className = 'element-input';
+            input.placeholder = 'Input text';
+            el.appendChild(input);
         }
         
         // Special handling for image elements
-        if (element.type === 'image') {
-          const img = document.createElement('img');
-          img.className = 'element-image';
-          img.src = element.image || '';
-          el.appendChild(img);
-          textSpan.style.display = 'none';
+        if (type === 'image') {
+            const img = document.createElement('img');
+            img.className = 'element-image';
+            img.src = '';
+            el.appendChild(img);
+            textSpan.style.display = 'none';
+        }
+        
+        // Special handling for video elements
+        if (type === 'video') {
+            const videoIcon = document.createElement('i');
+            videoIcon.className = 'fas fa-video';
+            videoIcon.style.marginRight = '8px';
+            textSpan.prepend(videoIcon);
         }
         
         // Labels should have no background
-        if (element.type === 'label') {
-          el.style.background = 'none';
+        if (type === 'label') {
+            el.style.background = 'none';
+        }
+    }
+
+    // Set element attributes
+    el.setAttribute('data-x', x | 0);
+    el.setAttribute('data-y', y | 0);
+    el.setAttribute('data-width', width.replace('px', '') || '100');
+    el.setAttribute('data-height', height.replace('px', '') || '100');
+    
+    if (type !== 'menu') {
+        el.setAttribute('data-color', '#000000');
+        el.setAttribute('data-font', 'medium');
+        el.style.fontSize = getFontSize('medium') + 'px';
+        el.style.padding = '4px';
+        
+        if (type === 'button') {
+            el.setAttribute('data-bg-color', '#ffffff');
+            el.style.backgroundColor = '#ffffff';
+        }
+    }
+
+    // Add to canvas
+    canvas.appendChild(el);
+    setupElementEvents(el);
+    
+    if (!scenes[currentScene]) scenes[currentScene] = [];
+    scenes[currentScene].push(el.cloneNode(true));
+
+    return el;
+}
+
+function setupElementEvents(el) {
+    // Mouse events for dragging and resizing
+    el.addEventListener('mousedown', (event) => {
+        if (event.button === 2) { // Right click for resize
+            handleResize(el, event);
+        } else { // Left click for drag
+            handleDrag(el, event);
+        }
+    });
+
+    // Context menu prevention
+    el.addEventListener('contextmenu', (event) => event.preventDefault());
+
+    // Double click for editing
+    el.addEventListener('dblclick', (event) => {
+        event.stopPropagation();
+        const type = el.getAttribute('data-type');
+        if (['button', 'label', 'video'].includes(type)) {
+            const textSpan = el.querySelector('.text-content');
+            const newText = prompt("Edit text:", textSpan.textContent);
+            if (newText !== null) {
+                textSpan.textContent = newText;
+                processTextForVariables(textSpan);
+            }
+        } else if (type === 'image') {
+            const fileInput = document.createElement('input');
+            fileInput.type = 'file';
+            fileInput.accept = 'image/*';
+            fileInput.style.display = 'none';
+            
+            fileInput.onchange = (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+                
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const img = el.querySelector('.element-image');
+                    if (img) img.src = e.target.result;
+                    const textSpan = el.querySelector('.text-content');
+                    if (textSpan) textSpan.style.display = 'none';
+                };
+                reader.readAsDataURL(file);
+            };
+            
+            document.body.appendChild(fileInput);
+            fileInput.click();
+            document.body.removeChild(fileInput);
+        } else if (type === 'input') {
+            const input = el.querySelector('.element-input');
+            if (input) input.focus();
+        }
+    });
+
+    // Selection
+    el.addEventListener('click', (e) => {
+        if (e.target.classList.contains('remove-button') || 
+            e.target.classList.contains('menu-scene-button') ||
+            e.target.classList.contains('menu-language') ||
+            e.target.classList.contains('element-input')) {
+            return;
         }
         
-        scenes[scene.name].push(el);
-      }
+        document.querySelectorAll('.element').forEach(otherEl => {
+            otherEl.classList.remove('selected');
+        });
+        el.classList.add('selected');
+        currentElement = el;
+        showElementProperties(el);
     });
-  });
-  
-  // Set current scene
-  if (data.scenes.length > 0) {
-    currentScene = data.scenes[0].name;
-    sceneSelector.value = currentScene;
-    loadScene(currentScene);
-  }
-  
-  // Update selectors
-  updateSceneChangeSelector();
-  updateVariableChangeSelector();
+
+    // Remove button
+    const removeButton = el.querySelector('.remove-button');
+    if (removeButton) {
+        removeButton.addEventListener('click', (event) => {
+            event.stopPropagation();
+            el.remove();
+            const sceneElements = scenes[currentScene];
+            const index = sceneElements.findIndex(item => item.isEqualNode(el));
+            if (index > -1) sceneElements.splice(index, 1);
+        });
+    }
+    
+    // Process text for variables
+    const textSpan = el.querySelector('.text-content');
+    if (textSpan) {
+        processTextForVariables(textSpan);
+    }
 }
 
-// Fix menu scene buttons
+function handleResize(el, event) {
+    el.style.cursor = 'nwse-resize';
+    const startX = event.clientX;
+    const startY = event.clientY;
+    const startWidth = el.offsetWidth;
+    const startHeight = el.offsetHeight;
+
+    const onMouseMove = (e) => {
+        const newWidth = Math.max(50, startWidth + (e.clientX - startX));
+        const newHeight = Math.max(50, startHeight + (e.clientY - startY));
+        el.style.width = `${newWidth}px`;
+        el.style.height = `${newHeight}px`;
+        el.setAttribute('data-width', newWidth);
+        el.setAttribute('data-height', newHeight);
+    };
+
+    const onMouseUp = () => {
+        el.style.cursor = 'grab';
+        document.removeEventListener('mousemove', onMouseMove);
+        document.removeEventListener('mouseup', onMouseUp);
+    };
+
+    document.addEventListener('mousemove', onMouseMove);
+    document.addEventListener('mouseup', onMouseUp);
+}
+
+function handleDrag(el, event) {
+    el.style.cursor = 'grabbing';
+    const xOffset = event.clientX - el.offsetLeft;
+    const yOffset = event.clientY - el.offsetTop;
+    const canvasRect = canvas.getBoundingClientRect();
+
+    const onMouseMove = (e) => {
+        let newX = e.clientX - xOffset;
+        let newY = e.clientY - yOffset;
+        const elRect = el.getBoundingClientRect();
+
+        newX = Math.max(0, Math.min(newX, canvasRect.width - elRect.width));
+        newY = Math.max(0, Math.min(newY, canvasRect.height - elRect.height));
+
+        el.style.left = `${newX}px`;
+        el.style.top = `${newY}px`;
+        el.setAttribute('data-x', newX);
+        el.setAttribute('data-y', newY);
+    };
+
+    const onMouseUp = () => {
+        el.style.cursor = 'grab';
+        document.removeEventListener('mousemove', onMouseMove);
+        document.removeEventListener('mouseup', onMouseUp);
+    };
+
+    document.addEventListener('mousemove', onMouseMove);
+    document.addEventListener('mouseup', onMouseUp);
+}
+
+function showElementProperties(el) {
+    noSelection.style.display = 'none';
+    elementProperties.classList.add('visible');
+
+    const bgColorPicker = document.getElementById('bgColorPicker');
+    const bgColorGroup = bgColorPicker.closest('.control-group');
+
+    if (el.getAttribute('data-type') === 'label') {
+        bgColorGroup.style.display = 'none';
+        el.style.backgroundColor = 'transparent';
+        el.removeAttribute('data-bg-color');
+    } else {
+        bgColorGroup.style.display = 'block';
+    }
+    
+    // Position/size
+    const datax = document.getElementById('datax');
+    const datay = document.getElementById('datay');
+    const dataWidth = document.getElementById('dataWidth');
+    const dataHeight = document.getElementById('dataHeight');
+    
+    datax.value = el.getAttribute('data-x') || 0;
+    datay.value = el.getAttribute('data-y') || 0;
+    dataWidth.value = el.getAttribute('data-width') || 100;
+    dataHeight.value = el.getAttribute('data-height') || 100;
+    
+    // Update position/size when inputs change
+    const updatePositionSize = () => {
+        el.style.left = `${datax.value}px`;
+        el.setAttribute('data-x', datax.value);
+        el.style.top = `${datay.value}px`;
+        el.setAttribute('data-y', datay.value);
+        el.style.width = `${dataWidth.value}px`;
+        el.setAttribute('data-width', dataWidth.value);
+        el.style.height = `${dataHeight.value}px`;
+        el.setAttribute('data-height', dataHeight.value);
+    };
+    
+    [datax, datay, dataWidth, dataHeight].forEach(input => {
+        input.oninput = updatePositionSize;
+    });
+    
+    // Text styling
+    if (!['image', 'input'].includes(el.getAttribute('data-type'))) {
+        const colorPicker = document.getElementById('colorPicker');
+        const fontSizePicker = document.getElementById('fontSizePicker');
+        
+        colorPicker.value = el.getAttribute('data-color') || '#000000';
+        colorPicker.oninput = () => {
+            el.style.color = colorPicker.value;
+            el.setAttribute('data-color', colorPicker.value);
+        };
+
+        fontSizePicker.value = el.getAttribute('data-font') || 'medium';
+        fontSizePicker.onchange = () => {
+            el.setAttribute('data-font', fontSizePicker.value);
+            el.style.fontSize = getFontSize(fontSizePicker.value) + 'px';
+        };
+
+        if (el.getAttribute('data-type') !== 'label') {
+            const bgColorPicker = document.getElementById('bgColorPicker');
+            bgColorPicker.value = el.getAttribute('data-bg-color') || '#ffffff';
+            bgColorPicker.oninput = () => {
+                el.style.backgroundColor = bgColorPicker.value;
+                el.setAttribute('data-bg-color', bgColorPicker.value);
+            };
+        }
+    }
+
+    // Transparency
+    if (['image', 'button', 'video'].includes(el.getAttribute('data-type'))) {
+        const opacitySlider = document.getElementById('opacitySlider');
+        const opacityValue = document.getElementById('opacityValue');
+        
+        const opacity = el.getAttribute('data-opacity') || '100';
+        opacitySlider.value = opacity;
+        opacityValue.textContent = `${opacity}%`;
+        opacitySlider.oninput = () => {
+            const value = opacitySlider.value;
+            el.style.opacity = value / 100;
+            el.setAttribute('data-opacity', value);
+            opacityValue.textContent = `${value}%`;
+        };
+    }
+    
+    // Trigger controls
+    const triggerSelector = document.getElementById('triggerSelector');
+    triggerSelector.value = el.getAttribute('data-trigger') || '';
+    
+    // Hide all trigger options first
+    document.querySelectorAll('#triggerOptions > *').forEach(el => {
+        el.style.display = 'none';
+    });
+    
+    // Show relevant options based on selected trigger
+    if (triggerSelector.value === 'change_scene') {
+        document.getElementById('sceneChangeSelector').style.display = 'block';
+    } else if (triggerSelector.value === 'external_app') {
+        document.getElementById('externalAppPath').style.display = 'block';
+    } else if (triggerSelector.value === 'set_variable') {
+        document.getElementById('variableChangeSelector').style.display = 'block';
+        document.getElementById('variableChangeValue').style.display = 'block';
+    }
+}
+
+// Menu Functions
+function setupMenuEvents(menuEl) {
+    // Remove button
+    const removeButton = menuEl.querySelector('.remove-button');
+    if (removeButton) {
+        removeButton.addEventListener('click', (event) => {
+            event.stopPropagation();
+            menuEl.remove();
+            const sceneElements = scenes[currentScene];
+            const index = sceneElements.findIndex(item => item.isEqualNode(menuEl));
+            if (index > -1) sceneElements.splice(index, 1);
+        });
+    }
+}
+
 function updateMenuSceneButtons(menuEl) {
-  const sceneButtonsContainer = menuEl.querySelector('.menu-scene-buttons');
-  if (!sceneButtonsContainer) return;
-  
-  sceneButtonsContainer.innerHTML = '';
-  
-  Object.keys(scenes).forEach(sceneName => {
-    const button = document.createElement('button');
-    button.className = 'menu-scene-button';
-    if (sceneName === currentScene) button.classList.add('active');
-    button.textContent = sceneName;
-    button.addEventListener('click', () => {
-      sceneSelector.value = sceneName;
-      changeScene();
+    const sceneButtonsContainer = menuEl.querySelector('.menu-scene-buttons');
+    if (!sceneButtonsContainer) return;
+    
+    sceneButtonsContainer.innerHTML = '';
+    
+    Object.keys(scenes).forEach(sceneName => {
+        const button = document.createElement('button');
+        button.className = 'menu-scene-button';
+        if (sceneName === currentScene) button.classList.add('active');
+        button.textContent = sceneName;
+        button.addEventListener('click', () => {
+            sceneSelector.value = sceneName;
+            changeScene();
+            menuEl.querySelectorAll('.menu-scene-button').forEach(btn => btn.classList.remove('active'));
+            button.classList.add('active');
+        });
+        sceneButtonsContainer.appendChild(button);
     });
-    sceneButtonsContainer.appendChild(button);
-  });
 }
 
-// Fix scene switching
-function changeScene() {
-  // Save current scene elements
-  scenes[currentScene] = Array.from(canvas.children).map(el => el.cloneNode(true));
-  
-  // Load new scene
-  currentScene = sceneSelector.value;
-  loadScene(currentScene);
-  
-  // Update menu buttons to show current scene as active
-  document.querySelectorAll('.menu').forEach(menu => {
-    const buttons = menu.querySelectorAll('.menu-scene-button');
-    buttons.forEach(button => {
-      button.classList.remove('active');
-      if (button.textContent === currentScene) {
-        button.classList.add('active');
-      }
+function updateMenuClock(clockEl) {
+    if (!clockEl) return;
+    
+    const updateTime = () => {
+        const now = new Date();
+        const hours = now.getHours().toString().padStart(2, '0');
+        const minutes = now.getMinutes().toString().padStart(2, '0');
+        clockEl.textContent = `${hours}:${minutes}`;
+    };
+    
+    updateTime();
+    setInterval(updateTime, 60000);
+}
+
+// Variable Management
+function addVariable() {
+    const variableName = prompt('Enter variable name:');
+    if (variableName && !variables[variableName]) {
+        variables[variableName] = '';
+        
+        // Create variable item
+        const variableItem = document.createElement('div');
+        variableItem.className = 'variable-item';
+        variableItem.innerHTML = `
+            <div>
+                <span class="variable-name">${variableName}</span>
+                <span class="variable-value">${variables[variableName]}</span>
+            </div>
+            <div class="variable-actions">
+                <button onclick="editVariable('${variableName}')"><i class="fas fa-edit"></i></button>
+                <button onclick="deleteVariable('${variableName}')"><i class="fas fa-trash"></i></button>
+            </div>
+        `;
+        
+        variablesList.appendChild(variableItem);
+        
+        // Update variable change selector
+        updateVariableChangeSelector();
+    }
+}
+
+function editVariable(name) {
+    const newValue = prompt(`Enter new value for ${name}:`, variables[name]);
+    if (newValue !== null) {
+        variables[name] = newValue;
+        
+        // Update UI
+        document.querySelectorAll('.variable-item').forEach(item => {
+            if (item.querySelector('.variable-name').textContent === name) {
+                item.querySelector('.variable-value').textContent = newValue;
+            }
+        });
+        
+        // Update all elements with variables
+        document.querySelectorAll('.text-content').forEach(textEl => {
+            processTextForVariables(textEl);
+        });
+    }
+}
+
+function deleteVariable(name) {
+    if (confirm(`Delete variable ${name}?`)) {
+        delete variables[name];
+        
+        // Remove from UI
+        document.querySelectorAll('.variable-item').forEach(item => {
+            if (item.querySelector('.variable-name').textContent === name) {
+                item.remove();
+            }
+        });
+        
+        // Update variable change selector
+        updateVariableChangeSelector();
+        
+        // Update all elements with variables
+        document.querySelectorAll('.text-content').forEach(textEl => {
+            processTextForVariables(textEl);
+        });
+    }
+}
+
+function updateVariableChangeSelector() {
+    const selector = document.getElementById('variableChangeSelector');
+    selector.innerHTML = '';
+    
+    Object.keys(variables).forEach(variableName => {
+        const option = document.createElement('option');
+        option.value = variableName;
+        option.textContent = variableName;
+        selector.appendChild(option);
     });
-  });
+}
+
+function updateSceneChangeSelector() {
+    const selector = document.getElementById('sceneChangeSelector');
+    selector.innerHTML = '';
+    
+    Object.keys(scenes).forEach(sceneName => {
+        const option = document.createElement('option');
+        option.value = sceneName;
+        option.textContent = sceneName;
+        selector.appendChild(option);
+    });
+}
+
+// Process text for variables and add tooltips
+function processTextForVariables(textElement) {
+    let text = textElement.textContent;
+    const regex = /{{(.*?)}}/g;
+    let matches = [];
+    let match;
+    
+    // Find all variables in the text
+    while ((match = regex.exec(text)) !== null) {
+        matches.push(match[1]);
+    }
+    
+    let newHTML = text;
+    let tooltipContent = '';
+    
+    // Process each variable
+    matches.forEach(varName => {
+        const value = variables[varName] || '';
+        newHTML = newHTML.replace(
+            new RegExp(`{{${varName}}}`, 'g'),
+            `<span class="variable-hover" data-value="${varName}: ${value}">{{${varName}}}</span>`
+        );
+        
+        // Add to tooltip
+        if (tooltipContent) tooltipContent += '\n';
+        tooltipContent += `${varName}: ${value}`;
+    });
+    
+    textElement.innerHTML = newHTML;
+    
+    // Add tooltip for the entire element
+    if (matches.length > 0) {
+        const parent = textElement.parentElement;
+        parent.classList.add('variable-hover');
+        parent.setAttribute('data-value', tooltipContent);
+        
+        // Create variable value display
+        let displayEl = parent.querySelector('.variable-display');
+        if (!displayEl) {
+            displayEl = document.createElement('div');
+            displayEl.className = 'variable-display';
+            parent.appendChild(displayEl);
+        }
+        
+        // Update display content
+        displayEl.textContent = tooltipContent.replace(/\n/g, ', ');
+    }
+}
+
+// File Operations
+function setBackground() {
+    const file = backgroundFileInput.files[0];
+    if (!file) return;
+    
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        canvas.style.backgroundImage = `url(${e.target.result})`;
+        canvas.style.backgroundSize = 'cover';
+        backgroundPath = e.target.result;
+    };
+    reader.readAsDataURL(file);
+}
+
+function getFontSize(fontSize) {
+    const sizes = {
+        title: parseInt(titleSizeInput.value) || 48,
+        big: parseInt(bigSizeInput.value) || 36,
+        medium: parseInt(mediumSizeInput.value) || 24,
+        small: parseInt(smallSizeInput.value) || 18
+    };
+    
+    return sizes[fontSize] || 24;
+}
+
+// Export functionality
+function createJukaApp() {
+    const config = {
+        title: document.getElementById('title').value,
+        author: document.getElementById('author').value,
+        description: document.getElementById('description').value,
+        variables: {
+            ...variables,
+            backgroundImage: backgroundPath,
+            fontSizes: {
+                title: parseInt(titleSizeInput.value, 10),
+                big: parseInt(bigSizeInput.value, 10),
+                medium: parseInt(mediumSizeInput.value, 10),
+                small: parseInt(smallSizeInput.value, 10)
+            }
+        },
+        scenes: Object.keys(scenes).map(sceneName => ({
+            name: sceneName,
+            elements: scenes[sceneName].map(el => {
+                const element = {
+                    type: el.getAttribute('data-type'),
+                    x: parseInt(el.getAttribute('data-x')),
+                    y: parseInt(el.getAttribute('data-y')),
+                    width: parseInt(el.getAttribute('data-width')),
+                    height: parseInt(el.getAttribute('data-height'))
+                };
+                
+                if (el.getAttribute('data-color')) {
+                    element.color = el.getAttribute('data-color');
+                }
+                
+                if (el.getAttribute('data-bg-color')) {
+                    element.bgColor = el.getAttribute('data-bg-color');
+                }
+                
+                if (el.getAttribute('data-font')) {
+                    element.font = el.getAttribute('data-font');
+                }
+                
+                if (el.getAttribute('data-opacity')) {
+                    element.opacity = parseInt(el.getAttribute('data-opacity')) / 100;
+                }
+                
+                const type = el.getAttribute('data-type');
+                if (type === 'input') {
+                    const input = el.querySelector('.element-input');
+                    if (input) element.text = input.value;
+                } else {
+                    const textSpan = el.querySelector('.text-content');
+                    if (textSpan) element.text = textSpan.textContent;
+                }
+                
+                if (type === 'image') {
+                    const img = el.querySelector('.element-image');
+                    if (img && img.src) element.image = img.src;
+                }
+                
+                if (type === 'video') {
+                    element.video = el.getAttribute('data-video-path') || '';
+                }
+                
+                return element;
+            })
+        }))
+    };
+
+    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(config, null, 2));
+    const downloadAnchorNode = document.createElement('a');
+    downloadAnchorNode.href = dataStr;
+    downloadAnchorNode.download = "jukaconfig.json";
+    document.body.appendChild(downloadAnchorNode);
+    downloadAnchorNode.click();
+    downloadAnchorNode.remove();
+}
+
+function clearAll() {
+    if (confirm('Are you sure you want to clear everything and start new?')) {
+        scenes = { 'Scene 1': [] };
+        currentScene = 'Scene 1';
+        variables = {};
+        canvas.innerHTML = '';
+        sceneSelector.innerHTML = '';
+        variablesList.innerHTML = '';
+        
+        const option = document.createElement('option');
+        option.value = 'Scene 1';
+        option.textContent = 'Scene 1';
+        sceneSelector.appendChild(option);
+        sceneSelector.value = 'Scene 1';
+        
+        document.getElementById('title').value = '';
+        document.getElementById('author').value = '';
+        document.getElementById('description').value = '';
+        titleSizeInput.value = 48;
+        bigSizeInput.value = 36;
+        mediumSizeInput.value = 24;
+        smallSizeInput.value = 18;
+        
+        canvas.style.backgroundImage = '';
+        backgroundPath = '';
+        
+        updateCanvasSize();
+        addElement('menu', 0, canvasHeight - 50);
+        
+        document.querySelectorAll('.menu').forEach(menu => {
+            updateMenuSceneButtons(menu);
+        });
+        
+        updateSceneChangeSelector();
+        updateVariableChangeSelector();
+    }
+}
+
+function saveCurrentScene() {
+    scenes[currentScene] = Array.from(canvas.children).map(el => el.cloneNode(true));
+}
+
+// Load initial config
+function loadInitialConfig() {
+    // This would typically fetch from a server
+    console.log('Loading initial configuration...');
 }

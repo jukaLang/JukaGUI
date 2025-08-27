@@ -13,20 +13,20 @@
   --warning: #FFC107;
   --error: #e63946;
   --info: #219ebc;
-  
+
   --on-primary: #ffffff;
   --on-secondary: #ffffff;
-  
-  --shadow-sm: 0 2px 6px rgba(0,0,0,0.05);
-  --shadow-md: 0 4px 12px rgba(0,0,0,0.08);
-  --shadow-lg: 0 10px 25px rgba(0,0,0,0.1);
-  
+
+  --shadow-sm: 0 2px 6px rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.08);
+  --shadow-lg: 0 10px 25px rgba(0, 0, 0, 0.1);
+
   --border-radius-sm: 6px;
   --border-radius-md: 10px;
   --border-radius-lg: 14px;
-  
+
   --transition: all 0.3s ease;
-  
+
   /* Dark mode variables */
   --dark-primary: #4361ee;
   --dark-primary-light: #4895ef;
@@ -60,7 +60,9 @@ body {
 }
 
 /* === Layout === */
-header, main, footer {
+header,
+main,
+footer {
   max-width: 100%;
   padding: 1rem;
 }
@@ -187,8 +189,10 @@ main {
   background-size: cover;
   overflow: hidden;
   border: 1px solid var(--border);
-  box-shadow: inset 0 0 8px rgba(0,0,0,0.05);
+  box-shadow: inset 0 0 8px rgba(0, 0, 0, 0.05);
   margin: 0 auto;
+  width: 100% !important;
+  height: 100% !important;
 }
 
 .right-sidebar {
@@ -379,7 +383,7 @@ main {
   font-size: 0.9rem;
 }
 
-#triggerOptions > * {
+#triggerOptions>* {
   width: 100%;
   margin-bottom: 0.65rem;
   display: none;
@@ -393,12 +397,12 @@ main {
   color: var(--on-primary);
   overflow: hidden;
   margin-bottom: 0.8rem;
-  display: block;
+  display: none;
 }
 
 .steps-header {
   padding: 0.7rem 1.1rem;
-  background: rgba(0,0,0,0.1);
+  background: rgba(0, 0, 0, 0.1);
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -422,7 +426,8 @@ main {
   padding: 0.9rem 1.1rem;
 }
 
-.steps-content ol, .steps-content ul {
+.steps-content ol,
+.steps-content ul {
   margin-left: 1.3rem;
 }
 
@@ -761,20 +766,20 @@ body.dark-mode .file-button {
     flex-direction: column;
     height: auto;
   }
-  
+
   .sidebar {
     width: 100%;
     max-height: 180px;
   }
-  
+
   .left-sidebar {
     order: 1;
   }
-  
+
   .canvas-area {
     order: 2;
   }
-  
+
   .right-sidebar {
     order: 3;
     width: 100%;
@@ -788,26 +793,26 @@ body.dark-mode .file-button {
     align-items: flex-start;
     gap: 0.8rem;
   }
-  
+
   .canvas-controls {
     flex-direction: column;
     gap: 0.8rem;
     align-items: flex-start;
   }
-  
+
   .position-controls {
     grid-template-columns: 1fr;
   }
-  
+
   .input-container {
     grid-template-columns: 1fr;
   }
-  
+
   .file-actions {
     flex-direction: column;
     align-items: stretch;
   }
-  
+
   /* Make properties overlay canvas on small screens */
   .right-sidebar {
     position: absolute;
@@ -816,7 +821,7 @@ body.dark-mode .file-button {
     width: calc(100% - 3rem);
     z-index: 100;
     max-height: 50vh;
-    box-shadow: 0 0 20px rgba(0,0,0,0.3);
+    box-shadow: 0 0 20px rgba(0, 0, 0, 0.3);
   }
 }
 
@@ -838,11 +843,11 @@ body.dark-mode .file-button {
   font-size: 0.9rem;
 }
 
-
 .variable-hover {
   position: relative;
   cursor: help;
 }
+
 .variable-hover:hover::after {
   content: attr(data-value);
   position: absolute;
@@ -888,9 +893,10 @@ body.dark-mode .file-button {
   background-size: cover;
   overflow: hidden;
   border: 1px solid var(--border);
-  box-shadow: inset 0 0 8px rgba(0,0,0,0.05);
+  box-shadow: inset 0 0 8px rgba(0, 0, 0, 0.05);
   margin: 0 auto;
-  min-height: 500px; /* Prevent canvas from collapsing */
+  min-height: 500px;
+  /* Prevent canvas from collapsing */
 }
 
 /* Ensure elements don't overlap */
@@ -938,7 +944,7 @@ body.dark-mode .file-button {
 
 .element:hover {
   transform: translateY(-3px);
-  box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
   border-color: var(--primary-light);
 }
 
@@ -964,7 +970,7 @@ body.dark-mode .file-button {
   left: 50%;
   transform: translateX(-50%);
   padding: 8px 12px;
-  background: rgba(0,0,0,0.85);
+  background: rgba(0, 0, 0, 0.85);
   color: #fff;
   border-radius: 6px;
   white-space: pre-wrap;
@@ -1007,7 +1013,7 @@ body.dark-mode .file-button {
 
 .left-sidebar .element:hover {
   transform: translateY(-3px);
-  box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
   border-color: var(--primary-light);
   background: rgba(67, 97, 238, 0.05);
 }
@@ -1025,7 +1031,7 @@ body.dark-mode .file-button {
   left: 50%;
   transform: translateX(-50%);
   padding: 10px 15px;
-  background: rgba(0,0,0,0.85);
+  background: rgba(0, 0, 0, 0.85);
   color: #fff;
   border-radius: 8px;
   white-space: pre-wrap;
@@ -1035,7 +1041,7 @@ body.dark-mode .file-button {
   font-weight: normal;
   z-index: 1000;
   pointer-events: none;
-  box-shadow: 0 6px 15px rgba(0,0,0,0.2);
+  box-shadow: 0 6px 15px rgba(0, 0, 0, 0.2);
   line-height: 1.5;
 }
 
@@ -1049,7 +1055,7 @@ body.dark-mode .file-button {
 }
 
 .menu-scene-button {
-  background: rgba(255,255,255,0.15);
+  background: rgba(255, 255, 255, 0.15);
   color: #fff;
   border: none;
   padding: 5px 10px;
@@ -1060,7 +1066,7 @@ body.dark-mode .file-button {
 }
 
 .menu-scene-button:hover {
-  background: rgba(255,255,255,0.25);
+  background: rgba(255, 255, 255, 0.25);
 }
 
 .menu-scene-button.active {
@@ -1109,7 +1115,6 @@ body.dark-mode .file-button {
   opacity: 1;
 }
 
-
 /* Add to the end of the file */
 /* Variable value display */
 .variable-display {
@@ -1118,7 +1123,7 @@ body.dark-mode .file-button {
   left: 50%;
   transform: translateX(-50%);
   padding: 4px 8px;
-  background: rgba(0,0,0,0.85);
+  background: rgba(0, 0, 0, 0.85);
   color: white;
   border-radius: 4px;
   font-size: 12px;
@@ -1126,7 +1131,7 @@ body.dark-mode .file-button {
   z-index: 20;
   white-space: nowrap;
   pointer-events: none;
-  box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
 }
 
 .variable-display:empty {
@@ -1163,7 +1168,7 @@ body.dark-mode .file-button {
   top: -25px;
   left: 0;
   padding: 3px 8px;
-  background: rgba(0,0,0,0.85);
+  background: rgba(0, 0, 0, 0.85);
   color: white;
   border-radius: 4px;
   font-size: 12px;
@@ -1171,7 +1176,7 @@ body.dark-mode .file-button {
   z-index: 20;
   white-space: nowrap;
   pointer-events: none;
-  box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
   transform: translateY(-5px);
   opacity: 0;
   transition: all 0.3s ease;
@@ -1268,4 +1273,74 @@ body.dark-mode .file-button {
   font-family: 'Roboto', sans-serif;
   font-weight: 900;
   margin-left: 10px;
+}
+
+/* Properties Panel Tabs */
+.properties-tabs {
+  display: flex;
+  border-bottom: 1px solid var(--border);
+}
+
+.properties-tab {
+  padding: 0.75rem 1rem;
+  background: var(--surface);
+  border: none;
+  cursor: pointer;
+  font-weight: 500;
+  transition: var(--transition);
+  flex: 1;
+  text-align: center;
+}
+
+.properties-tab.active {
+  background: var(--primary);
+  color: var(--on-primary);
+}
+
+.properties-panel {
+  display: none;
+  padding: 1rem;
+}
+
+.properties-panel.active {
+  display: block;
+}
+
+/* External Program Section */
+.external-program-section {
+  margin-top: 1.5rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border);
+}
+
+.program-output {
+  margin-top: 1rem;
+  padding: 0.75rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--border-radius-sm);
+  max-height: 200px;
+  overflow-y: auto;
+  font-family: monospace;
+  font-size: 0.85rem;
+}
+
+.video-list {
+  margin-top: 1rem;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.video-item {
+  padding: 0.5rem;
+  border: 1px solid var(--border);
+  border-radius: var(--border-radius-sm);
+  margin-bottom: 0.5rem;
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.video-item:hover {
+  background: var(--primary-light);
+  color: var(--on-primary);
 }

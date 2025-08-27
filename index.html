@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -8,7 +9,9 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap">
+
 </head>
+
 <body>
     <header>
         <div class="header-content">
@@ -23,12 +26,9 @@
                 <button id="toggleGuide" class="action-button">
                     <i class="fas fa-question-circle"></i> Guide
                 </button>
-                <button id="toggleAppInfo" class="action-button">
-                    <i class="fas fa-info-circle"></i> App Info
-                </button>
             </div>
         </div>
-        
+
         <div id="guidePanel" class="steps-box">
             <div class="steps-header">
                 <h2><i class="fas fa-lightbulb"></i> Getting Started Guide</h2>
@@ -47,7 +47,8 @@
                     </li>
                     <li>Select elements to edit properties in the right sidebar</li>
                     <li>Use the "Download Config" button when finished</li>
-                    <li>Combine with the JukaGUI template from <a href="https://github.com/jukaLang/JukaGUI/releases">GitHub releases</a></li>
+                    <li>Combine with the JukaGUI template from <a
+                            href="https://github.com/jukaLang/JukaGUI/releases">GitHub releases</a></li>
                 </ol>
                 <div class="file-actions">
                     <button id="clearButton" class="action-button danger">
@@ -62,75 +63,6 @@
                 </div>
             </div>
         </div>
-
-<!-- Update the Application Information section -->
-<div id="appInfoPanel" class="app-info-section">
-    <div class="steps-header">
-      <h2><i class="fas fa-info-circle"></i> Application Information</h2>
-      <button id="closeAppInfo" class="close-button">
-        <i class="fas fa-times"></i>
-      </button>
-    </div>
-    <div class="steps-content">
-      <div class="input-container">
-        <div class="input-group">
-          <label for="title"><i class="fas fa-heading"></i> Title:</label>
-          <input type="text" id="title" placeholder="App Title">
-        </div>
-        <div class="input-group">
-          <label for="author"><i class="fas fa-user"></i> Author:</label>
-          <input type="text" id="author" placeholder="Your Name">
-        </div>
-        <div class="input-group">
-          <label for="description"><i class="fas fa-align-left"></i> Description:</label>
-          <input type="text" id="description" placeholder="App description">
-        </div>
-        <div class="input-group">
-          <label for="canvasSize"><i class="fas fa-mobile-alt"></i> Device:</label>
-          <select id="canvasSize">
-            <option value="1280x720">TSP (1280 x 720)</option>
-            <option value="1024x768">Brick (1024 x 768)</option>
-            <option value="custom">Custom</option>
-          </select>
-        </div>
-        <div id="customSizeFields" class="custom-size-fields">
-          <input type="number" id="customWidth" placeholder="Width" min="1">
-          <span>x</span>
-          <input type="number" id="customHeight" placeholder="Height" min="1">
-        </div>
-        <div class="input-group file-input-group">
-          <label for="backgroundFile"><i class="fas fa-image"></i> Background:</label>
-          <div class="file-input-container">
-            <label for="backgroundFile" class="file-button">
-              <i class="fas fa-upload"></i> Choose Image
-            </label>
-            <input type="file" id="backgroundFile" accept="image/*">
-          </div>
-        </div>
-      </div>
-      <div class="font-size-controls">
-        <h4><i class="fas fa-text-height"></i> Font Sizes</h4>
-        <div class="size-inputs">
-          <div class="size-group">
-            <label for="titleSize">Title:</label>
-            <input type="number" id="titleSize" value="48" min="10">
-          </div>
-          <div class="size-group">
-            <label for="bigSize">Big:</label>
-            <input type="number" id="bigSize" value="36" min="10">
-          </div>
-          <div class="size-group">
-            <label for="mediumSize">Medium:</label>
-            <input type="number" id="mediumSize" value="24" min="10">
-          </div>
-          <div class="size-group">
-            <label for="smallSize">Small:</label>
-            <input type="number" id="smallSize" value="18" min="10">
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
     </header>
 
     <main>
@@ -155,6 +87,9 @@
                     </div>
                     <div class="element" draggable="true" data-type="menu" title="Menu">
                         <i class="fas fa-bars"></i> Menu
+                    </div>
+                    <div class="element" draggable="true" data-type="video" title="Video">
+                        <i class="fas fa-video"></i> Video
                     </div>
                 </div>
                 <div class="variables-panel">
@@ -189,7 +124,7 @@
                                 <i class="fas fa-copy"></i>
                             </button>
                         </div>
-                        
+
                         <button class="action-button primary" onclick="createJukaApp()">
                             <i class="fas fa-download"></i> Download Config
                         </button>
@@ -202,16 +137,20 @@
             <div class="sidebar right-sidebar">
                 <div class="sidebar-header">
                     <h3><i class="fas fa-sliders-h"></i> Properties</h3>
-                    <button id="toggleProperties" class="toggle-button">
-                        <i class="fas fa-chevron-down"></i>
-                    </button>
                 </div>
-                <div id="propertiesContent" class="properties-content">
+
+                <div class="properties-tabs">
+                    <button class="properties-tab active" data-tab="element-properties">Element</button>
+                    <button class="properties-tab" data-tab="app-properties">App Info</button>
+                </div>
+
+                <!-- Element Properties -->
+                <div id="elementPropertiesPanel" class="properties-panel active">
                     <div id="noSelection" class="no-selection">
                         <i class="fas fa-mouse-pointer"></i>
                         <p>Select an element to edit properties</p>
                     </div>
-                    
+
                     <div id="elementProperties" class="element-properties">
                         <div class="position-controls">
                             <div class="control-group">
@@ -252,7 +191,8 @@
                             </div>
                             <div class="control-group">
                                 <label for="opacitySlider"><i class="fas fa-adjust"></i> Opacity:</label>
-                                <input type="range" id="opacitySlider" min="0" max="100" value="100" class="opacity-slider">
+                                <input type="range" id="opacitySlider" min="0" max="100" value="100"
+                                    class="opacity-slider">
                                 <span id="opacityValue">100%</span>
                             </div>
                         </div>
@@ -270,13 +210,91 @@
                                     <option value="play_image">Fullscreen Image</option>
                                 </select>
                             </div>
-                            
+
                             <div id="triggerOptions">
                                 <select id="sceneChangeSelector" class="scene-change-selector"></select>
-                                <input type="text" id="externalAppPath" class="external-app-path" placeholder="App path">
+                                <input type="text" id="externalAppPath" class="external-app-path"
+                                    placeholder="App path">
                                 <select id="variableChangeSelector" class="variable-change-selector"></select>
-                                <input type="text" id="variableChangeValue" class="variable-change-value" placeholder="New value">
+                                <input type="text" id="variableChangeValue" class="variable-change-value"
+                                    placeholder="New value">
                             </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- App Properties -->
+                <div id="appPropertiesPanel" class="properties-panel">
+                    <div class="app-properties-content">
+                        <div class="input-container">
+                            <div class="input-group">
+                                <label for="title"><i class="fas fa-heading"></i> Title:</label>
+                                <input type="text" id="title" placeholder="App Title">
+                            </div>
+                            <div class="input-group">
+                                <label for="author"><i class="fas fa-user"></i> Author:</label>
+                                <input type="text" id="author" placeholder="Your Name">
+                            </div>
+                            <div class="input-group">
+                                <label for="description"><i class="fas fa-align-left"></i> Description:</label>
+                                <input type="text" id="description" placeholder="App description">
+                            </div>
+                            <div class="input-group">
+                                <label for="canvasSize"><i class="fas fa-mobile-alt"></i> Device:</label>
+                                <select id="canvasSize">
+                                    <option value="1280x720">TSP (1280 x 720)</option>
+                                    <option value="1024x768">Brick (1024 x 768)</option>
+                                    <option value="custom">Custom</option>
+                                </select>
+                            </div>
+                            <div id="customSizeFields" class="custom-size-fields">
+                                <input type="number" id="customWidth" placeholder="Width" min="1">
+                                <span>x</span>
+                                <input type="number" id="customHeight" placeholder="Height" min="1">
+                            </div>
+                            <div class="input-group file-input-group">
+                                <label for="backgroundFile"><i class="fas fa-image"></i> Background:</label>
+                                <div class="file-input-container">
+                                    <label for="backgroundFile" class="file-button">
+                                        <i class="fas fa-upload"></i> Choose Image
+                                    </label>
+                                    <input type="file" id="backgroundFile" accept="image/*">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="font-size-controls">
+                            <h4><i class="fas fa-text-height"></i> Font Sizes</h4>
+                            <div class="size-inputs">
+                                <div class="size-group">
+                                    <label for="titleSize">Title:</label>
+                                    <input type="number" id="titleSize" value="48" min="10">
+                                </div>
+                                <div class="size-group">
+                                    <label for="bigSize">Big:</label>
+                                    <input type="number" id="bigSize" value="36" min="10">
+                                </div>
+                                <div class="size-group">
+                                    <label for="mediumSize">Medium:</label>
+                                    <input type="number" id="mediumSize" value="24" min="10">
+                                </div>
+                                <div class="size-group">
+                                    <label for="smallSize">Small:</label>
+                                    <input type="number" id="smallSize" value="18" min="10">
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="external-program-section">
+                            <h4><i class="fas fa-terminal"></i> External Program</h4>
+                            <div class="input-group">
+                                <label for="externalProgramPath">Program Path:</label>
+                                <input type="text" id="externalProgramPath" placeholder="/path/to/program">
+                            </div>
+                            <button id="executeProgram" class="action-button">
+                                <i class="fas fa-play"></i> Execute Program
+                            </button>
+                            <div id="programOutput" class="program-output"></div>
+                            <div id="videoList" class="video-list"></div>
                         </div>
                     </div>
                 </div>
@@ -287,12 +305,14 @@
     <footer>
         <div class="contribute-banner">
             <p>
-                Need help? Join us on <a href="https://discord.gg/R9qgJjh5jG"><i class="fab fa-discord"></i> Discord</a>! 
-                Want to contribute? Visit our <a href="https://github.com/jukaLang/JukaGUI"><i class="fab fa-github"></i> GitHub</a>
+                Need help? Join us on <a href="https://discord.gg/R9qgJjh5jG"><i class="fab fa-discord"></i>
+                    Discord</a>!
+                Want to contribute? Visit our <a href="https://github.com/jukaLang/JukaGUI"><i
+                        class="fab fa-github"></i> GitHub</a>
             </p>
         </div>
     </footer>
-
     <script src="script.js"></script>
 </body>
+
 </html>

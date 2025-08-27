@@ -1,0 +1,1100 @@
+package main
+
+import (
+	"bytes"
+	"encoding/json"
+	"fmt"
+	"log"
+	"math"
+	"os"
+	"os/exec"
+	"regexp"
+	"runtime/debug"
+	"strconv"
+	"strings"
+	"time"
+
+	"github.com/veandco/go-sdl2/img"
+	"github.com/veandco/go-sdl2/sdl"
+	"github.com/veandco/go-sdl2/ttf"
+)
+
+//
+// Types and configuration
+//
+
+type StringOrInt string
+
+type Config struct {
+	Title       string        `json:"title"`
+	Author      string        `json:"author"`
+	Description string        `json:"description"`
+	Variables   Variables     `json:"variables"`
+	Scenes      []SceneConfig `json:"scenes"`
+}
+
+type Variables struct {
+	ButtonColor struct {
+		R int `json:"r"`
+		G int `json:"g"`
+		B int `json:"b"`
+	} `json:"buttonColor"`
+	LabelColor struct {
+		R int `json:"r"`
+		G int `json:"g"`
+		B int `json:"b"`
+	} `json:"labelColor"`
+	BackgroundImage string            `json:"backgroundImage"`
+	Fonts           map[string]string `json:"fonts"`
+	FontSizes       map[string]int    `json:"fontSizes"`
+	Custom          map[string]interface{}
+}
+
+type SceneConfig struct {
+	Name     string    `json:"name"`
+	Elements []Element `json:"elements"`
+}
+
+type Element struct {
+	Type          string      `json:"type"`
+	Text          string      `json:"text"`
+	Color         string      `json:"color"`
+	X             int32       `json:"x"`
+	Y             int32       `json:"y"`
+	Font          string      `json:"font"`
+	BgColor       string      `json:"bgColor"`
+	Trigger       string      `json:"trigger"`
+	TriggerTarget string      `json:"triggerTarget"`
+	TriggerValue  string      `json:"triggerValue"`
+	Image         string      `json:"image"`
+	Width         StringOrInt `json:"width"`
+	Height        StringOrInt `json:"height"`
+	Video         string      `json:"video"`
+	Variable      string      `json:"variable"`
+}
+
+//
+// Global UI state
+//
+
+var (
+	// Scene and selection
+	currentSceneIndex  int
+	selectedElementIdx int // index into current scene's Elements
+	videoPlayed        bool
+
+	// Input state
+	activeInputIdx    = -1 // index of active input field in current scene, -1 if none
+	inputTextBuffer   string
+	cursorBlinkMillis uint64
+
+	// Virtual keyboard
+	keyboard              [][]string
+	keyboardPosX          int
+	keyboardPosY          int
+	virtualKeyboardActive bool
+)
+
+//
+// JSON helpers
+//
+
+func (s *StringOrInt) UnmarshalJSON(data []byte) error {
+	// Try string first
+	var str string
+	if err := json.Unmarshal(data, &str); err == nil {
+		*s = StringOrInt(str)
+		return nil
+	}
+	// Then try number
+	var num int
+	if err := json.Unmarshal(data, &num); err == nil {
+		*s = StringOrInt(strconv.Itoa(num))
+		return nil
+	}
+	// Handle null values
+	if string(data) == "null" {
+		*s = ""
+		return nil
+	}
+	return fmt.Errorf("StringOrInt: expected string or integer, got %q", data)
+}
+
+func (v *Variables) UnmarshalJSON(data []byte) error {
+	var raw map[string]json.RawMessage
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return err
+	}
+	known := map[string]bool{
+		"buttonColor":     true,
+		"labelColor":      true,
+		"backgroundImage": true,
+		"fonts":           true,
+		"fontSizes":       true,
+	}
+	v.Custom = make(map[string]interface{})
+	for key, val := range raw {
+		if known[key] {
+			switch key {
+			case "buttonColor":
+				if err := json.Unmarshal(val, &v.ButtonColor); err != nil {
+					return err
+				}
+			case "labelColor":
+				if err := json.Unmarshal(val, &v.LabelColor); err != nil {
+					return err
+				}
+			case "backgroundImage":
+				if err := json.Unmarshal(val, &v.BackgroundImage); err != nil {
+					return err
+				}
+			case "fonts":
+				if err := json.Unmarshal(val, &v.Fonts); err != nil {
+					return err
+				}
+			case "fontSizes":
+				if err := json.Unmarshal(val, &v.FontSizes); err != nil {
+					return err
+				}
+			}
+		} else {
+			var value interface{}
+			if err := json.Unmarshal(val, &value); err != nil {
+				return err
+			}
+			v.Custom[key] = value
+			log.Printf("[DEBUG] Stored custom variable: %s = %v (type %T)", key, value, value)
+		}
+	}
+	log.Printf("[DEBUG] Total custom variables: %+v", v.Custom)
+	return nil
+}
+
+func (v *Variables) Get(name string) string {
+	targetKey := strings.ToLower(name)
+	// custom variables (case-insensitive)
+	for key, val := range v.Custom {
+		if strings.EqualFold(key, targetKey) {
+			switch val := val.(type) {
+			case string:
+				return val
+			case float64:
+				return strconv.FormatFloat(val, 'f', -1, 64)
+			case int:
+				return strconv.Itoa(val)
+			default:
+				return fmt.Sprintf("%v", val)
+			}
+		}
+	}
+	// predefined
+	switch targetKey {
+	case "buttoncolor":
+		return fmt.Sprintf("%d,%d,%d", v.ButtonColor.R, v.ButtonColor.G, v.ButtonColor.B)
+	case "labelcolor":
+		return fmt.Sprintf("%d,%d,%d", v.LabelColor.R, v.LabelColor.G, v.LabelColor.B)
+	case "backgroundimage":
+		return v.BackgroundImage
+	}
+	for key, path := range v.Fonts {
+		if strings.EqualFold(key, targetKey) {
+			return path
+		}
+	}
+	for key, size := range v.FontSizes {
+		if strings.EqualFold(key, targetKey) {
+			return strconv.Itoa(size)
+		}
+	}
+	log.Printf("[ERROR] MISSING VARIABLE: %s (searched as: %s)", name, targetKey)
+	return "MISSING_VAR"
+}
+
+func loadConfig(filename string) (*Config, error) {
+	f, err := os.Open(filename)
+	if err != nil {
+		return nil, err
+	}
+	defer f.Close()
+	var cfg Config
+	dec := json.NewDecoder(f)
+	if err := dec.Decode(&cfg); err != nil {
+		return nil, err
+	}
+	if cfg.Variables.Fonts == nil {
+		cfg.Variables.Fonts = make(map[string]string)
+	}
+	if cfg.Variables.FontSizes == nil {
+		cfg.Variables.FontSizes = make(map[string]int)
+	}
+	return &cfg, nil
+}
+
+//
+// Utility: colors, variables, fonts
+//
+
+func resolveColor(config *Config, colorName string, defaultColor sdl.Color) sdl.Color {
+	if strings.HasPrefix(colorName, "$") {
+		colorValue := config.Variables.Get(colorName[1:])
+		parts := strings.Split(colorValue, ",")
+		if len(parts) == 3 {
+			r, _ := strconv.Atoi(strings.TrimSpace(parts[0]))
+			g, _ := strconv.Atoi(strings.TrimSpace(parts[1]))
+			b, _ := strconv.Atoi(strings.TrimSpace(parts[2]))
+			return sdl.Color{R: uint8(r), G: uint8(g), B: uint8(b), A: 255}
+		}
+		return defaultColor
+	}
+	if colorName != "" {
+		r, g, b := hexToRGB(colorName)
+		return sdl.Color{R: r, G: g, B: b, A: 255}
+	}
+	return defaultColor
+}
+
+func hexToRGB(hex string) (uint8, uint8, uint8) {
+	if strings.HasPrefix(hex, "#") && len(hex) == 7 {
+		hex = hex[1:]
+	}
+	r, _ := strconv.ParseUint(hex[0:2], 16, 8)
+	g, _ := strconv.ParseUint(hex[2:4], 16, 8)
+	b, _ := strconv.ParseUint(hex[4:6], 16, 8)
+	return uint8(r), uint8(g), uint8(b)
+}
+
+func substituteVariables(text string, config *Config) string {
+	return regexp.MustCompile(`\$(\w+)`).ReplaceAllStringFunc(text, func(m string) string {
+		varName := m[1:]
+		value := config.Variables.Get(varName)
+		if value == "" {
+			log.Printf("MISSING VARIABLE: %s", varName)
+			return "MISSING_VAR"
+		}
+		return value
+	})
+}
+
+func getFontAndSize(config *Config, fontName string) (*ttf.Font, int) {
+	if config.Variables.Fonts == nil {
+		config.Variables.Fonts = make(map[string]string)
+	}
+	if config.Variables.FontSizes == nil {
+		config.Variables.FontSizes = make(map[string]int)
+	}
+	fontPath := "Roboto-Black.ttf"
+	size := 24
+	for key, path := range config.Variables.Fonts {
+		if strings.EqualFold(key, fontName) {
+			fontPath = path
+			break
+		}
+	}
+	for key, val := range config.Variables.FontSizes {
+		if strings.EqualFold(key, fontName) {
+			size = val
+			break
+		}
+	}
+	font, err := ttf.OpenFont(fontPath, size)
+	if err != nil {
+		log.Printf("Error loading font %s: %v", fontPath, err)
+		return nil, 0
+	}
+	return font, size
+}
+
+//
+// Rendering
+//
+
+func resolveBackground(renderer *sdl.Renderer, config *Config) *sdl.Texture {
+	if config.Variables.BackgroundImage != "" {
+		texture, err := img.LoadTexture(renderer, config.Variables.BackgroundImage)
+		if err != nil {
+			log.Printf("Failed to load background texture: %v", err)
+			return nil
+		}
+		return texture
+	}
+	renderer.SetDrawColor(32, 32, 32, 255)
+	renderer.Clear()
+	return nil
+}
+
+func renderText(renderer *sdl.Renderer, config *Config, font *ttf.Font, text string, color sdl.Color, x int32, y int32) (int32, int32) {
+	processedText := substituteVariables(text, config)
+	if processedText == "" || font == nil {
+		return 0, 0
+	}
+	surface, err := font.RenderUTF8Blended(processedText, color)
+	if err != nil {
+		log.Printf("Render error: %v", err)
+		return 0, 0
+	}
+	defer surface.Free()
+
+	texture, err := renderer.CreateTextureFromSurface(surface)
+	if err != nil {
+		log.Printf("Texture error: %v", err)
+		return 0, 0
+	}
+	defer texture.Destroy()
+
+	_, _, w, h, _ := texture.Query()
+	dst := sdl.Rect{X: x, Y: y, W: w, H: h}
+	renderer.Copy(texture, nil, &dst)
+	return w, h
+}
+
+func renderMenu(renderer *sdl.Renderer, config *Config, element Element) {
+	textColor := sdl.Color{R: 255, G: 255, B: 255, A: 255}
+	font, _ := getFontAndSize(config, "medium")
+	if font == nil {
+		return
+	}
+	defer font.Close()
+
+	renderer.SetDrawColor(32, 32, 32, 200)
+	renderer.FillRect(&sdl.Rect{X: element.X, Y: element.Y, W: 1280, H: 50})
+
+	buttonX := int32(10)
+	for _, scene := range config.Scenes {
+		text := scene.Name
+		if scene.Name == config.Scenes[currentSceneIndex].Name {
+			text = "[" + text + "]"
+		}
+		w, _ := renderText(renderer, config, font, text, textColor, buttonX+40, element.Y+10)
+		buttonX += w + 20
+	}
+
+	currentTime := time.Now().Format("15:04")
+	renderText(renderer, config, font, currentTime, textColor, 1200, element.Y+10)
+}
+
+func renderButton(renderer *sdl.Renderer, config *Config, element Element, invert bool) {
+	defaultTextColor := sdl.Color{R: 0, G: 0, B: 0, A: 255}
+	defaultBgColor := sdl.Color{R: 255, G: 255, B: 255, A: 255}
+	color := resolveColor(config, element.Color, defaultTextColor)
+	bgColor := resolveColor(config, element.BgColor, defaultBgColor)
+
+	if invert {
+		color, bgColor = bgColor, color
+	}
+
+	renderer.SetDrawColor(bgColor.R, bgColor.G, bgColor.B, bgColor.A)
+	renderer.FillRect(&sdl.Rect{X: element.X, Y: element.Y, W: 200, H: 50})
+
+	font, _ := getFontAndSize(config, element.Font)
+	if font != nil {
+		defer font.Close()
+		renderText(renderer, config, font, element.Text, color, element.X+10, element.Y+10)
+	}
+}
+
+func renderInputField(renderer *sdl.Renderer, config *Config, element Element, isActive bool) {
+	bgColor := resolveColor(config, element.BgColor, sdl.Color{R: 255, G: 255, B: 255, A: 255})
+	renderer.SetDrawColor(bgColor.R, bgColor.G, bgColor.B, bgColor.A)
+	w := int32(300)
+	h := int32(40)
+	renderer.FillRect(&sdl.Rect{X: element.X, Y: element.Y, W: w, H: h})
+
+	textColor := resolveColor(config, element.Color, sdl.Color{R: 0, G: 0, B: 0, A: 255})
+	font, _ := getFontAndSize(config, element.Font)
+	defer func() {
+		if font != nil {
+			font.Close()
+		}
+	}()
+
+	// determine text to display: active buffer or stored variable
+	txt := ""
+	if isActive {
+		txt = inputTextBuffer
+		if (sdl.GetTicks64()/500)%2 == 0 {
+			txt += "_"
+		}
+	} else if element.Variable != "" {
+		txt = config.Variables.Get(element.Variable)
+	}
+
+	renderText(renderer, config, font, txt, textColor, element.X+10, element.Y+10)
+
+	if isActive {
+		renderer.SetDrawColor(0, 120, 215, 255)
+		renderer.DrawRect(&sdl.Rect{X: element.X - 2, Y: element.Y - 2, W: w + 4, H: h + 4})
+	}
+}
+
+func renderImage(renderer *sdl.Renderer, config *Config, element Element) {
+	if element.Image == "" {
+		return
+	}
+	texture, err := img.LoadTexture(renderer, element.Image)
+	if err != nil {
+		log.Printf("Failed to load image %s: %v", element.Image, err)
+		return
+	}
+	defer texture.Destroy()
+
+	widthStr := substituteVariables(string(element.Width), config)
+	heightStr := substituteVariables(string(element.Height), config)
+	width, _ := strconv.Atoi(widthStr)
+	height, _ := strconv.Atoi(heightStr)
+
+	if width == 0 || height == 0 {
+		_, _, w, h, _ := texture.Query()
+		if width == 0 {
+			width = int(w)
+		}
+		if height == 0 {
+			height = int(h)
+		}
+	}
+	dst := sdl.Rect{X: element.X, Y: element.Y, W: int32(width), H: int32(height)}
+	renderer.Copy(texture, nil, &dst)
+}
+
+func renderKeyboard(renderer *sdl.Renderer, config *Config) {
+	if !virtualKeyboardActive {
+		return
+	}
+	renderer.SetDrawColor(0, 0, 0, 200)
+	renderer.FillRect(&sdl.Rect{X: 0, Y: 0, W: 1280, H: 720})
+
+	keyWidth := int32(60)
+	keyHeight := int32(60)
+	padding := int32(10)
+	startX := (1280 - (10*keyWidth + 9*padding)) / 2
+	startY := int32(200)
+
+	font, _ := getFontAndSize(config, "medium")
+	defer func() {
+		if font != nil {
+			font.Close()
+		}
+	}()
+
+	for y, row := range keyboard {
+		rowStartX := startX
+		if y == 1 {
+			rowStartX += keyWidth / 2
+		}
+		if y == 2 {
+			rowStartX += keyWidth
+		}
+		if y == 3 {
+			rowStartX += keyWidth * 3
+		}
+		for x, key := range row {
+			bg := sdl.Color{R: 255, G: 255, B: 255, A: 255}
+			if x == keyboardPosX && y == keyboardPosY {
+				bg = sdl.Color{R: 0, G: 255, B: 0, A: 255}
+			}
+			renderer.SetDrawColor(bg.R, bg.G, bg.B, bg.A)
+			rect := &sdl.Rect{
+				X: rowStartX + int32(x)*(keyWidth+padding),
+				Y: startY + int32(y)*(keyHeight+padding),
+				W: keyWidth,
+				H: keyHeight,
+			}
+			renderer.FillRect(rect)
+			renderText(renderer, config, font, key, sdl.Color{R: 0, G: 0, B: 0, A: 255}, rect.X+keyWidth/3, rect.Y+keyHeight/4)
+		}
+	}
+}
+
+func renderScene(renderer *sdl.Renderer, config *Config, scene SceneConfig) {
+	fontCache := make(map[string]*ttf.Font)
+	bgTexture := resolveBackground(renderer, config)
+	if bgTexture != nil {
+		defer bgTexture.Destroy()
+		renderer.Copy(bgTexture, nil, &sdl.Rect{X: 0, Y: 0, W: 1280, H: 720})
+	}
+
+	for i := range scene.Elements {
+		element := scene.Elements[i]
+		switch element.Type {
+		case "image":
+			renderImage(renderer, config, element)
+		case "input":
+			renderInputField(renderer, config, element, i == activeInputIdx)
+		case "video":
+			if !videoPlayed && element.Video != "" {
+				widthStr := substituteVariables(string(element.Width), config)
+				heightStr := substituteVariables(string(element.Height), config)
+				width, _ := strconv.Atoi(widthStr)
+				height, _ := strconv.Atoi(heightStr)
+				cmd := exec.Command("ffmpeg/ffplay", element.Video,
+					"-noborder",
+					"-x", strconv.Itoa(width),
+					"-y", strconv.Itoa(height),
+					"-left", strconv.Itoa(int(element.X)),
+					"-top", strconv.Itoa(int(element.Y)),
+					"-autoexit")
+				if err := cmd.Start(); err != nil {
+					log.Printf("Error starting ffplay: %v", err)
+				}
+				videoPlayed = true
+			}
+		case "label":
+			font, ok := fontCache[element.Font]
+			if !ok || font == nil {
+				font, _ = getFontAndSize(config, element.Font)
+				fontCache[element.Font] = font
+			}
+			color := resolveColor(config, element.Color, sdl.Color{R: 0, G: 0, B: 0, A: 255})
+			if font != nil {
+				renderText(renderer, config, font, element.Text, color, element.X, element.Y)
+			}
+		case "button":
+			invert := (i == selectedElementIdx)
+			renderButton(renderer, config, element, invert)
+		case "menu":
+			renderMenu(renderer, config, element)
+		default:
+			// unknown: skip
+		}
+	}
+	for _, f := range fontCache {
+		if f != nil {
+			f.Close()
+		}
+	}
+	renderKeyboard(renderer, config)
+}
+
+//
+// Input handling
+//
+
+func initKeyboard() {
+	keyboard = [][]string{
+		{"Q", "W", "E", "R", "T", "Y", "U", "I", "O", "P"},
+		{"A", "S", "D", "F", "G", "H", "J", "K", "L"},
+		{"Z", "X", "C", "V", "B", "N", "M"},
+		{"SPACE", "BACK", "ENTER"},
+	}
+	keyboardPosX, keyboardPosY = 0, 0
+}
+
+func textFromEvent(e *sdl.TextInputEvent) string {
+	n := bytes.IndexByte(e.Text[:], 0)
+	if n < 0 {
+		n = len(e.Text)
+	}
+	return string(e.Text[:n])
+}
+
+func handleTextKey(event *sdl.KeyboardEvent, config *Config) {
+	switch event.Keysym.Sym {
+	case sdl.K_BACKSPACE:
+		if len(inputTextBuffer) > 0 {
+			inputTextBuffer = inputTextBuffer[:len(inputTextBuffer)-1]
+		}
+		updateInputVariable(config)
+	case sdl.K_RETURN, sdl.K_KP_ENTER:
+		// Finish input
+		endInputMode()
+	default:
+		// printable characters come via TextInputEvent
+	}
+}
+
+func handleTextInputEvent(e *sdl.TextInputEvent, config *Config) {
+	if activeInputIdx == -1 {
+		return
+	}
+	add := textFromEvent(e)
+	if add != "" {
+		inputTextBuffer += add
+		updateInputVariable(config)
+	}
+}
+
+func startInputMode(config *Config, scene SceneConfig, idx int) {
+	activeInputIdx = idx
+	// prefill buffer from variable if available
+	el := scene.Elements[idx]
+	inputTextBuffer = ""
+	if el.Variable != "" {
+		inputTextBuffer = config.Variables.Get(el.Variable)
+		if inputTextBuffer == "MISSING_VAR" {
+			inputTextBuffer = ""
+		}
+	}
+	sdl.StartTextInput()
+	// Show virtual keyboard overlay by default (still allows physical typing)
+	virtualKeyboardActive = true
+}
+
+func endInputMode() {
+	virtualKeyboardActive = false
+	activeInputIdx = -1
+	sdl.StopTextInput()
+}
+
+func updateInputVariable(config *Config) {
+	if activeInputIdx == -1 {
+		return
+	}
+	scene := config.Scenes[currentSceneIndex]
+	el := scene.Elements[activeInputIdx]
+	if el.Variable != "" {
+		if config.Variables.Custom == nil {
+			config.Variables.Custom = make(map[string]interface{})
+		}
+		config.Variables.Custom[el.Variable] = inputTextBuffer
+	}
+}
+
+func handleVirtualKeyboardNav(event *sdl.KeyboardEvent) {
+	switch event.Keysym.Sym {
+	case sdl.K_UP:
+		if keyboardPosY > 0 {
+			keyboardPosY--
+			if keyboardPosX >= len(keyboard[keyboardPosY]) {
+				keyboardPosX = len(keyboard[keyboardPosY]) - 1
+			}
+		}
+	case sdl.K_DOWN:
+		if keyboardPosY < len(keyboard)-1 {
+			keyboardPosY++
+			if keyboardPosX >= len(keyboard[keyboardPosY]) {
+				keyboardPosX = len(keyboard[keyboardPosY]) - 1
+			}
+		}
+	case sdl.K_LEFT:
+		if keyboardPosX > 0 {
+			keyboardPosX--
+		}
+	case sdl.K_RIGHT:
+		if keyboardPosX < len(keyboard[keyboardPosY])-1 {
+			keyboardPosX++
+		}
+	case sdl.K_RETURN, sdl.K_KP_ENTER:
+		handleVirtualKeyboardCommit()
+	}
+}
+
+func handleVirtualKeyboardCommit() {
+	key := keyboard[keyboardPosY][keyboardPosX]
+	switch key {
+	case "SPACE":
+		inputTextBuffer += " "
+	case "BACK":
+		if len(inputTextBuffer) > 0 {
+			inputTextBuffer = inputTextBuffer[:len(inputTextBuffer)-1]
+		}
+	case "ENTER":
+		endInputMode()
+	default:
+		inputTextBuffer += key
+	}
+}
+
+//
+// Navigation and triggers
+//
+
+func interactiveIndices(scene SceneConfig) []int {
+	var idxs []int
+	for i, el := range scene.Elements {
+		if el.Type == "button" || el.Type == "input" {
+			idxs = append(idxs, i)
+		}
+	}
+	return idxs
+}
+
+func elementCenter(el Element) (float64, float64) {
+	w := int32(0)
+	h := int32(0)
+	switch el.Type {
+	case "button":
+		w, h = 200, 50
+	case "input":
+		w, h = 300, 40
+	default:
+		// try to use provided Width/Height if available
+		// otherwise treat as point
+	}
+	return float64(el.X + w/2), float64(el.Y + h/2)
+}
+
+func moveSelectionDirectional(config *Config, dx, dy int) {
+	scene := config.Scenes[currentSceneIndex]
+	if len(scene.Elements) == 0 {
+		return
+	}
+	// ensure selected index is on an interactive element
+	ints := interactiveIndices(scene)
+	if len(ints) == 0 {
+		selectedElementIdx = -1
+		return
+	}
+	if selectedElementIdx < 0 || (scene.Elements[selectedElementIdx].Type != "button" && scene.Elements[selectedElementIdx].Type != "input") {
+		selectedElementIdx = ints[0]
+		return
+	}
+
+	cur := scene.Elements[selectedElementIdx]
+	cx, cy := elementCenter(cur)
+
+	dirx := float64(dx)
+	diry := float64(dy)
+	// normalize direction
+	norm := math.Hypot(dirx, diry)
+	if norm == 0 {
+		return
+	}
+	dirx /= norm
+	diry /= norm
+
+	bestIdx := -1
+	bestScore := math.MaxFloat64
+
+	for _, i := range ints {
+		if i == selectedElementIdx {
+			continue
+		}
+		target := scene.Elements[i]
+		tx, ty := elementCenter(target)
+		vx := tx - cx
+		vy := ty - cy
+		// projection along direction
+		proj := vx*dirx + vy*diry
+		// only consider elements in the intended direction (proj > 0)
+		if proj <= 0.0 {
+			continue
+		}
+		// perpendicular distance (to prefer straighter moves)
+		perp := math.Abs(vx*diry - vy*dirx)
+		// score favors nearest ahead, with tie-break on alignment
+		score := proj + perp*0.25
+		if score < bestScore {
+			bestScore = score
+			bestIdx = i
+		}
+	}
+	if bestIdx != -1 {
+		selectedElementIdx = bestIdx
+	}
+}
+
+func triggerSelectedElement(renderer *sdl.Renderer, config *Config) {
+	scene := config.Scenes[currentSceneIndex]
+	if selectedElementIdx < 0 || selectedElementIdx >= len(scene.Elements) {
+		return
+	}
+	selected := scene.Elements[selectedElementIdx]
+	if selected.Type == "input" {
+		startInputMode(config, scene, selectedElementIdx)
+		return
+	}
+	if selected.Type == "button" {
+		handleTrigger(renderer, config, selected)
+	}
+}
+
+func handleTrigger(renderer *sdl.Renderer, config *Config, element Element) {
+	if element.Trigger == "" {
+		return
+	}
+	switch element.Trigger {
+	case "set_variable":
+		if element.TriggerTarget != "" {
+			if config.Variables.Custom == nil {
+				config.Variables.Custom = make(map[string]interface{})
+			}
+			config.Variables.Custom[element.TriggerTarget] = element.TriggerValue
+		}
+	case "external_app":
+		cmd := exec.Command(element.TriggerTarget)
+		if err := cmd.Start(); err != nil {
+			log.Printf("Failed to start external app: %v", err)
+		}
+	case "play_video":
+		go func() {
+			cmd := exec.Command("ffplay", element.TriggerTarget, "-fs", "-autoexit")
+			if err := cmd.Run(); err != nil {
+				log.Printf("Video playback failed: %v", err)
+			}
+		}()
+	case "play_image":
+		texture, err := img.LoadTexture(renderer, element.TriggerTarget)
+		if err == nil && texture != nil {
+			defer texture.Destroy()
+			renderer.Copy(texture, nil, nil)
+			renderer.Present()
+			sdl.Delay(3000)
+		}
+	case "exit":
+		os.Exit(0)
+	case "change_scene":
+		if element.TriggerTarget != "" {
+			for i, scene := range config.Scenes {
+				if scene.Name == element.TriggerTarget {
+					currentSceneIndex = i
+					videoPlayed = false
+					// reset selection to first interactive element in new scene
+					ints := interactiveIndices(config.Scenes[currentSceneIndex])
+					if len(ints) > 0 {
+						selectedElementIdx = ints[0]
+					} else {
+						selectedElementIdx = -1
+					}
+					// end any active input
+					endInputMode()
+					break
+				}
+			}
+		}
+	}
+}
+
+//
+// Main
+//
+
+func main() {
+	defer func() {
+		if r := recover(); r != nil {
+			log.Printf("Unhandled error: %v\n", r)
+			log.Println("Stack trace:")
+			debug.PrintStack()
+			os.Exit(-1)
+		}
+	}()
+
+	if err := ttf.Init(); err != nil {
+		fmt.Println("Error initializing TTF:", err)
+		os.Exit(1)
+	}
+	defer ttf.Quit()
+
+	if err := img.Init(img.INIT_PNG | img.INIT_JPG | img.INIT_TIF); err != nil {
+		fmt.Println("Error initializing IMG:", err)
+		os.Exit(1)
+	}
+	defer img.Quit()
+
+	config, err := loadConfig("jukaconfig.json")
+	if err != nil {
+		fmt.Println("Error loading config:", err)
+		os.Exit(1)
+	}
+
+	screenWidth := int32(1280)
+	screenHeight := int32(720)
+
+	window, err := sdl.CreateWindow(config.Title, int32(sdl.WINDOWPOS_CENTERED), int32(sdl.WINDOWPOS_CENTERED), screenWidth, screenHeight, sdl.WINDOW_SHOWN)
+	if err != nil {
+		fmt.Println("Error creating window:", err)
+		os.Exit(1)
+	}
+	defer window.Destroy()
+
+	renderer, err := sdl.CreateRenderer(window, -1, sdl.RENDERER_ACCELERATED)
+	if err != nil {
+		fmt.Println("Error creating renderer:", err)
+		os.Exit(1)
+	}
+	defer renderer.Destroy()
+
+	// Controller mappings (as provided)
+	mapping1 := "030000005e0400008e02000014010000,X360 Controller,a:b0,b:b1,back:b6,dpdown:h0.4,dpleft:h0.8,dpright:h0.2,dpup:h0.1,guide:b8,leftshoulder:b4,leftstick:b9,lefttrigger:a2,leftx:a0,lefty:a1,rightshoulder:b5,rightstick:b10,righttrigger:a5,rightx:a3,righty:a4,start:b7,x:b2,y:b3,platform:Linux,"
+	mapping2 := "0000000058626f782047616d65706100,Xbox Gamepad (userspace driver),platform:Linux,a:b0,b:b1,x:b2,y:b3,start:b7,back:b6,guide:b8,dpup:h0.1,dpdown:h0.4,dpleft:h0.8,dpright:h0.2,leftshoulder:b4,rightshoulder:b5,lefttrigger:a5,righttrigger:a4,leftstick:b9,rightstick:b10,leftx:a0,lefty:a1,rightx:a2,righty:a3,"
+
+	if sdl.GameControllerAddMapping(mapping1) == -1 {
+		fmt.Printf("Failed to add controller mapping: %s\n", sdl.GetError())
+	}
+	if sdl.GameControllerAddMapping(mapping2) == -1 {
+		fmt.Printf("Failed to add controller mapping: %s\n", sdl.GetError())
+	}
+
+	if sdl.NumJoysticks() > 0 {
+		if controller := sdl.GameControllerOpen(0); controller != nil {
+			defer controller.Close()
+			fmt.Println("Controller detected.")
+		}
+	}
+
+	initKeyboard()
+
+	// initialize default selection to first interactive element
+	if ints := interactiveIndices(config.Scenes[currentSceneIndex]); len(ints) > 0 {
+		selectedElementIdx = ints[0]
+	} else {
+		selectedElementIdx = -1
+	}
+
+	running := true
+	for running {
+		for event := sdl.PollEvent(); event != nil; event = sdl.PollEvent() {
+			switch e := event.(type) {
+			case *sdl.QuitEvent:
+				running = false
+
+			case *sdl.KeyboardEvent:
+				if e.Type == sdl.KEYDOWN {
+					// If virtual keyboard visible, navigate it first
+					if virtualKeyboardActive && activeInputIdx != -1 {
+						handleVirtualKeyboardNav(e)
+						updateInputVariable(config)
+						break
+					}
+					// If editing, process text keys
+					if activeInputIdx != -1 {
+						handleTextKey(e, config)
+						break
+					}
+					// Otherwise, global navigation
+					switch e.Keysym.Sym {
+					case sdl.K_UP:
+						moveSelectionDirectional(config, 0, -1)
+					case sdl.K_DOWN:
+						moveSelectionDirectional(config, 0, 1)
+					case sdl.K_LEFT:
+						moveSelectionDirectional(config, -1, 0)
+					case sdl.K_RIGHT:
+						moveSelectionDirectional(config, 1, 0)
+					case sdl.K_RETURN, sdl.K_KP_ENTER:
+						triggerSelectedElement(renderer, config)
+					case sdl.K_ESCAPE:
+						if virtualKeyboardActive || activeInputIdx != -1 {
+							endInputMode()
+						}
+					}
+				}
+
+			case *sdl.TextInputEvent:
+				handleTextInputEvent(e, config)
+
+			case *sdl.MouseButtonEvent:
+				if e.Type == sdl.MOUSEBUTTONDOWN && e.Button == sdl.BUTTON_LEFT {
+					mouseX := int(e.X)
+					mouseY := int(e.Y)
+					scene := config.Scenes[currentSceneIndex]
+
+					// iterate by index to avoid address-of-range variable bug
+					for i := range scene.Elements {
+						el := scene.Elements[i]
+
+						switch el.Type {
+						case "video":
+							// no hit-test area specified; skip
+						case "input":
+							widthStr := substituteVariables(string(el.Width), config)
+							heightStr := substituteVariables(string(el.Height), config)
+							width, _ := strconv.Atoi(widthStr)
+							height, _ := strconv.Atoi(heightStr)
+							if width == 0 {
+								width = 300
+							}
+							if height == 0 {
+								height = 40
+							}
+							if mouseX >= int(el.X) && mouseX <= int(el.X)+width &&
+								mouseY >= int(el.Y) && mouseY <= int(el.Y)+height {
+								selectedElementIdx = i
+								startInputMode(config, scene, i)
+							}
+						case "button":
+							bx := int(el.X)
+							by := int(el.Y)
+							bw := 200
+							bh := 50
+							if mouseX >= bx && mouseX <= bx+bw &&
+								mouseY >= by && mouseY <= by+bh {
+								selectedElementIdx = i
+								handleTrigger(renderer, config, el)
+							}
+						}
+					}
+				}
+
+			case *sdl.ControllerButtonEvent:
+				if e.Type == sdl.CONTROLLERBUTTONDOWN {
+					if virtualKeyboardActive && activeInputIdx != -1 {
+						switch e.Button {
+						case sdl.CONTROLLER_BUTTON_DPAD_UP:
+							handleVirtualKeyboardNav(&sdl.KeyboardEvent{Keysym: sdl.Keysym{Sym: sdl.K_UP}})
+						case sdl.CONTROLLER_BUTTON_DPAD_DOWN:
+							handleVirtualKeyboardNav(&sdl.KeyboardEvent{Keysym: sdl.Keysym{Sym: sdl.K_DOWN}})
+						case sdl.CONTROLLER_BUTTON_DPAD_LEFT:
+							handleVirtualKeyboardNav(&sdl.KeyboardEvent{Keysym: sdl.Keysym{Sym: sdl.K_LEFT}})
+						case sdl.CONTROLLER_BUTTON_DPAD_RIGHT:
+							handleVirtualKeyboardNav(&sdl.KeyboardEvent{Keysym: sdl.Keysym{Sym: sdl.K_RIGHT}})
+						case sdl.CONTROLLER_BUTTON_A, sdl.CONTROLLER_BUTTON_B:
+							handleVirtualKeyboardCommit()
+							updateInputVariable(config)
+						}
+					} else {
+						switch e.Button {
+						case sdl.CONTROLLER_BUTTON_DPAD_UP:
+							moveSelectionDirectional(config, 0, -1)
+						case sdl.CONTROLLER_BUTTON_DPAD_DOWN:
+							moveSelectionDirectional(config, 0, 1)
+						case sdl.CONTROLLER_BUTTON_DPAD_LEFT:
+							moveSelectionDirectional(config, -1, 0)
+						case sdl.CONTROLLER_BUTTON_DPAD_RIGHT:
+							moveSelectionDirectional(config, 1, 0)
+						case sdl.CONTROLLER_BUTTON_A, sdl.CONTROLLER_BUTTON_B:
+							triggerSelectedElement(renderer, config)
+						}
+					}
+				}
+			}
+		}
+
+		// Render frame
+		renderScene(renderer, config, config.Scenes[currentSceneIndex])
+		renderer.Present()
+	}
+
+	// Cleanup done by defers
+}
+
+//
+// Optional: config mutators (kept from original for completeness)
+
+func executeExternalProgram(path string) (string, error) {
+	cmd := exec.Command(path)
+	output, err := cmd.Output()
+	if err != nil {
+		return "", err
+	}
+	return string(output), nil
+}
+
+func setConfigVariable(config *Config, variableName, value string) {
+	switch variableName {
+	case "buttonColor":
+		colorParts := strings.Split(value, ",")
+		if len(colorParts) == 3 {
+			r, _ := strconv.Atoi(strings.TrimSpace(colorParts[0]))
+			g, _ := strconv.Atoi(strings.TrimSpace(colorParts[1]))
+			b, _ := strconv.Atoi(strings.TrimSpace(colorParts[2]))
+			config.Variables.ButtonColor = struct {
+				R int `json:"r"`
+				G int `json:"g"`
+				B int `json:"b"`
+			}{r, g, b}
+		}
+	case "labelColor":
+		colorParts := strings.Split(value, ",")
+		if len(colorParts) == 3 {
+			r, _ := strconv.Atoi(strings.TrimSpace(colorParts[0]))
+			g, _ := strconv.Atoi(strings.TrimSpace(colorParts[1]))
+			b, _ := strconv.Atoi(strings.TrimSpace(colorParts[2]))
+			config.Variables.LabelColor = struct {
+				R int `json:"r"`
+				G int `json:"g"`
+				B int `json:"b"`
+			}{r, g, b}
+		}
+	case "backgroundImage":
+		config.Variables.BackgroundImage = value
+	}
+}
