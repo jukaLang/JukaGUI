@@ -7,9 +7,8 @@
     <title>JukaGUI Generator</title>
     <link data-rh="true" rel="icon" href="/favicon.png">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap">
-
+    <link rel="stylesheet" href="style.css">
 </head>
 
 <body>
@@ -220,12 +219,24 @@
                                     placeholder="New value">
                             </div>
                         </div>
+
+                        <!-- Video Properties -->
+                        <div id="videoProperties" class="video-properties">
+                            <div class="control-group">
+                                <label for="videoListJson"><i class="fas fa-list"></i> Video List JSON:</label>
+                                <textarea id="videoListJson" class="video-list-json" placeholder='[{"name": "Video 1", "path": "video1.mp4"}]' rows="4"></textarea>
+                            </div>
+                            <div class="control-group">
+                                <label for="videoSelector"><i class="fas fa-video"></i> Selected Video:</label>
+                                <select id="videoSelector" class="video-selector"></select>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
                 <!-- App Properties -->
-                <div id="appPropertiesPanel" class="properties-panel">
-                    <div class="app-properties-content">
+                <div id="appInfoPanel" class="properties-panel">
+                    <div class="steps-content">
                         <div class="input-container">
                             <div class="input-group">
                                 <label for="title"><i class="fas fa-heading"></i> Title:</label>
@@ -282,19 +293,6 @@
                                     <input type="number" id="smallSize" value="18" min="10">
                                 </div>
                             </div>
-                        </div>
-
-                        <div class="external-program-section">
-                            <h4><i class="fas fa-terminal"></i> External Program</h4>
-                            <div class="input-group">
-                                <label for="externalProgramPath">Program Path:</label>
-                                <input type="text" id="externalProgramPath" placeholder="/path/to/program">
-                            </div>
-                            <button id="executeProgram" class="action-button">
-                                <i class="fas fa-play"></i> Execute Program
-                            </button>
-                            <div id="programOutput" class="program-output"></div>
-                            <div id="videoList" class="video-list"></div>
                         </div>
                     </div>
                 </div>

@@ -191,8 +191,8 @@ main {
   border: 1px solid var(--border);
   box-shadow: inset 0 0 8px rgba(0, 0, 0, 0.05);
   margin: 0 auto;
-  width: 100% !important;
-  height: 100% !important;
+  width: 1280px;
+  height: 720px;
 }
 
 .right-sidebar {
@@ -458,17 +458,10 @@ main {
   display: none;
 }
 
-.app-info-section .section-header {
+.app-info-section .steps-header {
   display: flex;
-  align-items: center;
-  gap: 0.65rem;
-  margin-bottom: 1rem;
-  color: var(--primary);
-}
-
-.app-info-section .section-header h3 {
-  font-size: 1rem;
-  font-weight: 500;
+  justify-content: flex-end;
+  margin-bottom: 0.5rem;
 }
 
 .input-container {
@@ -1139,9 +1132,9 @@ body.dark-mode .file-button {
 }
 
 /* App info section header */
-.app-info-section .section-header {
+.app-info-section .steps-header {
   display: flex;
-  justify-content: space-between;
+  justify-content: flex-end;
   align-items: center;
 }
 
@@ -1298,12 +1291,12 @@ body.dark-mode .file-button {
 }
 
 .properties-panel {
-  display: none;
+  display: block;
   padding: 1rem;
 }
 
-.properties-panel.active {
-  display: block;
+.properties-panel:not(.active) {
+  display: none;
 }
 
 /* External Program Section */
@@ -1343,4 +1336,175 @@ body.dark-mode .file-button {
 .video-item:hover {
   background: var(--primary-light);
   color: var(--on-primary);
+}
+
+/* Add this to your CSS */
+.app-info-section {
+  display: block !important;
+  /* Ensure it's visible */
+  margin-bottom: 1rem;
+}
+
+/* Remove the language button styling if needed */
+.menu-language {
+  display: none;
+}
+
+/* ... (previous CSS remains the same) ... */
+
+/* Properties Panel Tabs */
+.properties-tabs {
+  display: flex;
+  border-bottom: 1px solid var(--border);
+}
+
+.properties-tab {
+  padding: 0.75rem 1rem;
+  background: var(--surface);
+  border: none;
+  cursor: pointer;
+  font-weight: 500;
+  transition: var(--transition);
+  flex: 1;
+  text-align: center;
+}
+
+.properties-tab.active {
+  background: var(--primary);
+  color: var(--on-primary);
+}
+
+.properties-panel {
+  display: none;
+  padding: 1rem;
+}
+
+.properties-panel.active {
+  display: block;
+}
+
+/* App Info Section */
+.app-info-section {
+  background: var(--surface);
+  border-radius: var(--border-radius-md);
+  box-shadow: var(--shadow-md);
+  padding: 0.9rem;
+  margin-bottom: 0.8rem;
+  display: none;
+}
+
+.app-info-section .steps-header {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  margin-bottom: 1rem;
+  color: var(--primary);
+  justify-content: flex-end;
+}
+
+.app-info-section .steps-header h3 {
+  font-size: 1rem;
+  font-weight: 500;
+}
+
+.input-container {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 0.7rem;
+}
+
+.input-group {
+  margin-bottom: 0;
+}
+
+.input-group label {
+  display: block;
+  margin-bottom: 0.3rem;
+  font-weight: 500;
+  color: var(--text);
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.85rem;
+}
+
+.file-input-group {
+  grid-column: 1 / -1;
+}
+
+.file-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.55rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--border-radius-sm);
+  cursor: pointer;
+  transition: var(--transition);
+  font-size: 0.85rem;
+  width: 100%;
+  justify-content: center;
+}
+
+.file-button:hover {
+  border-color: var(--primary);
+}
+
+.file-button input[type="file"] {
+  display: none;
+}
+
+.custom-size-fields {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  gap: 0.4rem;
+  align-items: center;
+  margin-bottom: 0.7rem;
+  display: none;
+}
+
+/* Font Size Controls */
+.font-size-controls {
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border);
+}
+
+.font-size-controls h4 {
+  margin-bottom: 0.8rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.size-inputs {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.7rem;
+}
+
+.size-group {
+  display: flex;
+  flex-direction: column;
+}
+
+.size-group label {
+  font-size: 0.85rem;
+  margin-bottom: 0.3rem;
+}
+
+.size-group input {
+  padding: 0.5rem;
+  border: 1px solid var(--border);
+  border-radius: var(--border-radius-sm);
+}
+
+/* Fix for video element properties */
+.video-properties {
+  display: none;
+}
+
+.video-properties.visible {
+  display: block;
 }

@@ -29,6 +29,8 @@ var (
 	keyboard            [][]string
 )
 
+var menuButtonRects = make(map[int]sdl.Rect) // Scene index → hitbox
+
 type Config struct {
 	Title       string        `json:"title"`
 	Author      string        `json:"author"`
@@ -368,33 +370,88 @@ func handleInputElement(renderer *sdl.Renderer, config *Config, element Element)
 	}
 }
 
-func renderMenu(renderer *sdl.Renderer, config *Config, element Element) {
-	// Define text color (white by default for menu items)
-	textColor := sdl.Color{R: 255, G: 255, B: 255, A: 255}
+func maxInt(a, b int32) int32 {
+	if a > b {
+		return a
+	}
+	return b
+}
 
-	// Get font using medium size from config
-	font, _ := getFontAndSize(config, "medium")
-	defer font.Close()
-
-	// Draw menu background
-	renderer.SetDrawColor(32, 32, 32, 200)
-	renderer.FillRect(&sdl.Rect{X: element.X, Y: element.Y, W: 1280, H: 50})
-
-	// Draw scene buttons
-	buttonX := int32(10)
-	for _, scene := range config.Scenes {
-		text := scene.Name
-		if scene.Name == config.Scenes[currentSceneIndex].Name {
-			text = "[" + text + "]"
-		}
-		w, _ := renderText(renderer, config, font, text, textColor, buttonX+40, element.Y+10)
-		buttonX += w + 20
+func getTextDimensions(font *ttf.Font, text string) (int32, int32) {
+	if text == "" {
+		return 0, 0
 	}
 
-	// Draw clock
+	if font == nil {
+		// Create a temporary font if none provided
+		tempFont, err := ttf.OpenFont("Roboto-Black.ttf", 24)
+		if err != nil {
+			return 0, 0
+		}
+		defer tempFont.Close()
+		font = tempFont
+	}
+
+	width, height, err := font.SizeUTF8(text)
+	if err != nil {
+		return 0, 0
+	}
+	return int32(width), int32(height)
+}
+
+func renderMenu(renderer *sdl.Renderer, config *Config, element Element) {
+	textColor := sdl.Color{R: 255, G: 255, B: 255, A: 255}
+	highlightColor := sdl.Color{R: 0, G: 200, B: 255, A: 255}
+
+	font, _ := getFontAndSize(config, "medium")
+	if font == nil {
+		return
+	}
+	defer font.Close()
+
+	// Background bar
+	renderer.SetDrawColor(32, 32, 32, 200)
+	renderer.FillRect(&sdl.Rect{X: 0, Y: element.Y, W: 1280, H: 50})
+
+	buttonX := int32(10)
+	menuButtonRects = make(map[int]sdl.Rect) // Reset the menu button rects
+
+	for i, scene := range config.Scenes {
+		isSelected := currentSceneIndex == i
+
+		btnColor := textColor
+		bgColor := sdl.Color{R: 50, G: 50, B: 50, A: 200}
+		if isSelected {
+			btnColor = highlightColor
+			bgColor = sdl.Color{R: 0, G: 150, B: 255, A: 255}
+		}
+
+		label := scene.Name
+		textWidth, textHeight := getTextDimensions(font, label)
+		diameter := maxInt(textWidth, textHeight) + 20
+
+		// Draw filled circle as button background
+		drawFilledCircle(renderer, buttonX+diameter/2, element.Y+25, diameter/2, bgColor)
+
+		// Draw label centered on the circle
+		renderText(renderer, config, font, label, btnColor,
+			buttonX+(diameter-textWidth)/2,
+			element.Y+(50-textHeight)/2)
+
+		menuButtonRects[i] = sdl.Rect{
+			X: buttonX,
+			Y: element.Y,
+			W: diameter,
+			H: 50,
+		}
+		buttonX += diameter + 20
+	}
+
+	// Clock display (right side)
 	currentTime := time.Now().Format("15:04")
 	renderText(renderer, config, font, currentTime, textColor, 1200, element.Y+10)
 }
+
 func renderText(renderer *sdl.Renderer, config *Config, font *ttf.Font, text string, color sdl.Color, x int32, y int32) (int32, int32) {
 	processedText := substituteVariables(text, config)
 	if processedText == "" || font == nil {
@@ -771,21 +828,6 @@ func renderImage(renderer *sdl.Renderer, config *Config, element Element) {
 	renderer.Copy(texture, nil, &sdl.Rect{X: element.X, Y: element.Y, W: int32(width), H: int32(height)})
 }
 
-func getTextDimensions(font *ttf.Font, text string) (int32, int32) {
-	if text == "" || font == nil {
-		return 0, 0 // Return zero dimensions for empty text or invalid font
-	}
-
-	surface, err := font.RenderUTF8Blended(text, sdl.Color{R: 0, G: 0, B: 0, A: 0})
-	if err != nil {
-		log.Printf("Warning: Error rendering text '%s': %v", text, err)
-		return 0, 0
-	}
-	defer surface.Free()
-
-	return int32(surface.W), int32(surface.H)
-}
-
 func main() {
 	defer func() {
 		if r := recover(); r != nil {
@@ -872,6 +914,41 @@ func main() {
 					} else if inputActiveElement != nil {
 						// Handle direct text input
 						handleTextInput(e, config)
+					} else {
+						// Handle menu and other navigation
+						switch e.Keysym.Sym {
+						case sdl.K_UP:
+							moveSelection(config, -1)
+						case sdl.K_DOWN:
+							moveSelection(config, 1)
+						case sdl.K_LEFT:
+							// Check if we're selecting a menu
+							currentScene := config.Scenes[currentSceneIndex]
+							if selectedButtonIndex >= 0 && selectedButtonIndex < len(currentScene.Elements) {
+								if currentScene.Elements[selectedButtonIndex].Type == "menu" {
+									moveSelection(config, -1) // Treat left as previous in menu
+								}
+							}
+						case sdl.K_RIGHT:
+							// Check if we're selecting a menu
+							currentScene := config.Scenes[currentSceneIndex]
+							if selectedButtonIndex >= 0 && selectedButtonIndex < len(currentScene.Elements) {
+								if currentScene.Elements[selectedButtonIndex].Type == "menu" {
+									moveSelection(config, 1) // Treat right as next in menu
+								}
+							}
+						case sdl.K_RETURN, sdl.K_SPACE:
+							if selectedButtonIndex >= 0 && selectedButtonIndex < len(config.Scenes[currentSceneIndex].Elements) {
+								selectedElement := config.Scenes[currentSceneIndex].Elements[selectedButtonIndex]
+								if selectedElement.Type == "input" {
+									handleInputSelection(renderer, config, &selectedElement)
+								} else if selectedElement.Type == "menu" {
+									// Menu is already handled by left/right navigation
+								} else {
+									triggerSelectedElement(renderer, config)
+								}
+							}
+						}
 					}
 				}
 			case *sdl.TextInputEvent: // Use pointer receiver
@@ -880,12 +957,24 @@ func main() {
 			case *sdl.QuitEvent: // Use pointer receiver
 				running = false
 			case *sdl.MouseButtonEvent:
-				if e.Button == sdl.BUTTON_LEFT {
-					mouseX := int(e.X)
-					mouseY := int(e.Y)
+				if e.Button == sdl.BUTTON_LEFT && e.Type == sdl.MOUSEBUTTONDOWN {
+					mouseX, mouseY := int32(e.X), int32(e.Y)
 
+					// Check menu buttons first
+					for sceneIndex, rect := range menuButtonRects {
+						if mouseX >= rect.X && mouseX <= rect.X+rect.W &&
+							mouseY >= rect.Y && mouseY <= rect.Y+rect.H {
+							// Change scene on click
+							currentSceneIndex = sceneIndex
+							selectedButtonIndex = 0
+							videoPlayed = false
+							break // Exit after handling the click
+						}
+					}
+
+					// If not a menu button, check other elements
 					currentScene := config.Scenes[currentSceneIndex]
-					for _, element := range currentScene.Elements {
+					for i, element := range currentScene.Elements {
 						// Input field handling
 						if element.Type == "input" {
 							widthStr := substituteVariables(string(element.Width), config)
@@ -899,18 +988,34 @@ func main() {
 								height = 50
 							}
 
-							if mouseX > int(element.X) && mouseX < int(element.X)+width &&
-								mouseY > int(element.Y) && mouseY < int(element.Y)+height {
-								handleInputSelection(renderer, config, &element)
+							if mouseX >= element.X && mouseX <= element.X+int32(width) &&
+								mouseY >= element.Y && mouseY <= element.Y+int32(height) {
+								handleInputSelection(renderer, config, &currentScene.Elements[i])
 							}
-						} else if element.Type == "button" { // Proper else placement
-							if mouseX > int(element.X)-50 && mouseX < int(element.X)+50 &&
-								mouseY > int(element.Y)-25 && mouseY < int(element.Y)+25 {
+						} else if element.Type == "button" {
+							textWidth, textHeight := getTextDimensions(nil, element.Text)
+							btnWidth := textWidth + 20
+							btnHeight := textHeight + 10
+
+							if string(element.Width) != "" {
+								widthStr := substituteVariables(string(element.Width), config)
+								w, _ := strconv.Atoi(widthStr)
+								btnWidth = int32(w)
+							}
+							if string(element.Height) != "" {
+								heightStr := substituteVariables(string(element.Height), config)
+								h, _ := strconv.Atoi(heightStr)
+								btnHeight = int32(h)
+							}
+
+							if mouseX >= element.X && mouseX <= element.X+btnWidth &&
+								mouseY >= element.Y && mouseY <= element.Y+btnHeight {
 								handleTrigger(renderer, config, element)
 							}
 						}
 					}
 				}
+
 			case *sdl.ControllerButtonEvent: // Use pointer receiver
 				if e.Type == sdl.CONTROLLERBUTTONDOWN {
 					if virtualKeyboardActive {
@@ -940,12 +1045,32 @@ func main() {
 							moveSelection(config, -1)
 						case sdl.CONTROLLER_BUTTON_DPAD_DOWN:
 							moveSelection(config, 1)
+						case sdl.CONTROLLER_BUTTON_DPAD_LEFT:
+							// Check if we're selecting a menu
+							currentScene := config.Scenes[currentSceneIndex]
+							if selectedButtonIndex >= 0 && selectedButtonIndex < len(currentScene.Elements) {
+								if currentScene.Elements[selectedButtonIndex].Type == "menu" {
+									moveSelection(config, -1) // Treat left as previous in menu
+								}
+							}
+						case sdl.CONTROLLER_BUTTON_DPAD_RIGHT:
+							// Check if we're selecting a menu
+							currentScene := config.Scenes[currentSceneIndex]
+							if selectedButtonIndex >= 0 && selectedButtonIndex < len(currentScene.Elements) {
+								if currentScene.Elements[selectedButtonIndex].Type == "menu" {
+									moveSelection(config, 1) // Treat right as next in menu
+								}
+							}
 						case sdl.CONTROLLER_BUTTON_A, sdl.CONTROLLER_BUTTON_B:
-							selectedElement := config.Scenes[currentSceneIndex].Elements[selectedButtonIndex]
-							if selectedElement.Type == "input" {
-								handleInputSelection(renderer, config, &selectedElement) // Changed from &element
-							} else {
-								triggerSelectedElement(renderer, config)
+							if selectedButtonIndex >= 0 && selectedButtonIndex < len(config.Scenes[currentSceneIndex].Elements) {
+								selectedElement := config.Scenes[currentSceneIndex].Elements[selectedButtonIndex]
+								if selectedElement.Type == "input" {
+									handleInputSelection(renderer, config, &selectedElement)
+								} else if selectedElement.Type == "menu" {
+									// Menu is already handled by left/right navigation
+								} else {
+									triggerSelectedElement(renderer, config)
+								}
 							}
 						}
 					}
@@ -964,10 +1089,37 @@ func moveSelection(config *Config, direction int) {
 	currentScene := config.Scenes[currentSceneIndex]
 	elements := currentScene.Elements
 
+	// Check if we're currently selecting a menu item
+	isSelectingMenu := false
+	for i, el := range elements {
+		if el.Type == "menu" && i == selectedButtonIndex {
+			isSelectingMenu = true
+			break
+		}
+	}
+
+	// If we're selecting a menu, handle horizontal navigation
+	if isSelectingMenu {
+		// Horizontal navigation for menu items
+		if direction == -1 { // Left
+			currentSceneIndex--
+			if currentSceneIndex < 0 {
+				currentSceneIndex = len(config.Scenes) - 1
+			}
+		} else if direction == 1 { // Right
+			currentSceneIndex++
+			if currentSceneIndex >= len(config.Scenes) {
+				currentSceneIndex = 0
+			}
+		}
+		videoPlayed = false
+		return
+	}
+
 	// Create a list of navigable element indices (buttons and inputs)
 	var interactive []int
 	for i, el := range elements {
-		if el.Type == "button" || el.Type == "input" { // Remove "label" from list
+		if el.Type == "button" || el.Type == "input" {
 			interactive = append(interactive, i)
 		}
 	}
@@ -1003,11 +1155,6 @@ func moveSelection(config *Config, direction int) {
 
 	// Update selection
 	selectedButtonIndex = interactive[newIdx]
-
-	// Skip menu elements (if any somehow got through)
-	if elements[selectedButtonIndex].Type == "menu" {
-		moveSelection(config, direction) // Recursively move to next
-	}
 }
 
 func triggerSelectedElement(renderer *sdl.Renderer, config *Config) {
@@ -1066,6 +1213,19 @@ func handleTrigger(renderer *sdl.Renderer, config *Config, element Element) {
 					//fmt.Println("Scene changed to:", element.TriggerTarget)
 					break
 				}
+			}
+		}
+	}
+}
+
+func drawFilledCircle(renderer *sdl.Renderer, x, y, r int32, color sdl.Color) {
+	renderer.SetDrawColor(color.R, color.G, color.B, color.A)
+	for w := int32(0); w < r*2; w++ {
+		for h := int32(0); h < r*2; h++ {
+			dx := r - w
+			dy := r - h
+			if dx*dx+dy*dy <= r*r {
+				renderer.DrawPoint(x+dx, y+dy)
 			}
 		}
 	}
