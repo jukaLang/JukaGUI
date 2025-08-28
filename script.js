@@ -35,6 +35,7 @@ let currentElement = null;
 let canvasWidth = 1280;
 let canvasHeight = 720;
 let videoList = [];
+let globalTooltip = null;
 
 // Initialize the editor
 document.addEventListener('DOMContentLoaded', () => {
@@ -64,7 +65,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Set up font size change listeners
   setupFontSizeListeners();
+
+  // Create global tooltip
+  createGlobalTooltip();
 });
+
+// Create global tooltip element
+function createGlobalTooltip() {
+  globalTooltip = document.createElement('div');
+  globalTooltip.className = 'variable-tooltip';
+  globalTooltip.style.display = 'none';
+  document.body.appendChild(globalTooltip);
+}
 
 // Set up all event listeners
 function setupEventListeners() {
@@ -110,9 +122,8 @@ function setupEventListeners() {
     if (e.target === canvas) {
       currentElement = null;
       document.querySelectorAll('.element').forEach(el => el.classList.remove('selected'));
-      noSelection.style.display = 'block';
-      elementProperties.classList.remove('visible');
-      switchTab('element-properties');
+      document.body.classList.remove('element-selected');
+      switchTab('app-properties');
     }
   });
 
@@ -340,6 +351,8 @@ function addElement(type, x, y) {
 
   // Set default dimensions
   const dimensions = {
+    button: { width: '120px', height: '40px' },
+    label: { width: '120px', height: '40px' },
     menu: { width: '100%', height: '50px', y: canvasHeight - 50 },
     image: { width: '100px', height: '100px' },
     input: { width: '150px', height: '40px' },
@@ -367,7 +380,14 @@ function addElement(type, x, y) {
   } else {
     const textSpan = document.createElement('span');
     textSpan.className = 'text-content';
-    textSpan.textContent = type.charAt(0).toUpperCase() + type.slice(1);
+
+    // Fix for Collapsed List text
+    let displayText = type.charAt(0).toUpperCase() + type.slice(1);
+    if (type === 'collapsedlist') {
+      displayText = 'Collapsed List';
+    }
+    textSpan.textContent = displayText;
+
     el.appendChild(textSpan);
 
     const removeButton = document.createElement('span');
@@ -384,6 +404,9 @@ function addElement(type, x, y) {
       input.type = 'text';
       input.className = 'element-input';
       input.placeholder = 'Input text';
+      input.addEventListener('mousedown', (e) => {
+        e.stopPropagation(); // Prevent dragging when clicking on input
+      });
       el.appendChild(input);
     }
 
@@ -392,20 +415,20 @@ function addElement(type, x, y) {
       const img = document.createElement('img');
       img.className = 'element-image';
       img.src = '';
+      img.draggable = false; // Prevent image dragging
       el.appendChild(img);
       textSpan.style.display = 'none';
     }
 
-    // Special handling for video elements
-    if (type === 'video') {
-      const videoIcon = document.createElement('i');
-      videoIcon.className = 'fas fa-video';
-      videoIcon.style.marginRight = '8px';
-      textSpan.prepend(videoIcon);
+    // Update the addElement function
+    if (type === 'collapsedlist') {
+      const listIcon = document.createElement('i');
+      listIcon.className = 'fas fa-bars';
+      listIcon.style.marginRight = '8px';
+      textSpan.prepend(listIcon);
 
-      // Set up video properties
-      el.setAttribute('data-video-list', '[]');
-      el.setAttribute('data-selected-video', '');
+      // Set up collapsed list properties
+      el.setAttribute('data-list-variable', '');
     }
 
     // Labels should have no background
@@ -443,12 +466,55 @@ function addElement(type, x, y) {
 }
 
 function setupElementEvents(el) {
+  let isDragging = false;
+  let startX, startY;
+
   // Mouse events for dragging and resizing
   el.addEventListener('mousedown', (event) => {
     if (event.button === 2) { // Right click for resize
       handleResize(el, event);
     } else { // Left click for drag
-      handleDrag(el, event);
+      // Prevent dragging if clicking on input or image
+      if (event.target.tagName === 'INPUT' || event.target.tagName === 'IMG') {
+        return;
+      }
+
+      isDragging = true;
+      startX = event.clientX - el.offsetLeft;
+      startY = event.clientY - el.offsetTop;
+      el.style.cursor = 'grabbing';
+
+      // Prevent text selection during drag
+      event.preventDefault();
+    }
+  });
+
+  // Mouse move for dragging
+  document.addEventListener('mousemove', (event) => {
+    if (!isDragging) return;
+
+    const canvasRect = canvas.getBoundingClientRect();
+    let newX = event.clientX - startX;
+    let newY = event.clientY - startY;
+    const elRect = el.getBoundingClientRect();
+
+    newX = Math.max(0, Math.min(newX, canvasRect.width - elRect.width));
+    newY = Math.max(0, Math.min(newY, canvasRect.height - elRect.height));
+
+    // Remove any transition effects
+    el.style.transition = 'none';
+
+    el.style.left = `${newX}px`;
+    el.style.top = `${newY}px`;
+    el.setAttribute('data-x', newX);
+    el.setAttribute('data-y', newY);
+  });
+
+  // Mouse up to stop dragging
+  document.addEventListener('mouseup', () => {
+    if (isDragging) {
+      isDragging = false;
+      el.style.cursor = 'grab';
     }
   });
 
@@ -509,6 +575,7 @@ function setupElementEvents(el) {
     });
     el.classList.add('selected');
     currentElement = el;
+    document.body.classList.add('element-selected');
     showElementProperties(el);
     switchTab('element-properties');
   });
@@ -546,36 +613,6 @@ function handleResize(el, event) {
     el.style.height = `${newHeight}px`;
     el.setAttribute('data-width', newWidth);
     el.setAttribute('data-height', newHeight);
-  };
-
-  const onMouseUp = () => {
-    el.style.cursor = 'grab';
-    document.removeEventListener('mousemove', onMouseMove);
-    document.removeEventListener('mouseup', onMouseUp);
-  };
-
-  document.addEventListener('mousemove', onMouseMove);
-  document.addEventListener('mouseup', onMouseUp);
-}
-
-function handleDrag(el, event) {
-  el.style.cursor = 'grabbing';
-  const xOffset = event.clientX - el.offsetLeft;
-  const yOffset = event.clientY - el.offsetTop;
-  const canvasRect = canvas.getBoundingClientRect();
-
-  const onMouseMove = (e) => {
-    let newX = e.clientX - xOffset;
-    let newY = e.clientY - yOffset;
-    const elRect = el.getBoundingClientRect();
-
-    newX = Math.max(0, Math.min(newX, canvasRect.width - elRect.width));
-    newY = Math.max(0, Math.min(newY, canvasRect.height - elRect.height));
-
-    el.style.left = `${newX}px`;
-    el.style.top = `${newY}px`;
-    el.setAttribute('data-x', newX);
-    el.setAttribute('data-y', newY);
   };
 
   const onMouseUp = () => {
@@ -685,86 +722,93 @@ function showElementProperties(el) {
   // Show relevant options based on selected trigger
   if (triggerSelector.value === 'change_scene') {
     document.getElementById('sceneChangeSelector').style.display = 'block';
+    document.getElementById('sceneChangeSelector').value = el.getAttribute('data-scene-change') || '';
   } else if (triggerSelector.value === 'external_app') {
     document.getElementById('externalAppPath').style.display = 'block';
+    document.getElementById('externalAppPath').value = el.getAttribute('data-external-app-path') || '';
+    document.getElementById('externalAppReturnVar').style.display = 'block';
+    document.getElementById('externalAppReturnVar').value = el.getAttribute('data-external-app-return') || '';
   } else if (triggerSelector.value === 'set_variable') {
     document.getElementById('variableChangeSelector').style.display = 'block';
+    document.getElementById('variableChangeSelector').value = el.getAttribute('data-variable-change') || '';
     document.getElementById('variableChangeValue').style.display = 'block';
+    document.getElementById('variableChangeValue').value = el.getAttribute('data-variable-change-value') || '';
+  } else if (triggerSelector.value === 'play_video') {
+    document.getElementById('videoPath').style.display = 'block';
+    document.getElementById('videoPath').value = el.getAttribute('data-video-path') || '';
+  } else if (triggerSelector.value === 'play_image') {
+    document.getElementById('imagePath').style.display = 'block';
+    document.getElementById('imagePath').value = el.getAttribute('data-image-path') || '';
   }
+
+  // Update trigger change handler
+  triggerSelector.onchange = () => {
+    const value = triggerSelector.value;
+    el.setAttribute('data-trigger', value);
+
+    // Hide all options first
+    document.querySelectorAll('#triggerOptions > *').forEach(el => {
+      el.style.display = 'none';
+    });
+
+    // Show relevant options
+    if (value === 'change_scene') {
+      document.getElementById('sceneChangeSelector').style.display = 'block';
+    } else if (value === 'external_app') {
+      document.getElementById('externalAppPath').style.display = 'block';
+      document.getElementById('externalAppReturnVar').style.display = 'block';
+    } else if (value === 'set_variable') {
+      document.getElementById('variableChangeSelector').style.display = 'block';
+      document.getElementById('variableChangeValue').style.display = 'block';
+    } else if (value === 'play_video') {
+      document.getElementById('videoPath').style.display = 'block';
+    } else if (value === 'play_image') {
+      document.getElementById('imagePath').style.display = 'block';
+    }
+  };
+
+  // Set up change handlers for trigger options
+  document.getElementById('sceneChangeSelector').onchange = () => {
+    el.setAttribute('data-scene-change', document.getElementById('sceneChangeSelector').value);
+  };
+
+  document.getElementById('externalAppPath').onchange = () => {
+    el.setAttribute('data-external-app-path', document.getElementById('externalAppPath').value);
+  };
+
+  document.getElementById('externalAppReturnVar').onchange = () => {
+    el.setAttribute('data-external-app-return', document.getElementById('externalAppReturnVar').value);
+  };
+
+  document.getElementById('variableChangeSelector').onchange = () => {
+    el.setAttribute('data-variable-change', document.getElementById('variableChangeSelector').value);
+  };
+
+  document.getElementById('variableChangeValue').onchange = () => {
+    el.setAttribute('data-variable-change-value', document.getElementById('variableChangeValue').value);
+  };
+
+  document.getElementById('videoPath').onchange = () => {
+    el.setAttribute('data-video-path', document.getElementById('videoPath').value);
+  };
+
+  document.getElementById('imagePath').onchange = () => {
+    el.setAttribute('data-image-path', document.getElementById('imagePath').value);
+  };
 
   // Video properties
   if (el.getAttribute('data-type') === 'video') {
     videoProperties.classList.add('visible');
 
-    // Set video list JSON
-    videoListJson.value = el.getAttribute('data-video-list') || '[]';
+    // Set video variable
+    document.getElementById('videoVariable').value = el.getAttribute('data-video-variable') || '';
 
-    // Parse and update video selector
-    try {
-      videoList = JSON.parse(videoListJson.value);
-    } catch (e) {
-      videoList = [];
-      videoListJson.value = '[]';
-    }
-
-    updateVideoSelector();
-
-    // Set selected video
-    const selectedVideo = el.getAttribute('data-selected-video') || '';
-    if (selectedVideo && videoList.some(video => video.name === selectedVideo)) {
-      videoSelector.value = selectedVideo;
-    } else if (videoList.length > 0) {
-      videoSelector.value = videoList[0].name;
-      el.setAttribute('data-selected-video', videoList[0].name);
-    }
+    // Update handler
+    document.getElementById('videoVariable').onchange = () => {
+      el.setAttribute('data-video-variable', document.getElementById('videoVariable').value);
+    };
   } else {
     videoProperties.classList.remove('visible');
-  }
-}
-
-// Update video selector based on JSON input
-function updateVideoSelector() {
-  try {
-    videoList = JSON.parse(videoListJson.value);
-    if (!Array.isArray(videoList)) {
-      videoList = [];
-      videoListJson.value = '[]';
-    }
-  } catch (e) {
-    videoList = [];
-    videoListJson.value = '[]';
-  }
-
-  // Clear and repopulate video selector
-  videoSelector.innerHTML = '';
-  videoList.forEach(video => {
-    const option = document.createElement('option');
-    option.value = video.name;
-    option.textContent = video.name;
-    videoSelector.appendChild(option);
-  });
-
-  // Update current element if it's a video
-  if (currentElement && currentElement.getAttribute('data-type') === 'video') {
-    currentElement.setAttribute('data-video-list', videoListJson.value);
-
-    if (videoList.length > 0 && !videoSelector.value) {
-      videoSelector.value = videoList[0].name;
-      currentElement.setAttribute('data-selected-video', videoList[0].name);
-    }
-  }
-}
-
-// Update selected video for current element
-function updateSelectedVideo() {
-  if (currentElement && currentElement.getAttribute('data-type') === 'video') {
-    currentElement.setAttribute('data-selected-video', videoSelector.value);
-
-    // Update text content
-    const textSpan = currentElement.querySelector('.text-content');
-    if (textSpan) {
-      textSpan.textContent = videoSelector.value;
-    }
   }
 }
 
@@ -912,50 +956,56 @@ function updateSceneChangeSelector() {
 // Process text for variables and add tooltips
 function processTextForVariables(textElement) {
   let text = textElement.textContent;
-  const regex = /{{(.*?)}}/g;
-  let matches = [];
+  const regex = /\$([a-zA-Z_][a-zA-Z0-9_]*)/g;
+  let variablesUsed = {};
   let match;
 
-  // Find all variables in the text
+  // Find all unique variables in the text
   while ((match = regex.exec(text)) !== null) {
-    matches.push(match[1]);
+    const varName = match[1];
+    variablesUsed[varName] = variables[varName] || '""';
   }
 
-  let newHTML = text;
-  let tooltipContent = '';
-
-  // Process each variable
-  matches.forEach(varName => {
-    const value = variables[varName] || '';
-    newHTML = newHTML.replace(
-      new RegExp(`{{${varName}}}`, 'g'),
-      `<span class="variable-hover" data-value="${varName}: ${value}">{{${varName}}}</span>`
-    );
-
-    // Add to tooltip
-    if (tooltipContent) tooltipContent += '\n';
-    tooltipContent += `${varName}: ${value}`;
-  });
-
-  textElement.innerHTML = newHTML;
-
-  // Add tooltip for the entire element
-  if (matches.length > 0) {
-    const parent = textElement.parentElement;
-    parent.classList.add('variable-hover');
-    parent.setAttribute('data-value', tooltipContent);
-
-    // Create variable value display
-    let displayEl = parent.querySelector('.variable-display');
-    if (!displayEl) {
-      displayEl = document.createElement('div');
-      displayEl.className = 'variable-display';
-      parent.appendChild(displayEl);
-    }
-
-    // Update display content
-    displayEl.textContent = tooltipContent.replace(/\n/g, ', ');
+  // If no variables, remove any existing tooltip and return
+  if (Object.keys(variablesUsed).length === 0) {
+    textElement.parentElement.classList.remove('has-variables');
+    return;
   }
+
+  // Add has-variables class for styling
+  textElement.parentElement.classList.add('has-variables');
+
+  // Format the tooltip text with evaluated values
+  let evaluatedText = text;
+  for (const [varName, varValue] of Object.entries(variablesUsed)) {
+    evaluatedText = evaluatedText.replace(`$${varName}`, varValue);
+  }
+
+  const tooltipText = `Evaluated: ${evaluatedText}\n\nVariables:\n${Object.entries(variablesUsed)
+    .map(([name, value]) => `${name}: ${value}`)
+    .join('\n')}`;
+
+  // Remove any existing event listeners
+  const parentEl = textElement.parentElement;
+  parentEl.removeEventListener('mouseenter', parentEl._tooltipMouseEnter);
+  parentEl.removeEventListener('mouseleave', parentEl._tooltipMouseLeave);
+
+  // Add new event listeners using the global tooltip
+  parentEl._tooltipMouseEnter = function (e) {
+    globalTooltip.textContent = tooltipText;
+    globalTooltip.style.display = 'block';
+
+    const rect = parentEl.getBoundingClientRect();
+    globalTooltip.style.left = `${rect.left + (rect.width / 2) - (globalTooltip.offsetWidth / 2)}px`;
+    globalTooltip.style.top = `${rect.top - globalTooltip.offsetHeight - 5}px`;
+  };
+
+  parentEl._tooltipMouseLeave = function (e) {
+    globalTooltip.style.display = 'none';
+  };
+
+  parentEl.addEventListener('mouseenter', parentEl._tooltipMouseEnter);
+  parentEl.addEventListener('mouseleave', parentEl._tooltipMouseLeave);
 }
 
 // File Operations
@@ -1026,6 +1076,25 @@ function createJukaApp() {
           element.opacity = parseInt(el.getAttribute('data-opacity')) / 100;
         }
 
+        // Add trigger data
+        if (el.getAttribute('data-trigger')) {
+          element.trigger = el.getAttribute('data-trigger');
+
+          if (element.trigger === 'change_scene') {
+            element.sceneChange = el.getAttribute('data-scene-change');
+          } else if (element.trigger === 'external_app') {
+            element.externalAppPath = el.getAttribute('data-external-app-path');
+            element.externalAppReturn = el.getAttribute('data-external-app-return');
+          } else if (element.trigger === 'set_variable') {
+            element.variableChange = el.getAttribute('data-variable-change');
+            element.variableChangeValue = el.getAttribute('data-variable-change-value');
+          } else if (element.trigger === 'play_video') {
+            element.videoPath = el.getAttribute('data-video-path');
+          } else if (element.trigger === 'play_image') {
+            element.imagePath = el.getAttribute('data-image-path');
+          }
+        }
+
         const type = el.getAttribute('data-type');
         if (type === 'input') {
           const input = el.querySelector('.element-input');
@@ -1041,8 +1110,7 @@ function createJukaApp() {
         }
 
         if (type === 'video') {
-          element.video = el.getAttribute('data-selected-video') || '';
-          element.videoList = JSON.parse(el.getAttribute('data-video-list') || '[]');
+          element.videoVariable = el.getAttribute('data-video-variable');
         }
 
         return element;

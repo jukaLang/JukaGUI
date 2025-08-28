@@ -8,15 +8,15 @@
     <link data-rh="true" rel="icon" href="/favicon.png">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap">
-    <link rel="stylesheet" href="style.css">
+        <link rel="stylesheet" href="style.css">
 </head>
 
 <body>
     <header>
         <div class="header-content">
             <div class="title-container">
-                <h1><i class="fas fa-paint-brush"></i> JukaGUI Generator</h1>
-                <p class="subtitle">Create beautiful interfaces for your Juka applications</p>
+                <h1>JukaGUI Generator</h1>
+                <p class="subtitle">The Ultimate Retro Handheld Device GUI Creator</p>
             </div>
             <div class="header-actions">
                 <button id="darkModeToggle" class="dark-mode-toggle">
@@ -49,17 +49,6 @@
                     <li>Combine with the JukaGUI template from <a
                             href="https://github.com/jukaLang/JukaGUI/releases">GitHub releases</a></li>
                 </ol>
-                <div class="file-actions">
-                    <button id="clearButton" class="action-button danger">
-                        <i class="fas fa-trash"></i> Clear and Start New
-                    </button>
-                    <div class="file-input-container">
-                        <label for="loadFile" class="file-button">
-                            <i class="fas fa-upload"></i> Load jukaconfig.json
-                        </label>
-                        <input type="file" id="loadFile" accept="application/json">
-                    </div>
-                </div>
             </div>
         </div>
     </header>
@@ -87,8 +76,8 @@
                     <div class="element" draggable="true" data-type="menu" title="Menu">
                         <i class="fas fa-bars"></i> Menu
                     </div>
-                    <div class="element" draggable="true" data-type="video" title="Video">
-                        <i class="fas fa-video"></i> Video
+                    <div class="element" draggable="true" data-type="collapsedlist" title="Collapsed List">
+                        <i class="fas fa-bars"></i> Collapsed List
                     </div>
                 </div>
                 <div class="variables-panel">
@@ -123,13 +112,25 @@
                                 <i class="fas fa-copy"></i>
                             </button>
                         </div>
-
-                        <button class="action-button primary" onclick="createJukaApp()">
-                            <i class="fas fa-download"></i> Download Config
-                        </button>
+                        <div class="file-controls">
+                            <button id="clearButton" class="action-button danger">
+                                <i class="fas fa-broom"></i> Clear
+                            </button>
+                            <div class="file-input-container">
+                                <label for="loadFile" class="file-button">
+                                    <i class="fas fa-upload"></i> Load
+                                </label>
+                                <input type="file" id="loadFile" accept="application/json">
+                            </div>
+                            <button class="action-button primary" onclick="createJukaApp()">
+                                <i class="fas fa-download"></i> Download
+                            </button>
+                        </div>
                     </div>
                 </div>
-                <div class="canvas" id="canvas"></div>
+                <div class="canvas-container">
+                    <div class="canvas" id="canvas"></div>
+                </div>
             </div>
 
             <!-- Right Sidebar - Properties -->
@@ -144,7 +145,7 @@
                 </div>
 
                 <!-- Element Properties -->
-                <div id="elementPropertiesPanel" class="properties-panel active">
+                <div id="elementPropertiesPanel" class="properties-panel">
                     <div id="noSelection" class="no-selection">
                         <i class="fas fa-mouse-pointer"></i>
                         <p>Select an element to edit properties</p>
@@ -224,7 +225,8 @@
                         <div id="videoProperties" class="video-properties">
                             <div class="control-group">
                                 <label for="videoListJson"><i class="fas fa-list"></i> Video List JSON:</label>
-                                <textarea id="videoListJson" class="video-list-json" placeholder='[{"name": "Video 1", "path": "video1.mp4"}]' rows="4"></textarea>
+                                <textarea id="videoListJson" class="video-list-json"
+                                    placeholder='[{"name": "Video 1", "path": "video1.mp4"}]' rows="4"></textarea>
                             </div>
                             <div class="control-group">
                                 <label for="videoSelector"><i class="fas fa-video"></i> Selected Video:</label>
@@ -235,7 +237,7 @@
                 </div>
 
                 <!-- App Properties -->
-                <div id="appInfoPanel" class="properties-panel">
+                <div id="appInfoPanel" class="properties-panel active">
                     <div class="steps-content">
                         <div class="input-container">
                             <div class="input-group">
