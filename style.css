@@ -1847,3 +1847,310 @@ footer{
     display: block;
   }
 }
+
+
+/* Fix mobile layout - ensure sidebars are visible */
+@media (max-width: 768px) {
+  .sidebar {
+    display: block !important;
+    max-height: 200px;
+    order: 1;
+  }
+  
+  .canvas-area {
+    order: 2;
+  }
+  
+  .right-sidebar {
+    display: block !important;
+    max-height: 300px;
+    order: 3;
+    position: relative;
+    width: 100%;
+  }
+  
+  /* Ensure properties panels are visible */
+  #appInfoPanel,
+  #elementPropertiesPanel {
+    display: block !important;
+  }
+  
+  /* Stack properties panels vertically when element is selected */
+  body.element-selected #appInfoPanel {
+    display: none !important;
+  }
+  
+  body.element-selected #elementPropertiesPanel {
+    display: block !important;
+  }
+}
+
+/* Ensure canvas elements are not affected by dark mode */
+body.dark-mode .canvas,
+body.dark-mode .element:not([data-type="menu"]) {
+  background: #ffffff !important;
+  color: #2b2d42 !important;
+  border-color: #e9ecef !important;
+}
+
+body.dark-mode .element[data-type="menu"] {
+  background: #1a1a1a !important;
+  color: white !important;
+}
+
+/* Make sure text in elements remains visible in dark mode */
+body.dark-mode .element:not([data-type="menu"]) .text-content {
+  color: inherit !important;
+}
+
+/* Ensure input elements are visible in dark mode */
+body.dark-mode .element-input {
+  background: #ffffff !important;
+  color: #2b2d42 !important;
+  border: 1px solid #e9ecef !important;
+}
+
+/* Add this to fix canvas background in dark mode */
+body.dark-mode .canvas {
+  background: #ffffff !important;
+  background-image: inherit !important;
+  background-size: inherit !important;
+}
+
+/* Improve mobile properties panel */
+@media (max-width: 768px) {
+  .properties-panel {
+    padding: 1rem;
+  }
+  
+  .control-group {
+    margin-bottom: 1rem;
+  }
+  
+  .position-controls {
+    grid-template-columns: 1fr;
+    gap: 0.8rem;
+  }
+  
+  .coordinate-input {
+    width: 100%;
+    padding: 0.8rem;
+    font-size: 16px; /* Prevents zoom on iOS */
+  }
+  
+  /* Improve trigger options layout */
+  #triggerOptions {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  
+  #triggerOptions > * {
+    width: 100%;
+    margin-bottom: 0.5rem;
+  }
+}
+
+/* Ensure canvas maintains its background */
+.canvas {
+  background: #ffffff;
+  background-size: cover;
+  background-position: center;
+}
+
+  /* Mobile element menu styles */
+  .mobile-element-menu {
+    display: none;
+    position: fixed;
+    bottom: 90px;
+    right: 20px;
+    background: var(--surface);
+    border-radius: var(--border-radius-md);
+    padding: 1rem;
+    box-shadow: var(--shadow-lg);
+    z-index: 1000;
+    max-height: 70vh;
+    overflow-y: auto;
+  }
+  
+  .mobile-menu-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem;
+    width: 100%;
+    margin-bottom: 0.5rem;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--border-radius-sm);
+    cursor: pointer;
+  }
+  
+  @media (max-width: 768px) {
+    .left-sidebar {
+      display: none;
+    }
+  }
+
+
+  @media (max-width: 768px) {
+  /* Center the properties panel */
+  .right-sidebar {
+    position: fixed;
+    left: 50%;
+    transform: translateX(-50%);
+    bottom: 20px;
+    width: 90%;
+    z-index: 100;
+    max-height: 40vh;
+    box-shadow: 0 0 20px rgba(0, 0, 0, 0.3);
+    border-radius: var(--border-radius-md);
+    overflow: auto;
+  }
+
+  /* Hide left sidebar on mobile */
+  .left-sidebar {
+    display: none;
+  }
+
+  /* Adjust canvas area to take full width */
+  .canvas-area {
+    width: 100%;
+    margin-bottom: 20px;
+  }
+
+  /* Position the mobile add button above canvas */
+  .mobile-add-button {
+    position: fixed;
+    bottom: 80px;
+    right: 20px;
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    background: var(--primary);
+    color: white;
+    border: none;
+    font-size: 24px;
+    box-shadow: var(--shadow-lg);
+    z-index: 101;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  /* Adjust canvas to be responsive */
+  .canvas {
+    width: 100% !important;
+    height: 50vh !important;
+  }
+
+  /* Improve properties panel layout */
+  .properties-panel {
+    padding: 1rem;
+  }
+
+  .control-group {
+    margin-bottom: 1rem;
+  }
+
+  .position-controls {
+    grid-template-columns: 1fr;
+    gap: 0.8rem;
+  }
+
+  .coordinate-input {
+    width: 100%;
+    padding: 0.8rem;
+    font-size: 16px; /* Prevents zoom on iOS */
+  }
+}
+
+
+/* Add these styles to fix mobile layout */
+
+/* Hide left sidebar on mobile */
+@media (max-width: 768px) {
+  .left-sidebar {
+    display: none !important;
+  }
+  
+  /* Ensure the mobile add button is visible and above other elements */
+  .mobile-add-button {
+    z-index: 1000;
+    bottom: 100px !important; /* Position above properties panel */
+    right: 20px;
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    background: var(--primary);
+    color: white;
+    border: none;
+    font-size: 24px;
+    box-shadow: var(--shadow-lg);
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+  }
+  
+  /* Adjust properties panel to take less space */
+  .right-sidebar {
+    max-height: 40vh !important;
+    bottom: 20px;
+    top: auto !important;
+  }
+  
+  /* Make properties panel content scrollable */
+  .properties-panel {
+    overflow-y: auto;
+    max-height: 35vh;
+  }
+  
+  /* Ensure canvas has proper spacing */
+  .canvas-area {
+    margin-bottom: 10px;
+  }
+  
+  /* Make sure the mobile element menu appears above properties */
+  .mobile-element-menu {
+    z-index: 1001;
+    bottom: 170px !important; /* Position above the add button */
+  }
+}
+
+/* Make sure the mobile add button is only visible on mobile */
+.mobile-add-button {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .mobile-add-button {
+    display: flex;
+    position: fixed;
+  }
+}
+
+/* Ensure elements are properly hidden in left sidebar on mobile */
+@media (max-width: 768px) {
+  .left-sidebar .elements-container {
+    display: none;
+  }
+  
+  .left-sidebar .variables-panel {
+    display: none;
+  }
+}
+
+/* Add to existing mobile styles */
+.mobile-add-button {
+    z-index: 1002; /* Ensure it's above other elements */
+    pointer-events: all; /* Ensure it's clickable */
+}
+
+.mobile-add-button i {
+    pointer-events: none; /* Allow clicks to pass through to button */
+}
+
+/* Remove the mobile drag hint styles */
+.mobile-drag-hint {
+    display: none !important;
+}

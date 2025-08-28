@@ -68,6 +68,7 @@ document.addEventListener('DOMContentLoaded', () => {
   createGlobalTooltip();
 
   loadDefaultConfig();
+  setupMobileElementAdding();
 });
 
 // Create global tooltip element
@@ -82,10 +83,17 @@ function createGlobalTooltip() {
 function setupEventListeners() {
   // Dark mode toggle
   darkModeToggle.addEventListener('click', () => {
+    const isDarkMode = !document.body.classList.contains('dark-mode');
     document.body.classList.toggle('dark-mode');
-    darkModeToggle.innerHTML = document.body.classList.contains('dark-mode') ?
+    darkModeToggle.innerHTML = isDarkMode ?
       '<i class="fas fa-sun"></i> Light Mode' :
       '<i class="fas fa-moon"></i> Dark Mode';
+
+    // Preserve canvas background in dark mode
+    if (isDarkMode) {
+      canvas.style.backgroundImage = canvas.style.backgroundImage;
+      canvas.style.backgroundSize = canvas.style.backgroundSize;
+    }
   });
 
   // Guide panel toggle
@@ -348,6 +356,7 @@ function addElement(type, x, y) {
   el.style.fontFamily = 'Roboto, sans-serif';
   el.style.fontWeight = '900';
 
+
   // Set default dimensions
   const dimensions = {
     button: { width: '120px', height: '40px' },
@@ -356,6 +365,7 @@ function addElement(type, x, y) {
     image: { width: '100px', height: '100px' },
     input: { width: '150px', height: '40px' },
     video: { width: '200px', height: '150px' },
+    collapsedlist: { width: '600px', height: '40px' }, // Added this line
     default: { width: 'auto', height: 'auto' }
   };
 
@@ -480,24 +490,26 @@ function addElement(type, x, y) {
 function setupElementEvents(el) {
   let isDragging = false;
   let startX, startY;
-    let startTouchX, startTouchY;
+  let startTouchX, startTouchY;
 
-    // Touch events for mobile
+  // Touch events for mobile
   el.addEventListener('touchstart', (event) => {
-    if (event.touches.length === 1) { // Single touch for drag
+    if (event.touches.length === 1) {
       event.preventDefault();
       const touch = event.touches[0];
       startTouchX = touch.clientX - el.offsetLeft;
       startTouchY = touch.clientY - el.offsetTop;
       isDragging = true;
       el.style.cursor = 'grabbing';
+
     }
-  });
+  }, { passive: false });
+
 
   document.addEventListener('touchmove', (event) => {
     if (!isDragging) return;
     event.preventDefault();
-    
+
     const touch = event.touches[0];
     const canvasRect = canvas.getBoundingClientRect();
     let newX = touch.clientX - startTouchX;
@@ -512,14 +524,14 @@ function setupElementEvents(el) {
     el.style.top = `${newY}px`;
     el.setAttribute('data-x', newX);
     el.setAttribute('data-y', newY);
-  });
+  }, { passive: false });
 
   document.addEventListener('touchend', () => {
     if (isDragging) {
       isDragging = false;
       el.style.cursor = 'grab';
     }
-  });
+  }, { passive: false });
 
 
   // Mouse events for dragging and resizing
@@ -800,6 +812,8 @@ function showElementProperties(el) {
     const opacity = el.getAttribute('data-opacity') || '100';
     opacitySlider.value = opacity;
     opacityValue.textContent = `${opacity}%`;
+    el.style.opacity = opacity / 100;
+
     opacitySlider.oninput = () => {
       const value = opacitySlider.value;
       el.style.opacity = value / 100;
@@ -1497,6 +1511,16 @@ function createElementFromData(elementData) {
   el.setAttribute('data-x', elementData.x);
   el.setAttribute('data-y', elementData.y);
 
+
+  // Set opacity if it exists in the data
+  if (elementData.opacity !== undefined) {
+    el.style.opacity = elementData.opacity;
+    el.setAttribute('data-opacity', Math.round(elementData.opacity * 100));
+  } else {
+    el.style.opacity = 1;
+    el.setAttribute('data-opacity', '100');
+  }
+
   // Handle menu element specifically
   if (elementData.type === 'menu') {
     el.style.width = `${canvasWidth}px`; // Full width
@@ -1575,3 +1599,105 @@ function createElementFromData(elementData) {
   return el;
 }
 
+
+
+function setupMobileElementAdding() {
+  if (window.innerWidth <= 768) {
+    // Remove any existing button first
+    const existingButton = document.querySelector('.mobile-add-button');
+    if (existingButton) existingButton.remove();
+
+    const existingMenu = document.querySelector('.mobile-element-menu');
+    if (existingMenu) existingMenu.remove();
+
+    // Create mobile add button
+    const mobileAddButton = document.createElement('button');
+    mobileAddButton.className = 'mobile-add-button';
+    mobileAddButton.innerHTML = '<i class="fas fa-plus"></i>';
+    document.body.appendChild(mobileAddButton);
+
+    let elementType = null;
+
+    // Create mobile element selection menu
+    const mobileMenu = document.createElement('div');
+    mobileMenu.className = 'mobile-element-menu';
+    mobileMenu.style.display = 'none';
+    mobileMenu.style.position = 'fixed';
+    mobileMenu.style.bottom = '170px'; // Position above the add button
+    mobileMenu.style.right = '20px';
+    mobileMenu.style.background = 'var(--surface)';
+    mobileMenu.style.borderRadius = 'var(--border-radius-md)';
+    mobileMenu.style.padding = '1rem';
+    mobileMenu.style.boxShadow = 'var(--shadow-lg)';
+    mobileMenu.style.zIndex = '1001'; // Above other elements
+    mobileMenu.style.maxHeight = '60vh';
+    mobileMenu.style.overflowY = 'auto';
+
+    const elements = [
+      { type: 'button', icon: 'fas fa-square', name: 'Button' },
+      { type: 'label', icon: 'fas fa-font', name: 'Label' },
+      { type: 'image', icon: 'fas fa-image', name: 'Image' },
+      { type: 'input', icon: 'fas fa-edit', name: 'Input' },
+      { type: 'menu', icon: 'fas fa-bars', name: 'Menu' },
+      { type: 'collapsedlist', icon: 'fas fa-bars', name: 'Collapsed List' }
+    ];
+
+    elements.forEach(element => {
+      const button = document.createElement('button');
+      button.className = 'mobile-menu-item';
+      button.style.display = 'flex';
+      button.style.alignItems = 'center';
+      button.style.gap = '0.5rem';
+      button.style.padding = '0.5rem';
+      button.style.width = '100%';
+      button.style.marginBottom = '0.5rem';
+      button.innerHTML = `<i class="${element.icon}"></i> ${element.name}`;
+
+      button.addEventListener('click', () => {
+        elementType = element.type;
+        mobileMenu.style.display = 'none';
+        // Add element to center of canvas
+        const rect = canvas.getBoundingClientRect();
+        const x = rect.width / 2 - 60;
+        const y = rect.height / 2 - 20;
+        addElement(elementType, x, y);
+      });
+
+      mobileMenu.appendChild(button);
+    });
+
+    document.body.appendChild(mobileMenu);
+
+    // Toggle menu on add button click
+    mobileAddButton.addEventListener('click', (e) => {
+      e.stopPropagation(); // Prevent event from bubbling
+      mobileMenu.style.display = mobileMenu.style.display === 'none' ? 'block' : 'none';
+    });
+
+    // Close menu when clicking outside
+    document.addEventListener('click', (e) => {
+      if (!mobileMenu.contains(e.target) && e.target !== mobileAddButton && !mobileAddButton.contains(e.target)) {
+        mobileMenu.style.display = 'none';
+      }
+    });
+  }
+}
+
+window.addEventListener('resize', () => {
+  // Update mobile interface when switching to mobile size
+  if (window.innerWidth <= 768) {
+    setupMobileElementAdding();
+
+    // Ensure left sidebar is hidden
+    document.querySelector('.left-sidebar').style.display = 'none';
+  } else {
+    // Show left sidebar when not on mobile
+    document.querySelector('.left-sidebar').style.display = 'flex';
+
+    // Remove mobile buttons
+    const mobileButton = document.querySelector('.mobile-add-button');
+    if (mobileButton) mobileButton.remove();
+    const mobileMenu = document.querySelector('.mobile-element-menu');
+    if (mobileMenu) mobileMenu.remove();
+  }
+});

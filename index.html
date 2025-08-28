@@ -3,7 +3,8 @@
 
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport"
+        content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>JukaGUI Generator</title>
     <link data-rh="true" rel="icon" href="/favicon.png">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -36,19 +37,27 @@
                 </button>
             </div>
             <div class="steps-content">
-                <ol>
-                    <li>Drag elements from the left sidebar to the canvas
-                        <ul>
-                            <li>Double-click elements to edit</li>
-                            <li>Right-click + drag to resize images</li>
-                            <li>Drag elements to reposition</li>
-                        </ul>
-                    </li>
-                    <li>Select elements to edit properties in the right sidebar</li>
-                    <li>Use the "Download Config" button when finished</li>
-                    <li>Combine with the JukaGUI template from <a
-                            href="https://github.com/jukaLang/JukaGUI/releases">GitHub releases</a></li>
-                </ol>
+                 <div class="steps-content">
+        <ol>
+            <li>On desktop: Drag elements from the left sidebar to the canvas
+                <ul>
+                    <li>Double-click elements to edit</li>
+                    <li>Right-click + drag to resize images</li>
+                    <li>Drag elements to reposition</li>
+                </ul>
+            </li>
+            <li>On mobile: Use the + button to add elements to the canvas
+                <ul>
+                    <li>Tap elements to select and edit properties</li>
+                    <li>Use drag handles to reposition elements</li>
+                </ul>
+            </li>
+            <li>Select elements to edit properties in the right sidebar</li>
+            <li>Use the "Download Config" button when finished</li>
+            <li>Combine with the JukaGUI template from <a
+                    href="https://github.com/jukaLang/JukaGUI/releases">GitHub releases</a></li>
+        </ol>
+    </div>
             </div>
         </div>
     </header>
@@ -129,9 +138,6 @@
                     </div>
                 </div>
                 <div class="canvas-container">
-                      <div id="mobileDragHint" class="mobile-drag-hint">
-    <i class="fas fa-hand-point-up"></i> Touch and hold to drag elements
-  </div>
                     <div class="canvas" id="canvas"></div>
                 </div>
             </div>
