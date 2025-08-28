@@ -839,20 +839,7 @@ function showElementProperties(el) {
     };
   }
 
-  // Video properties
-  if (el.getAttribute('data-type') === 'video') {
-    videoProperties.classList.add('visible');
 
-    // Set video variable
-    document.getElementById('videoVariable').value = el.getAttribute('data-video-variable') || '';
-
-    // Update handler
-    document.getElementById('videoVariable').onchange = () => {
-      el.setAttribute('data-video-variable', document.getElementById('videoVariable').value);
-    };
-  } else {
-    videoProperties.classList.remove('visible');
-  }
 }
 
 // Menu Functions
@@ -1334,7 +1321,7 @@ function loadJukaApp(data) {
   variables = {};
   variablesList.innerHTML = '';
 
-  // Load variables (excluding special ones like buttonColor and labelColor)
+  // Load variables
   if (data.variables) {
     const excludedKeys = ['backgroundImage', 'fontSizes', 'buttonColor', 'labelColor', 'fonts'];
     for (const key in data.variables) {
@@ -1345,15 +1332,15 @@ function loadJukaApp(data) {
         const variableItem = document.createElement('div');
         variableItem.className = 'variable-item';
         variableItem.innerHTML = `
-          <div>
-            <span class="variable-name">${key}</span>
-            <span class="variable-value">${data.variables[key]}</span>
-          </div>
-          <div class="variable-actions">
-            <button onclick="editVariable('${key}')"><i class="fas fa-edit"></i></button>
-            <button onclick="deleteVariable('${key}')"><i class="fas fa-trash"></i></button>
-          </div>
-        `;
+                    <div>
+                        <span class="variable-name">${key}</span>
+                        <span class="variable-value">${data.variables[key]}</span>
+                    </div>
+                    <div class="variable-actions">
+                        <button onclick="editVariable('${key}')"><i class="fas fa-edit"></i></button>
+                        <button onclick="deleteVariable('${key}')"><i class="fas fa-trash"></i></button>
+                    </div>
+                `;
         variablesList.appendChild(variableItem);
       }
     }
@@ -1379,6 +1366,12 @@ function loadJukaApp(data) {
         canvas.appendChild(el);
         scenes[scene.name].push(el.cloneNode(true));
         setupElementEvents(el);
+
+        // Process text for variables if applicable
+        const textSpan = el.querySelector('.text-content');
+        if (textSpan) {
+          processTextForVariables(textSpan);
+        }
       }
     });
   });
@@ -1387,12 +1380,28 @@ function loadJukaApp(data) {
   if (data.scenes.length > 0) {
     currentScene = data.scenes[0].name;
     sceneSelector.value = currentScene;
-    loadScene(currentScene); // Load only the current scene
+    loadScene(currentScene);
   }
 
   // Update UI
   updateSceneChangeSelector();
   updateVariableChangeSelector();
+
+  // Update all menu scene buttons
+  updateAllMenuSceneButtons();
+}
+
+
+
+function calculateTextDimensions(text, fontSize, fontFamily = 'Roboto, sans-serif', fontWeight = '900') {
+  const canvas = document.createElement('canvas');
+  const context = canvas.getContext('2d');
+  context.font = `${fontWeight} ${fontSize}px ${fontFamily}`;
+  const metrics = context.measureText(text);
+  return {
+    width: Math.ceil(metrics.width + 16), // Add padding
+    height: Math.ceil(parseInt(fontSize) * 1.4) // Line height factor
+  };
 }
 
 function createElementFromData(elementData) {
@@ -1404,10 +1413,53 @@ function createElementFromData(elementData) {
   el.setAttribute('data-type', elementData.type);
   el.setAttribute('data-x', elementData.x);
   el.setAttribute('data-y', elementData.y);
-  el.setAttribute('data-width', elementData.width || 100);
-  el.setAttribute('data-height', elementData.height || 100);
-  el.style.width = `${elementData.width || 100}px`;
-  el.style.height = `${elementData.height || 100}px`;
+
+  // Handle menu element specifically
+  if (elementData.type === 'menu') {
+    el.style.width = `${canvasWidth}px`; // Full width
+    el.style.height = `${elementData.height || 50}px`;
+    el.setAttribute('data-width', canvasWidth);
+    el.setAttribute('data-height', elementData.height || 50);
+
+    // Create menu structure
+    el.innerHTML = `
+            <div class="menu-scene-buttons"></div>
+            <div class="menu-clock">00:00</div>
+            <span class="remove-button">✕</span>
+        `;
+
+    // Set up menu events and buttons
+    setupMenuEvents(el);
+    updateMenuSceneButtons(el);
+    updateMenuClock(el.querySelector('.menu-clock'));
+
+    return el;
+  }
+
+  // Handle button and label elements with null dimensions
+  let width = elementData.width;
+  let height = elementData.height;
+
+  if ((elementData.type === 'button' || elementData.type === 'label') &&
+    (width === null || height === null)) {
+    const fontSize = getFontSize(elementData.font || 'medium');
+    const dimensions = calculateTextDimensions(
+      elementData.text || elementData.type,
+      fontSize
+    );
+
+    if (width === null) width = dimensions.width;
+    if (height === null) height = dimensions.height;
+  }
+
+  // Set default dimensions if still null
+  width = width || 100;
+  height = height || 40;
+
+  el.style.width = `${width}px`;
+  el.style.height = `${height}px`;
+  el.setAttribute('data-width', width);
+  el.setAttribute('data-height', height);
 
   // Add text content
   const textSpan = document.createElement('span');
@@ -1420,31 +1472,6 @@ function createElementFromData(elementData) {
   removeButton.textContent = '✕';
   removeButton.className = 'remove-button';
   el.appendChild(removeButton);
-
-  // Handle null width/height
-  let width = elementData.width;
-  let height = elementData.height;
-
-  if (width === null || width === undefined) {
-    if (elementData.type === 'menu') {
-      width = '100%';
-    } else if (['button', 'label'].includes(elementData.type)) {
-      // Calculate width based on text content
-      const text = elementData.text || '';
-      width = Math.max(100, text.length * 10); // Adjust multiplier as needed
-    } else {
-      width = 100;
-    }
-  }
-
-  if (height === null || height === undefined) {
-    height = 40; // Default height
-  }
-
-  el.style.width = `${width}px`;
-  el.style.height = `${height}px`;
-  el.setAttribute('data-width', width);
-  el.setAttribute('data-height', height);
 
   // Set element-specific properties
   if (elementData.type === 'button') {
