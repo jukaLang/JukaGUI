@@ -153,6 +153,8 @@ function setupEventListeners() {
   // Add variable button
   addVariableButton.addEventListener('click', addVariable);
 
+  setupMobileDoubleTap();
+
   // Load file
   loadFileInput.addEventListener('change', function (e) {
     const file = e.target.files[0];
@@ -628,6 +630,7 @@ function setupElementEvents(el) {
 
   // Selection
   // Update the element click event listener to properly switch panels
+  // Update the element click event listener to work better on mobile
   el.addEventListener('click', (e) => {
     if (e.target.classList.contains('remove-button') ||
       e.target.classList.contains('menu-scene-button') ||
@@ -704,7 +707,16 @@ function handleResize(el, event) {
 }
 
 function showElementProperties(el) {
+  if (window.innerWidth <= 768) {
+    document.getElementById('appInfoPanel').style.display = 'none';
+    document.getElementById('elementPropertiesPanel').style.display = 'block';
 
+    // Scroll to properties panel on mobile
+    document.querySelector('.right-sidebar').scrollIntoView({
+      behavior: 'smooth',
+      block: 'nearest'
+    });
+  }
 
   noSelection.style.display = 'none';
   elementProperties.classList.add('visible');
@@ -1511,11 +1523,11 @@ function createElementFromData(elementData) {
   el.setAttribute('data-x', elementData.x);
   el.setAttribute('data-y', elementData.y);
 
-
-  // Set opacity if it exists in the data
+  // Fix: Properly handle opacity from config
   if (elementData.opacity !== undefined) {
+    const opacityValue = Math.round(elementData.opacity * 100);
     el.style.opacity = elementData.opacity;
-    el.setAttribute('data-opacity', Math.round(elementData.opacity * 100));
+    el.setAttribute('data-opacity', opacityValue);
   } else {
     el.style.opacity = 1;
     el.setAttribute('data-opacity', '100');
@@ -1701,3 +1713,37 @@ window.addEventListener('resize', () => {
     if (mobileMenu) mobileMenu.remove();
   }
 });
+
+function setupMobileDoubleTap() {
+  if ('ontouchstart' in window) {
+    let lastTap = 0;
+    document.addEventListener('touchend', function (event) {
+      const currentTime = new Date().getTime();
+      const tapLength = currentTime - lastTap;
+
+      if (tapLength < 300 && tapLength > 0) {
+        // Double tap detected
+        const target = event.target;
+        const element = target.closest('.element');
+
+        if (element && !element.classList.contains('menu')) {
+          event.preventDefault();
+          const type = element.getAttribute('data-type');
+
+          if (['button', 'label', 'video'].includes(type)) {
+            const textSpan = element.querySelector('.text-content');
+            if (textSpan) {
+              const newText = prompt("Edit text:", textSpan.textContent);
+              if (newText !== null) {
+                textSpan.textContent = newText;
+                processTextForVariables(textSpan);
+              }
+            }
+          }
+        }
+      }
+      lastTap = currentTime;
+    }, { passive: false });
+  }
+}
+
