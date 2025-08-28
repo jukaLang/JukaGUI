@@ -68,6 +68,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Create global tooltip
   createGlobalTooltip();
+
+  loadDefaultConfig();
 });
 
 // Create global tooltip element
@@ -339,6 +341,9 @@ function loadScene(sceneName) {
 
 // Element Management
 function addElement(type, x, y) {
+  if (type === 'menu-element') {
+    type = 'menu'; // Convert to the actual type used on canvas
+  }
   const el = document.createElement('div');
   el.className = 'element';
   el.style.position = 'absolute';
@@ -562,6 +567,7 @@ function setupElementEvents(el) {
   });
 
   // Selection
+  // Update the element click event listener to properly switch panels
   el.addEventListener('click', (e) => {
     if (e.target.classList.contains('remove-button') ||
       e.target.classList.contains('menu-scene-button') ||
@@ -577,7 +583,19 @@ function setupElementEvents(el) {
     currentElement = el;
     document.body.classList.add('element-selected');
     showElementProperties(el);
-    switchTab('element-properties');
+
+    // Force the properties panel to show element properties
+    document.getElementById('appInfoPanel').style.display = 'none';
+    document.getElementById('elementPropertiesPanel').style.display = 'block';
+
+    // Update tab states
+    document.querySelectorAll('.properties-tab').forEach(tab => {
+      if (tab.getAttribute('data-tab') === 'element-properties') {
+        tab.classList.add('active');
+      } else {
+        tab.classList.remove('active');
+      }
+    });
   });
 
   // Remove button
@@ -626,11 +644,17 @@ function handleResize(el, event) {
 }
 
 function showElementProperties(el) {
+
+
   noSelection.style.display = 'none';
   elementProperties.classList.add('visible');
 
+  // Add null checks for all DOM elements
   const bgColorPicker = document.getElementById('bgColorPicker');
+  if (!bgColorPicker) return;
+
   const bgColorGroup = bgColorPicker.closest('.control-group');
+  if (!bgColorGroup) return;
 
   if (el.getAttribute('data-type') === 'label') {
     bgColorGroup.style.display = 'none';
@@ -646,26 +670,28 @@ function showElementProperties(el) {
   const dataWidth = document.getElementById('dataWidth');
   const dataHeight = document.getElementById('dataHeight');
 
-  datax.value = el.getAttribute('data-x') || 0;
-  datay.value = el.getAttribute('data-y') || 0;
-  dataWidth.value = el.getAttribute('data-width') || 100;
-  dataHeight.value = el.getAttribute('data-height') || 100;
+  if (datax && datay && dataWidth && dataHeight) {
+    datax.value = el.getAttribute('data-x') || 0;
+    datay.value = el.getAttribute('data-y') || 0;
+    dataWidth.value = el.getAttribute('data-width') || 100;
+    dataHeight.value = el.getAttribute('data-height') || 100;
 
-  // Update position/size when inputs change
-  const updatePositionSize = () => {
-    el.style.left = `${datax.value}px`;
-    el.setAttribute('data-x', datax.value);
-    el.style.top = `${datay.value}px`;
-    el.setAttribute('data-y', datay.value);
-    el.style.width = `${dataWidth.value}px`;
-    el.setAttribute('data-width', dataWidth.value);
-    el.style.height = `${dataHeight.value}px`;
-    el.setAttribute('data-height', dataHeight.value);
-  };
+    // Update position/size when inputs change
+    const updatePositionSize = () => {
+      el.style.left = `${datax.value}px`;
+      el.setAttribute('data-x', datax.value);
+      el.style.top = `${datay.value}px`;
+      el.setAttribute('data-y', datay.value);
+      el.style.width = `${dataWidth.value}px`;
+      el.setAttribute('data-width', dataWidth.value);
+      el.style.height = `${dataHeight.value}px`;
+      el.setAttribute('data-height', dataHeight.value);
+    };
 
-  [datax, datay, dataWidth, dataHeight].forEach(input => {
-    input.oninput = updatePositionSize;
-  });
+    [datax, datay, dataWidth, dataHeight].forEach(input => {
+      if (input) input.oninput = updatePositionSize;
+    });
+  }
 
   // Text styling
   if (!['image', 'input'].includes(el.getAttribute('data-type'))) {
@@ -768,13 +794,21 @@ function showElementProperties(el) {
   };
 
   // Set up change handlers for trigger options
-  document.getElementById('sceneChangeSelector').onchange = () => {
-    el.setAttribute('data-scene-change', document.getElementById('sceneChangeSelector').value);
-  };
+  const sceneChangeSelectorEl = document.getElementById('sceneChangeSelector');
+  if (sceneChangeSelectorEl) {
+    sceneChangeSelectorEl.value = el.getAttribute('data-scene-change') || '';
+    sceneChangeSelectorEl.onchange = () => {
+      el.setAttribute('data-scene-change', sceneChangeSelectorEl.value);
+    };
+  }
 
-  document.getElementById('externalAppPath').onchange = () => {
-    el.setAttribute('data-external-app-path', document.getElementById('externalAppPath').value);
-  };
+  const externalAppPathEl = document.getElementById('externalAppPath');
+  if (externalAppPathEl) {
+    externalAppPathEl.value = el.getAttribute('data-external-app-path') || '';
+    externalAppPathEl.onchange = () => {
+      el.setAttribute('data-external-app-path', externalAppPathEl.value);
+    };
+  }
 
   document.getElementById('externalAppReturnVar').onchange = () => {
     el.setAttribute('data-external-app-return', document.getElementById('externalAppReturnVar').value);
@@ -996,8 +1030,17 @@ function processTextForVariables(textElement) {
     globalTooltip.style.display = 'block';
 
     const rect = parentEl.getBoundingClientRect();
+    const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+
     globalTooltip.style.left = `${rect.left + (rect.width / 2) - (globalTooltip.offsetWidth / 2)}px`;
-    globalTooltip.style.top = `${rect.top - globalTooltip.offsetHeight - 5}px`;
+    globalTooltip.style.top = `${rect.top + scrollTop - globalTooltip.offsetHeight - 5}px`;
+
+    // Ensure tooltip stays within viewport
+    const tooltipRect = globalTooltip.getBoundingClientRect();
+    if (tooltipRect.left < 5) globalTooltip.style.left = '5px';
+    if (tooltipRect.right > window.innerWidth - 5) {
+      globalTooltip.style.left = `${window.innerWidth - tooltipRect.width - 5}px`;
+    }
   };
 
   parentEl._tooltipMouseLeave = function (e) {
@@ -1231,4 +1274,179 @@ function deleteScene() {
 function loadInitialConfig() {
   // This would typically fetch from a server
   console.log('Loading initial configuration...');
+}
+
+
+function updateVideoSelector() {
+  try {
+    videoList = JSON.parse(videoListJson.value);
+    videoSelector.innerHTML = '';
+    videoList.forEach(video => {
+      const option = document.createElement('option');
+      option.value = video.path;
+      option.textContent = video.name;
+      videoSelector.appendChild(option);
+    });
+  } catch (error) {
+    console.error('Error parsing video list JSON:', error);
+  }
+}
+
+function updateSelectedVideo() {
+  if (currentElement) {
+    currentElement.setAttribute('data-video-path', videoSelector.value);
+  }
+}
+
+
+function loadDefaultConfig() {
+  fetch('player/jukaconfig.json')
+    .then(response => {
+      if (!response.ok) {
+        throw new Error('jukaconfig.json not found');
+      }
+      return response.json();
+    })
+    .then(config => {
+      loadJukaApp(config);
+    })
+    .catch(error => {
+      console.log('No default config found:', error.message);
+    });
+}
+
+
+function loadJukaApp(data) {
+  // Clear existing elements
+  variableChangeSelector.innerHTML = '';
+  canvas.innerHTML = '';
+
+  // Load app info
+  document.getElementById('title').value = data.title || '';
+  document.getElementById('author').value = data.author || '';
+  document.getElementById('description').value = data.description || '';
+
+  // Load font sizes
+  if (data.variables && data.variables.fontSizes) {
+    document.getElementById('titleSize').value = data.variables.fontSizes.title || 48;
+    document.getElementById('bigSize').value = data.variables.fontSizes.big || 36;
+    document.getElementById('mediumSize').value = data.variables.fontSizes.medium || 24;
+    document.getElementById('smallSize').value = data.variables.fontSizes.small || 18;
+  }
+
+  // Load background
+  if (data.variables && data.variables.backgroundImage) {
+    canvas.style.backgroundImage = `url(${data.variables.backgroundImage})`;
+    canvas.style.backgroundSize = 'cover';
+    backgroundPath = data.variables.backgroundImage;
+  }
+
+  // Clear existing scenes and variables
+  scenes = {};
+  variables = {};
+  variablesList.innerHTML = '';
+
+  // Load variables (excluding special ones like buttonColor and labelColor)
+  if (data.variables) {
+    const excludedKeys = ['backgroundImage', 'fontSizes', 'buttonColor', 'labelColor', 'fonts'];
+    for (const key in data.variables) {
+      if (!excludedKeys.includes(key)) {
+        variables[key] = data.variables[key];
+
+        // Add variable to UI
+        const variableItem = document.createElement('div');
+        variableItem.className = 'variable-item';
+        variableItem.innerHTML = `
+          <div>
+            <span class="variable-name">${key}</span>
+            <span class="variable-value">${data.variables[key]}</span>
+          </div>
+          <div class="variable-actions">
+            <button onclick="editVariable('${key}')"><i class="fas fa-edit"></i></button>
+            <button onclick="deleteVariable('${key}')"><i class="fas fa-trash"></i></button>
+          </div>
+        `;
+        variablesList.appendChild(variableItem);
+      }
+    }
+  }
+
+  // Load scenes
+  const sceneSelector = document.getElementById('sceneSelector');
+  sceneSelector.innerHTML = '';
+
+  data.scenes.forEach(scene => {
+    scenes[scene.name] = [];
+
+    // Add scene to selector
+    const option = document.createElement('option');
+    option.value = scene.name;
+    option.textContent = scene.name;
+    sceneSelector.appendChild(option);
+
+    // Load scene elements
+    scene.elements.forEach(elementData => {
+      const el = createElementFromData(elementData);
+      if (el) {
+        canvas.appendChild(el);
+        scenes[scene.name].push(el.cloneNode(true));
+        setupElementEvents(el);
+      }
+    });
+  });
+
+  // Set current scene
+  if (data.scenes.length > 0) {
+    currentScene = data.scenes[0].name;
+    sceneSelector.value = currentScene;
+  }
+
+  // Update UI
+  updateSceneChangeSelector();
+  updateVariableChangeSelector();
+}
+
+function createElementFromData(elementData) {
+  const el = document.createElement('div');
+  el.className = 'element';
+  el.style.position = 'absolute';
+  el.style.left = `${elementData.x}px`;
+  el.style.top = `${elementData.y}px`;
+  el.setAttribute('data-type', elementData.type);
+  el.setAttribute('data-x', elementData.x);
+  el.setAttribute('data-y', elementData.y);
+  el.setAttribute('data-width', elementData.width || 100);
+  el.setAttribute('data-height', elementData.height || 100);
+  el.style.width = `${elementData.width || 100}px`;
+  el.style.height = `${elementData.height || 100}px`;
+
+  // Add text content
+  const textSpan = document.createElement('span');
+  textSpan.className = 'text-content';
+  textSpan.textContent = elementData.text || elementData.type.charAt(0).toUpperCase() + elementData.type.slice(1);
+  el.appendChild(textSpan);
+
+  // Add remove button
+  const removeButton = document.createElement('span');
+  removeButton.textContent = '✕';
+  removeButton.className = 'remove-button';
+  el.appendChild(removeButton);
+
+  // Set element-specific properties
+  if (elementData.type === 'button') {
+    el.setAttribute('data-color', elementData.color || '#000000');
+    el.style.color = elementData.color || '#000000';
+    el.setAttribute('data-bg-color', elementData.bgColor || '#ffffff');
+    el.style.backgroundColor = elementData.bgColor || '#ffffff';
+    el.setAttribute('data-font', elementData.font || 'medium');
+    el.style.fontSize = getFontSize(elementData.font || 'medium') + 'px';
+  } else if (elementData.type === 'label') {
+    el.setAttribute('data-color', elementData.color || '#000000');
+    el.style.color = elementData.color || '#000000';
+    el.setAttribute('data-font', elementData.font || 'medium');
+    el.style.fontSize = getFontSize(elementData.font || 'medium') + 'px';
+    el.style.background = 'none';
+  }
+
+  return el;
 }

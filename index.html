@@ -8,7 +8,7 @@
     <link data-rh="true" rel="icon" href="/favicon.png">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap">
-        <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="style.css">
 </head>
 
 <body>
@@ -73,8 +73,8 @@
                     <div class="element" draggable="true" data-type="input" title="Input">
                         <i class="fas fa-edit"></i> Input
                     </div>
-                    <div class="element" draggable="true" data-type="menu" title="Menu">
-                        <i class="fas fa-bars"></i> Menu
+                    <div class="element" draggable="true" data-type="menu-element" title="Menu">
+                        <i class="fa-solid fa-bars-progress"></i> Menu
                     </div>
                     <div class="element" draggable="true" data-type="collapsedlist" title="Collapsed List">
                         <i class="fas fa-bars"></i> Collapsed List
@@ -118,9 +118,9 @@
                             </button>
                             <div class="file-input-container">
                                 <label for="loadFile" class="file-button">
-                                    <i class="fas fa-upload"></i> Load
+                                    <i class="fas fa-upload"></i> Load jukaconfig.json
                                 </label>
-                                <input type="file" id="loadFile" accept="application/json">
+                                <input type="file" id="loadFile" accept="application/json" style="display: none;">
                             </div>
                             <button class="action-button primary" onclick="createJukaApp()">
                                 <i class="fas fa-download"></i> Download
