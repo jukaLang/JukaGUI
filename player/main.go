@@ -61,7 +61,6 @@ type SceneConfig struct {
 	Elements []Element `json:"elements"`
 }
 
-// Update the Element struct
 type Element struct {
 	Type          string      `json:"type"`
 	Text          string      `json:"text"`
@@ -78,6 +77,33 @@ type Element struct {
 	Height        StringOrInt `json:"height"`
 	Video         string      `json:"video"`
 	Variable      string      `json:"variable"`
+	Command       string      `json:"command"`      // For collapsed list execution
+	ListVariable  string      `json:"listVariable"` // For storing list data
+}
+
+type CollapsedListItem struct {
+	Title       string `json:"title"`
+	Header      string `json:"header"`
+	Description string `json:"description"`
+	Image       string `json:"image"`
+}
+
+func executeCommandAndParse(config *Config, command string, listVariable string) {
+	cmd := exec.Command("sh", "-c", command)
+	output, err := cmd.Output()
+	if err != nil {
+		log.Printf("Error executing command: %v", err)
+		return
+	}
+
+	var items []CollapsedListItem
+	if err := json.Unmarshal(output, &items); err != nil {
+		log.Printf("Error parsing JSON: %v", err)
+		return
+	}
+
+	// Store the parsed items in a variable
+	config.Variables.Custom[listVariable] = items
 }
 
 var videoPlayed = false // rack if video has been played
@@ -402,6 +428,8 @@ func getTextDimensions(font *ttf.Font, text string) (int32, int32) {
 func renderMenu(renderer *sdl.Renderer, config *Config, element Element) {
 	textColor := sdl.Color{R: 255, G: 255, B: 255, A: 255}
 	highlightColor := sdl.Color{R: 0, G: 200, B: 255, A: 255}
+	bgColor := sdl.Color{R: 32, G: 32, B: 32, A: 200}
+	highlightBgColor := sdl.Color{R: 0, G: 150, B: 255, A: 255}
 
 	font, _ := getFontAndSize(config, "medium")
 	if font == nil {
@@ -410,7 +438,7 @@ func renderMenu(renderer *sdl.Renderer, config *Config, element Element) {
 	defer font.Close()
 
 	// Background bar
-	renderer.SetDrawColor(32, 32, 32, 200)
+	renderer.SetDrawColor(bgColor.R, bgColor.G, bgColor.B, bgColor.A)
 	renderer.FillRect(&sdl.Rect{X: 0, Y: element.Y, W: 1280, H: 50})
 
 	buttonX := int32(10)
@@ -420,36 +448,45 @@ func renderMenu(renderer *sdl.Renderer, config *Config, element Element) {
 		isSelected := currentSceneIndex == i
 
 		btnColor := textColor
-		bgColor := sdl.Color{R: 50, G: 50, B: 50, A: 200}
+		rectColor := bgColor
 		if isSelected {
 			btnColor = highlightColor
-			bgColor = sdl.Color{R: 0, G: 150, B: 255, A: 255}
+			rectColor = highlightBgColor
 		}
 
 		label := scene.Name
 		textWidth, textHeight := getTextDimensions(font, label)
-		diameter := maxInt(textWidth, textHeight) + 20
 
-		// Draw filled circle as button background
-		drawFilledCircle(renderer, buttonX+diameter/2, element.Y+25, diameter/2, bgColor)
+		// Calculate button dimensions with padding
+		padding := int32(20)
+		width := textWidth + padding*2
+		height := int32(40) // Fixed height for menu buttons
 
-		// Draw label centered on the circle
+		// Draw rounded rectangle as button background
+		drawRoundedRect(renderer, &sdl.Rect{
+			X: buttonX,
+			Y: element.Y + 5,
+			W: width,
+			H: height,
+		}, 10, rectColor)
+
+		// Draw label centered in the button
 		renderText(renderer, config, font, label, btnColor,
-			buttonX+(diameter-textWidth)/2,
-			element.Y+(50-textHeight)/2)
+			buttonX+(width-textWidth)/2,
+			element.Y+5+(height-textHeight)/2)
 
 		menuButtonRects[i] = sdl.Rect{
 			X: buttonX,
-			Y: element.Y,
-			W: diameter,
-			H: 50,
+			Y: element.Y + 5,
+			W: width,
+			H: height,
 		}
-		buttonX += diameter + 20
+		buttonX += width + 10
 	}
 
 	// Clock display (right side)
 	currentTime := time.Now().Format("15:04")
-	renderText(renderer, config, font, currentTime, textColor, 1200, element.Y+10)
+	renderText(renderer, config, font, currentTime, textColor, 1200, element.Y+15)
 }
 
 func renderText(renderer *sdl.Renderer, config *Config, font *ttf.Font, text string, color sdl.Color, x int32, y int32) (int32, int32) {
@@ -731,7 +768,23 @@ func renderScene(renderer *sdl.Renderer, config *Config, sceneConfig SceneConfig
 					element.X,
 					element.Y)
 			}
-		case "button": // Explicit button handling
+		case "collapsedlist":
+			if element.Command != "" && element.ListVariable != "" {
+				// Execute command and parse output if not already done
+				if _, exists := config.Variables.Custom[element.ListVariable]; !exists {
+					executeCommandAndParse(config, element.Command, element.ListVariable)
+				}
+
+				// Render the collapsed list
+				if items, ok := config.Variables.Custom[element.ListVariable].([]CollapsedListItem); ok {
+					renderCollapsedList(renderer, config, element, items)
+				}
+			} else {
+				// Render placeholder if no command is set
+				renderText(renderer, config, font, "Collapsed List", color, element.X, element.Y)
+			}
+		// In the renderScene function, update the button rendering case:
+		case "button":
 			// Calculate dimensions
 			textWidth, textHeight := getTextDimensions(font, element.Text)
 			width := textWidth + 20
@@ -753,10 +806,10 @@ func renderScene(renderer *sdl.Renderer, config *Config, sceneConfig SceneConfig
 			renderer.SetDrawColor(bgColor.R, bgColor.G, bgColor.B, bgColor.A)
 			renderer.FillRect(&sdl.Rect{X: element.X, Y: element.Y, W: width, H: height})
 
-			// Render button text
-			renderText(renderer, config, font, element.Text, color,
-				element.X+width/2,
-				element.Y+height/2)
+			// Render button text - centered properly
+			textX := element.X + (width-textWidth)/2
+			textY := element.Y + (height-textHeight)/2
+			renderText(renderer, config, font, element.Text, color, textX, textY)
 		case "menu":
 			renderMenu(renderer, config, element)
 		default:
@@ -766,6 +819,84 @@ func renderScene(renderer *sdl.Renderer, config *Config, sceneConfig SceneConfig
 
 	for _, font := range fontCache {
 		font.Close()
+	}
+}
+
+func renderCollapsedList(renderer *sdl.Renderer, config *Config, element Element, items []CollapsedListItem) {
+	// Render the list icon
+	font, _ := getFontAndSize(config, element.Font)
+	if font == nil {
+		return
+	}
+	defer font.Close()
+
+	// Draw list background
+	renderer.SetDrawColor(240, 240, 240, 255)
+	renderer.FillRect(&sdl.Rect{X: element.X, Y: element.Y, W: 300, H: 40})
+
+	// Draw list icon and text
+	renderText(renderer, config, font, "📋 Collapsed List",
+		resolveColor(config, element.Color, sdl.Color{R: 0, G: 0, B: 0, A: 255}),
+		element.X+10, element.Y+20)
+
+	for i, item := range items {
+		yPos := element.Y + 40 + int32(i)*60
+		renderCollapsedListItem(renderer, config, item, element.X, yPos, 300, 60)
+	}
+
+}
+
+func drawRoundedRect(renderer *sdl.Renderer, rect *sdl.Rect, radius int32, color sdl.Color) {
+	renderer.SetDrawColor(color.R, color.G, color.B, color.A)
+
+	// Draw the main rectangle (excluding corners)
+	renderer.FillRect(&sdl.Rect{
+		X: rect.X + radius,
+		Y: rect.Y,
+		W: rect.W - 2*radius,
+		H: rect.H,
+	})
+	renderer.FillRect(&sdl.Rect{
+		X: rect.X,
+		Y: rect.Y + radius,
+		W: rect.W,
+		H: rect.H - 2*radius,
+	})
+
+	// Draw the rounded corners
+	drawFilledCircle(renderer, rect.X+radius, rect.Y+radius, radius, color)
+	drawFilledCircle(renderer, rect.X+rect.W-radius, rect.Y+radius, radius, color)
+	drawFilledCircle(renderer, rect.X+radius, rect.Y+rect.H-radius, radius, color)
+	drawFilledCircle(renderer, rect.X+rect.W-radius, rect.Y+rect.H-radius, radius, color)
+}
+
+func renderCollapsedListItem(renderer *sdl.Renderer, config *Config, item CollapsedListItem, x, y, width, height int32) {
+	// Draw item background
+	renderer.SetDrawColor(255, 255, 255, 255)
+	renderer.FillRect(&sdl.Rect{X: x, Y: y, W: width, H: height})
+
+	// Draw item image if available
+	if item.Image != "" {
+		texture, err := img.LoadTexture(renderer, item.Image)
+		if err == nil {
+			defer texture.Destroy()
+			renderer.Copy(texture, nil, &sdl.Rect{X: x + 5, Y: y + 5, W: 50, H: 50})
+		}
+	}
+
+	// Draw item text
+	font, _ := getFontAndSize(config, "small")
+	if font != nil {
+		defer font.Close()
+		renderText(renderer, config, font, item.Title,
+			sdl.Color{R: 0, G: 0, B: 0, A: 255},
+			x+60, y+10)
+
+		if item.Description != "" {
+			renderText(renderer, config, font, item.Description,
+				sdl.Color{R: 100, G: 100, B: 100, A: 255},
+				x+60, y+30)
+		}
 	}
 }
 
@@ -862,6 +993,12 @@ func main() {
 		os.Exit(1)
 	}
 
+	// Auto-select the first selectable element in the initial scene
+	firstSelectable := findFirstSelectableElement(config.Scenes[currentSceneIndex])
+	if firstSelectable != -1 {
+		selectedButtonIndex = firstSelectable
+	}
+
 	screenWidth := int32(1280)
 	screenHeight := int32(720)
 
@@ -922,21 +1059,9 @@ func main() {
 						case sdl.K_DOWN:
 							moveSelection(config, 1)
 						case sdl.K_LEFT:
-							// Check if we're selecting a menu
-							currentScene := config.Scenes[currentSceneIndex]
-							if selectedButtonIndex >= 0 && selectedButtonIndex < len(currentScene.Elements) {
-								if currentScene.Elements[selectedButtonIndex].Type == "menu" {
-									moveSelection(config, -1) // Treat left as previous in menu
-								}
-							}
+							moveSelection(config, -1)
 						case sdl.K_RIGHT:
-							// Check if we're selecting a menu
-							currentScene := config.Scenes[currentSceneIndex]
-							if selectedButtonIndex >= 0 && selectedButtonIndex < len(currentScene.Elements) {
-								if currentScene.Elements[selectedButtonIndex].Type == "menu" {
-									moveSelection(config, 1) // Treat right as next in menu
-								}
-							}
+							moveSelection(config, 1)
 						case sdl.K_RETURN, sdl.K_SPACE:
 							if selectedButtonIndex >= 0 && selectedButtonIndex < len(config.Scenes[currentSceneIndex].Elements) {
 								selectedElement := config.Scenes[currentSceneIndex].Elements[selectedButtonIndex]
@@ -948,6 +1073,11 @@ func main() {
 									triggerSelectedElement(renderer, config)
 								}
 							}
+						// Add Q/E for menu navigation
+						case sdl.K_q:
+							changeScene(config, -1)
+						case sdl.K_e:
+							changeScene(config, 1)
 						}
 					}
 				}
@@ -966,7 +1096,15 @@ func main() {
 							mouseY >= rect.Y && mouseY <= rect.Y+rect.H {
 							// Change scene on click
 							currentSceneIndex = sceneIndex
-							selectedButtonIndex = 0
+
+							// Auto-select the first selectable element in the new scene
+							firstSelectable := findFirstSelectableElement(config.Scenes[currentSceneIndex])
+							if firstSelectable != -1 {
+								selectedButtonIndex = firstSelectable
+							} else {
+								selectedButtonIndex = 0
+							}
+
 							videoPlayed = false
 							break // Exit after handling the click
 						}
@@ -1046,21 +1184,9 @@ func main() {
 						case sdl.CONTROLLER_BUTTON_DPAD_DOWN:
 							moveSelection(config, 1)
 						case sdl.CONTROLLER_BUTTON_DPAD_LEFT:
-							// Check if we're selecting a menu
-							currentScene := config.Scenes[currentSceneIndex]
-							if selectedButtonIndex >= 0 && selectedButtonIndex < len(currentScene.Elements) {
-								if currentScene.Elements[selectedButtonIndex].Type == "menu" {
-									moveSelection(config, -1) // Treat left as previous in menu
-								}
-							}
+							moveSelection(config, -1)
 						case sdl.CONTROLLER_BUTTON_DPAD_RIGHT:
-							// Check if we're selecting a menu
-							currentScene := config.Scenes[currentSceneIndex]
-							if selectedButtonIndex >= 0 && selectedButtonIndex < len(currentScene.Elements) {
-								if currentScene.Elements[selectedButtonIndex].Type == "menu" {
-									moveSelection(config, 1) // Treat right as next in menu
-								}
-							}
+							moveSelection(config, 1)
 						case sdl.CONTROLLER_BUTTON_A, sdl.CONTROLLER_BUTTON_B:
 							if selectedButtonIndex >= 0 && selectedButtonIndex < len(config.Scenes[currentSceneIndex].Elements) {
 								selectedElement := config.Scenes[currentSceneIndex].Elements[selectedButtonIndex]
@@ -1072,6 +1198,11 @@ func main() {
 									triggerSelectedElement(renderer, config)
 								}
 							}
+						// Add shoulder buttons for menu navigation
+						case sdl.CONTROLLER_BUTTON_LEFTSHOULDER:
+							changeScene(config, -1)
+						case sdl.CONTROLLER_BUTTON_RIGHTSHOULDER:
+							changeScene(config, 1)
 						}
 					}
 				}
@@ -1085,41 +1216,33 @@ func main() {
 	}
 }
 
+func changeScene(config *Config, direction int) {
+	currentSceneIndex += direction
+	if currentSceneIndex < 0 {
+		currentSceneIndex = len(config.Scenes) - 1
+	} else if currentSceneIndex >= len(config.Scenes) {
+		currentSceneIndex = 0
+	}
+
+	// Auto-select the first selectable element in the new scene
+	firstSelectable := findFirstSelectableElement(config.Scenes[currentSceneIndex])
+	if firstSelectable != -1 {
+		selectedButtonIndex = firstSelectable
+	} else {
+		selectedButtonIndex = 0
+	}
+
+	videoPlayed = false
+}
+
 func moveSelection(config *Config, direction int) {
 	currentScene := config.Scenes[currentSceneIndex]
 	elements := currentScene.Elements
 
-	// Check if we're currently selecting a menu item
-	isSelectingMenu := false
-	for i, el := range elements {
-		if el.Type == "menu" && i == selectedButtonIndex {
-			isSelectingMenu = true
-			break
-		}
-	}
-
-	// If we're selecting a menu, handle horizontal navigation
-	if isSelectingMenu {
-		// Horizontal navigation for menu items
-		if direction == -1 { // Left
-			currentSceneIndex--
-			if currentSceneIndex < 0 {
-				currentSceneIndex = len(config.Scenes) - 1
-			}
-		} else if direction == 1 { // Right
-			currentSceneIndex++
-			if currentSceneIndex >= len(config.Scenes) {
-				currentSceneIndex = 0
-			}
-		}
-		videoPlayed = false
-		return
-	}
-
-	// Create a list of navigable element indices (buttons and inputs)
+	// Create a list of navigable element indices (only buttons and inputs, skip menus)
 	var interactive []int
 	for i, el := range elements {
-		if el.Type == "button" || el.Type == "input" {
+		if (el.Type == "button" || el.Type == "input") && el.Type != "menu" {
 			interactive = append(interactive, i)
 		}
 	}
@@ -1261,4 +1384,13 @@ func setConfigVariable(config *Config, variableName, value string) {
 	case "backgroundImage":
 		config.Variables.BackgroundImage = value
 	}
+}
+
+func findFirstSelectableElement(scene SceneConfig) int {
+	for i, element := range scene.Elements {
+		if element.Type == "button" || element.Type == "input" {
+			return i
+		}
+	}
+	return -1
 }

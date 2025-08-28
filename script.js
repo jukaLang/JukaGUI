@@ -363,7 +363,20 @@ function addElement(type, x, y) {
   el.style.width = width;
   el.style.height = height;
 
-  if (type === 'menu') {
+
+  // Make elements larger on mobile for better touch interaction
+  if (window.innerWidth <= 768) {
+    if (type === 'button' || type === 'label' || type === 'input') {
+      el.style.minHeight = '44px'; // Minimum touch target size
+      el.style.minWidth = '80px';
+    }
+  }
+
+
+  if (type === 'collapsedlist') {
+    el.setAttribute('data-command', '');
+    el.setAttribute('data-list-variable', '');
+  } else if (type === 'menu') {
     el.style.top = `${dimensions.menu.y}px`;
     el.style.left = '0px';
     el.innerHTML = `
@@ -467,6 +480,47 @@ function addElement(type, x, y) {
 function setupElementEvents(el) {
   let isDragging = false;
   let startX, startY;
+    let startTouchX, startTouchY;
+
+    // Touch events for mobile
+  el.addEventListener('touchstart', (event) => {
+    if (event.touches.length === 1) { // Single touch for drag
+      event.preventDefault();
+      const touch = event.touches[0];
+      startTouchX = touch.clientX - el.offsetLeft;
+      startTouchY = touch.clientY - el.offsetTop;
+      isDragging = true;
+      el.style.cursor = 'grabbing';
+    }
+  });
+
+  document.addEventListener('touchmove', (event) => {
+    if (!isDragging) return;
+    event.preventDefault();
+    
+    const touch = event.touches[0];
+    const canvasRect = canvas.getBoundingClientRect();
+    let newX = touch.clientX - startTouchX;
+    let newY = touch.clientY - startTouchY;
+    const elRect = el.getBoundingClientRect();
+
+    newX = Math.max(0, Math.min(newX, canvasRect.width - elRect.width));
+    newY = Math.max(0, Math.min(newY, canvasRect.height - elRect.height));
+
+    el.style.transition = 'none';
+    el.style.left = `${newX}px`;
+    el.style.top = `${newY}px`;
+    el.setAttribute('data-x', newX);
+    el.setAttribute('data-y', newY);
+  });
+
+  document.addEventListener('touchend', () => {
+    if (isDragging) {
+      isDragging = false;
+      el.style.cursor = 'grab';
+    }
+  });
+
 
   // Mouse events for dragging and resizing
   el.addEventListener('mousedown', (event) => {
@@ -685,6 +739,30 @@ function showElementProperties(el) {
     [datax, datay, dataWidth, dataHeight].forEach(input => {
       if (input) input.oninput = updatePositionSize;
     });
+  }
+
+
+  // Add to the element properties section
+  if (el.getAttribute('data-type') === 'collapsedlist') {
+    // Add command input
+    const commandInput = document.createElement('input');
+    commandInput.type = 'text';
+    commandInput.placeholder = 'Command to execute';
+    commandInput.value = el.getAttribute('data-command') || '';
+    commandInput.onchange = () => {
+      el.setAttribute('data-command', commandInput.value);
+    };
+    elementProperties.appendChild(commandInput);
+
+    // Add list variable input
+    const listVarInput = document.createElement('input');
+    listVarInput.type = 'text';
+    listVarInput.placeholder = 'Variable to store result';
+    listVarInput.value = el.getAttribute('data-list-variable') || '';
+    listVarInput.onchange = () => {
+      el.setAttribute('data-list-variable', listVarInput.value);
+    };
+    elementProperties.appendChild(listVarInput);
   }
 
   // Text styling
@@ -1143,6 +1221,11 @@ function createJukaApp() {
           if (textSpan) element.text = textSpan.textContent;
         }
 
+        if (type === 'collapsedlist') {
+          element.command = el.getAttribute('data-command') || '';
+          element.listVariable = el.getAttribute('data-list-variable') || '';
+        }
+
         if (type === 'image') {
           const img = el.querySelector('.element-image');
           if (img && img.src) element.image = img.src;
@@ -1491,3 +1574,4 @@ function createElementFromData(elementData) {
 
   return el;
 }
+

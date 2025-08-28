@@ -1501,3 +1501,349 @@ footer{
   margin:0;
   padding:0;
 }
+
+
+@media (max-width: 768px) {
+  /* Base layout adjustments */
+  body {
+    padding: 0;
+    font-size: 14px;
+  }
+  
+  header, main, footer {
+    padding: 0.5rem;
+  }
+  
+  .header-content {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+  
+  .header-actions {
+    width: 100%;
+    justify-content: space-between;
+  }
+  
+  /* Editor container becomes vertical stack */
+  .editor-container {
+    flex-direction: column;
+    height: auto;
+    gap: 0.75rem;
+  }
+  
+  .sidebar {
+    width: 100%;
+    max-height: 200px;
+    order: 1;
+  }
+  
+  .canvas-area {
+    order: 2;
+    width: 100%;
+  }
+  
+  .right-sidebar {
+    width: 100%;
+    max-height: 300px;
+    order: 3;
+  }
+  
+  /* Canvas controls become vertical */
+  .canvas-controls {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  
+  .scene-controls, .file-controls {
+    width: 100%;
+    justify-content: space-between;
+  }
+  
+  /* Canvas sizing for mobile */
+  .canvas {
+    width: 100% !important;
+    height: auto !important;
+    aspect-ratio: 16/9;
+    max-width: 100%;
+    transform-origin: center top;
+    transform: scale(0.9);
+  }
+  
+  /* Properties panel improvements */
+  .properties-panel {
+    padding: 0.5rem;
+  }
+  
+  .position-controls {
+    grid-template-columns: 1fr 1fr;
+    gap: 0.5rem;
+  }
+  
+  /* Element sidebar improvements */
+  .elements-container {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.5rem;
+  }
+  
+  .left-sidebar .element {
+    height: 40px;
+    font-size: 12px;
+    justify-content: center;
+    text-align: center;
+    padding: 0.5rem;
+  }
+  
+  .left-sidebar .element i {
+    display: none;
+  }
+  
+  /* Touch-friendly buttons */
+  .action-button, .dark-mode-toggle {
+    min-height: 44px; /* Minimum touch target size */
+    padding: 0.75rem 1rem;
+  }
+  
+  /* Hide less important elements on mobile */
+  .subtitle {
+    display: none;
+  }
+  
+  /* Improve variable panel */
+  .variables-panel {
+    display: none; /* Hide by default on mobile */
+  }
+  
+  /* Menu element adjustments */
+  .element[data-type="menu"] {
+    height: 40px;
+    font-size: 12px;
+  }
+  
+  .menu-scene-button {
+    padding: 4px 8px;
+    font-size: 11px;
+  }
+}
+
+/* Very small devices (phones) */
+@media (max-width: 480px) {
+  .elements-container {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  
+  .canvas-controls button span {
+    display: none;
+  }
+  
+  .canvas-controls button i {
+    margin-right: 0;
+  }
+  
+  .scene-controls select {
+    width: 100px;
+  }
+  
+  .position-controls {
+    grid-template-columns: 1fr;
+  }
+  
+  /* Stack coordinate inputs vertically */
+  .coordinate-input {
+    width: 100%;
+  }
+}
+
+/* Tablet devices */
+@media (min-width: 769px) and (max-width: 1024px) {
+  .editor-container {
+    grid-template-columns: 200px 1fr 280px;
+  }
+  
+  .sidebar {
+    width: 200px;
+  }
+  
+  .right-sidebar {
+    width: 280px;
+  }
+  
+  .canvas {
+    width: 90%;
+    height: auto;
+    aspect-ratio: 16/9;
+  }
+}
+
+/* === Modular Improvements === */
+/* Touch device detection */
+@media (hover: none) and (pointer: coarse) {
+  .element {
+    min-height: 44px;
+    min-width: 44px;
+  }
+  
+  .remove-button {
+    width: 24px;
+    height: 24px;
+    top: -12px;
+    right: -12px;
+  }
+}
+
+/* Prevent zoom on input focus */
+@media (max-width: 768px) {
+  input, select, textarea {
+    font-size: 16px; /* Prevents iOS zoom */
+  }
+}
+
+/* Improved mobile navigation */
+.mobile-tabs {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .mobile-tabs {
+    display: flex;
+    justify-content: space-around;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+  }
+  
+  .mobile-tab {
+    padding: 1rem;
+    flex: 1;
+    text-align: center;
+    cursor: pointer;
+  }
+  
+  .mobile-tab.active {
+    border-bottom: 2px solid var(--primary);
+  }
+  
+  /* Hide regular sidebars by default */
+  .sidebar {
+    display: none;
+  }
+  
+  .sidebar.mobile-active {
+    display: block;
+  }
+}
+
+
+/* Add to existing mobile styles */
+@media (max-width: 768px) {
+  .editor-container {
+    display: flex;
+    flex-direction: column;
+    height: auto;
+  }
+  
+  .sidebar, .canvas-area, .right-sidebar {
+    width: 100%;
+    max-height: none;
+  }
+  
+  .left-sidebar {
+    order: 1;
+  }
+  
+  .canvas-area {
+    order: 2;
+  }
+  
+  .right-sidebar {
+    order: 3;
+  }
+  
+  .canvas {
+    width: 100% !important;
+    height: 50vh !important;
+    transform: none;
+  }
+  
+  .elements-container {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.5rem;
+  }
+  
+  .element {
+    height: 40px;
+    font-size: 12px;
+    justify-content: center;
+    text-align: center;
+    padding: 0.5rem;
+  }
+  
+  .element i {
+    display: none;
+  }
+  
+  .canvas-controls {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  
+  .scene-controls, .file-controls {
+    width: 100%;
+    justify-content: space-between;
+  }
+  
+  /* Hide less important elements on mobile */
+  .subtitle {
+    display: none;
+  }
+  
+  /* Adjust properties panel */
+  .properties-panel {
+    padding: 0.5rem;
+  }
+  
+  .position-controls {
+    grid-template-columns: 1fr 1fr;
+    gap: 0.5rem;
+  }
+}
+
+/* Very small devices */
+@media (max-width: 480px) {
+  .elements-container {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  
+  .canvas-controls button span {
+    display: none;
+  }
+  
+  .canvas-controls button i {
+    margin-right: 0;
+  }
+  
+  .scene-controls select {
+    width: 100px;
+  }
+  
+  .position-controls {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Add to CSS */
+.mobile-drag-hint {
+  display: none;
+  text-align: center;
+  padding: 0.5rem;
+  background: var(--primary-light);
+  color: white;
+  font-size: 0.9rem;
+}
+
+@media (max-width: 768px) {
+  .mobile-drag-hint {
+    display: block;
+  }
+}
