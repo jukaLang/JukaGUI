@@ -1161,11 +1161,6 @@
    font-size: 0.85rem;
  }
 
- .video-list {
-   margin-top: 1rem;
-   max-height: 300px;
-   overflow-y: auto;
- }
 
  .video-item {
    padding: 0.5rem;

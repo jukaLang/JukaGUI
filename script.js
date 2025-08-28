@@ -23,8 +23,6 @@ const propertiesTabs = document.querySelectorAll('.properties-tab');
 const elementPropertiesPanel = document.getElementById('elementPropertiesPanel');
 const appInfoPanel = document.getElementById('appInfoPanel');
 const videoProperties = document.getElementById('videoProperties');
-const videoListJson = document.getElementById('videoListJson');
-const videoSelector = document.getElementById('videoSelector');
 
 // Global State
 let backgroundPath = '';
@@ -166,10 +164,6 @@ function setupEventListeners() {
 
   // Clear button
   clearButton.addEventListener('click', clearAll);
-
-  // Video list JSON change
-  videoListJson.addEventListener('change', updateVideoSelector);
-  videoSelector.addEventListener('change', updateSelectedVideo);
 }
 
 // Set up font size change listeners
@@ -810,25 +804,40 @@ function showElementProperties(el) {
     };
   }
 
-  document.getElementById('externalAppReturnVar').onchange = () => {
-    el.setAttribute('data-external-app-return', document.getElementById('externalAppReturnVar').value);
-  };
+  const externalAppReturnVarEl = document.getElementById('externalAppReturnVar');
+  if (externalAppReturnVarEl) {
+    externalAppReturnVarEl.onchange = () => {
+      el.setAttribute('data-external-app-return', externalAppReturnVarEl.value);
+    };
+  }
 
-  document.getElementById('variableChangeSelector').onchange = () => {
-    el.setAttribute('data-variable-change', document.getElementById('variableChangeSelector').value);
-  };
+  const variableChangeSelectorEl = document.getElementById('variableChangeSelector');
+  if (variableChangeSelectorEl) {
+    variableChangeSelectorEl.onchange = () => {
+      el.setAttribute('data-variable-change', variableChangeSelectorEl.value);
+    };
+  }
 
-  document.getElementById('variableChangeValue').onchange = () => {
-    el.setAttribute('data-variable-change-value', document.getElementById('variableChangeValue').value);
-  };
+  const variableChangeValueEl = document.getElementById('variableChangeValue');
+  if (variableChangeValueEl) {
+    variableChangeValueEl.onchange = () => {
+      el.setAttribute('data-variable-change-value', variableChangeValueEl.value);
+    };
+  }
 
-  document.getElementById('videoPath').onchange = () => {
-    el.setAttribute('data-video-path', document.getElementById('videoPath').value);
-  };
+  const videoPathEl = document.getElementById('videoPath');
+  if (videoPathEl) {
+    videoPathEl.onchange = () => {
+      el.setAttribute('data-video-path', videoPathEl.value);
+    };
+  }
 
-  document.getElementById('imagePath').onchange = () => {
-    el.setAttribute('data-image-path', document.getElementById('imagePath').value);
-  };
+  const imagePathEl = document.getElementById('imagePath');
+  if (imagePathEl) {
+    imagePathEl.onchange = () => {
+      el.setAttribute('data-image-path', imagePathEl.value);
+    };
+  }
 
   // Video properties
   if (el.getAttribute('data-type') === 'video') {
@@ -1277,27 +1286,6 @@ function loadInitialConfig() {
 }
 
 
-function updateVideoSelector() {
-  try {
-    videoList = JSON.parse(videoListJson.value);
-    videoSelector.innerHTML = '';
-    videoList.forEach(video => {
-      const option = document.createElement('option');
-      option.value = video.path;
-      option.textContent = video.name;
-      videoSelector.appendChild(option);
-    });
-  } catch (error) {
-    console.error('Error parsing video list JSON:', error);
-  }
-}
-
-function updateSelectedVideo() {
-  if (currentElement) {
-    currentElement.setAttribute('data-video-path', videoSelector.value);
-  }
-}
-
 
 function loadDefaultConfig() {
   fetch('player/jukaconfig.json')
@@ -1399,6 +1387,7 @@ function loadJukaApp(data) {
   if (data.scenes.length > 0) {
     currentScene = data.scenes[0].name;
     sceneSelector.value = currentScene;
+    loadScene(currentScene); // Load only the current scene
   }
 
   // Update UI
@@ -1431,6 +1420,31 @@ function createElementFromData(elementData) {
   removeButton.textContent = '✕';
   removeButton.className = 'remove-button';
   el.appendChild(removeButton);
+
+  // Handle null width/height
+  let width = elementData.width;
+  let height = elementData.height;
+
+  if (width === null || width === undefined) {
+    if (elementData.type === 'menu') {
+      width = '100%';
+    } else if (['button', 'label'].includes(elementData.type)) {
+      // Calculate width based on text content
+      const text = elementData.text || '';
+      width = Math.max(100, text.length * 10); // Adjust multiplier as needed
+    } else {
+      width = 100;
+    }
+  }
+
+  if (height === null || height === undefined) {
+    height = 40; // Default height
+  }
+
+  el.style.width = `${width}px`;
+  el.style.height = `${height}px`;
+  el.setAttribute('data-width', width);
+  el.setAttribute('data-height', height);
 
   // Set element-specific properties
   if (elementData.type === 'button') {
