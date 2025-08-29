@@ -37,27 +37,27 @@
                 </button>
             </div>
             <div class="steps-content">
-                 <div class="steps-content">
-        <ol>
-            <li>On desktop: Drag elements from the left sidebar to the canvas
-                <ul>
-                    <li>Double-click elements to edit</li>
-                    <li>Right-click + drag to resize images</li>
-                    <li>Drag elements to reposition</li>
-                </ul>
-            </li>
-            <li>On mobile: Use the + button to add elements to the canvas
-                <ul>
-                    <li>Tap elements to select and edit properties</li>
-                    <li>Use drag handles to reposition elements</li>
-                </ul>
-            </li>
-            <li>Select elements to edit properties in the right sidebar</li>
-            <li>Use the "Download Config" button when finished</li>
-            <li>Combine with the JukaGUI template from <a
-                    href="https://github.com/jukaLang/JukaGUI/releases">GitHub releases</a></li>
-        </ol>
-    </div>
+                <div class="steps-content">
+                    <ol>
+                        <li>On desktop: Drag elements from the left sidebar to the canvas
+                            <ul>
+                                <li>Double-click elements to edit</li>
+                                <li>Right-click + drag to resize images</li>
+                                <li>Drag elements to reposition</li>
+                            </ul>
+                        </li>
+                        <li>On mobile: Use the + button to add elements to the canvas
+                            <ul>
+                                <li>Tap elements to select and edit properties</li>
+                                <li>Use drag handles to reposition elements</li>
+                            </ul>
+                        </li>
+                        <li>Select elements to edit properties in the right sidebar</li>
+                        <li>Use the "Download Config" button when finished</li>
+                        <li>Combine with the JukaGUI template from <a
+                                href="https://github.com/jukaLang/JukaGUI/releases">GitHub releases</a></li>
+                    </ol>
+                </div>
             </div>
         </div>
     </header>
@@ -85,8 +85,8 @@
                     <div class="element" draggable="true" data-type="menu-element" title="Menu">
                         <i class="fa-solid fa-bars-progress"></i> Menu
                     </div>
-                    <div class="element" draggable="true" data-type="collapsedlist" title="Collapsed List">
-                        <i class="fas fa-bars"></i> Collapsed List
+                    <div class="element" draggable="true" data-type="dynamiclist" title="Dynamic List">
+                        <i class="fas fa-list"></i> Dynamic List
                     </div>
                 </div>
                 <div class="variables-panel">
@@ -155,11 +155,6 @@
 
                 <!-- Element Properties -->
                 <div id="elementPropertiesPanel" class="properties-panel">
-                    <div id="noSelection" class="no-selection">
-                        <i class="fas fa-mouse-pointer"></i>
-                        <p>Select an element to edit properties</p>
-                    </div>
-
                     <div id="elementProperties" class="element-properties">
                         <div class="position-controls">
                             <div class="control-group">

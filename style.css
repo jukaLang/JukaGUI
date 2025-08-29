@@ -2154,3 +2154,72 @@ body.dark-mode .canvas {
 .mobile-drag-hint {
     display: none !important;
 }
+
+.collapsed-list-properties {
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--border);
+}
+
+.collapsed-list-properties .control-group {
+    margin-bottom: 0.8rem;
+}
+
+.collapsed-list-properties input {
+    width: 100%;
+    padding: 0.5rem;
+    border: 1px solid var(--border);
+    border-radius: var(--border-radius-sm);
+    font-size: 0.9rem;
+}
+
+.collapsed-list-select {
+  border: none;
+  background: transparent;
+  font-family: 'Roboto', sans-serif;
+  font-weight: 900;
+  font-size: inherit;
+  color: inherit;
+  outline: none;
+  appearance: none;
+  padding: 4px;
+}
+
+.collapsed-list-select option {
+  background: white;
+  color: #2b2d42;
+}
+
+/* Dark mode support */
+body.dark-mode .collapsed-list-select option {
+  background: #1e293b;
+  color: #e2e8f0;
+}
+
+/* Add these styles to ensure canvas elements are not affected by dark mode */
+body.dark-mode .canvas,
+body.dark-mode .element:not([data-type="menu"]) {
+    background: #ffffff !important;
+    color: #2b2d42 !important;
+    border-color: #e9ecef !important;
+    font-size: inherit !important;
+}
+
+/* Ensure text in elements remains visible in dark mode */
+body.dark-mode .element:not([data-type="menu"]) .text-content {
+    color: inherit !important;
+}
+
+/* Ensure input elements are visible in dark mode */
+body.dark-mode .element-input {
+    background: #ffffff !important;
+    color: #2b2d42 !important;
+    border: 1px solid #e9ecef !important;
+}
+
+/* Fix canvas background in dark mode */
+body.dark-mode .canvas {
+    background: #ffffff !important;
+    background-image: inherit !important;
+    background-size: inherit !important;
+}
