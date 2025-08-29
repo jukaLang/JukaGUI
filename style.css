@@ -134,7 +134,7 @@ main {
   display: flex;
   flex-direction: column;
   gap: 0.65rem;
-  overflow-y: auto;
+
 }
 
 .canvas-area {
@@ -182,7 +182,7 @@ main {
 
 .canvas {
   position: relative;
-  background: var(--surface);
+  background: #ffffff;
   background-size: cover;
   overflow: hidden;
   border: 1px solid var(--border);
@@ -217,8 +217,8 @@ main {
   align-items: center;
   gap: 0.65rem;
   padding: 0.7rem;
-  background: var(--surface);
-  border: 1px solid var(--border);
+  background: #ffffff;
+  border: 1px solid #e9ecef;
   border-radius: var(--border-radius-sm);
   cursor: grab;
   text-align: left;
@@ -228,6 +228,7 @@ main {
   font-family: 'Roboto', sans-serif;
   font-weight: 900;
   box-sizing: border-box;
+  color: #2b2d42;
 }
 
 .element:hover {
@@ -736,31 +737,13 @@ body.dark-mode .title-container .subtitle {
   color: var(--dark-text);
 }
 
-/* Ensure canvas elements are not affected by dark mode */
-body.dark-mode .canvas,
-body.dark-mode .element:not([data-type="menu"]) {
-  background: #ffffff !important;
-  color: #2b2d42 !important;
-  border-color: #e9ecef !important;
-}
-
-body.dark-mode .element[data-type="menu"] {
-  background: #1a1a1a !important;
-  color: white !important;
-}
+/* Canvas elements should remain unchanged in dark mode */
 
 body.dark-mode header {
   background: var(--dark-surface);
 }
 
-body.dark-mode .action-button {
-  background: var(--dark-primary);
-  color: var(--dark-text);
-}
 
-body.dark-mode .action-button:hover {
-  background: var(--dark-primary-light);
-}
 
 body.dark-mode .dark-mode-toggle {
   background: var(--dark-surface);
@@ -899,6 +882,7 @@ body.dark-mode .file-button {
   outline: none;
   font-family: 'Roboto', sans-serif;
   font-weight: 900;
+  color: #2b2d42;
 }
 
 .element-image {
@@ -1072,7 +1056,7 @@ body.dark-mode .file-button {
   overflow-x: auto;
   flex: 1;
   padding: 0 15px;
-  justify-content: center;
+  justify-content: left;
 }
 
 .menu-scene-button {
@@ -1165,7 +1149,6 @@ body.dark-mode .file-button {
   font-size: 0.85rem;
 }
 
-
 .video-item {
   padding: 0.5rem;
   border: 1px solid var(--border);
@@ -1207,18 +1190,6 @@ body.element-selected #appInfoPanel {
 
 body.element-selected #elementPropertiesPanel {
   display: block;
-}
-
-/* Dark mode improvements */
-body.dark-mode .canvas {
-  background: #ffffff !important;
-  border-color: #e9ecef !important;
-}
-
-body.dark-mode .element {
-  background: #ffffff !important;
-  border-color: #e9ecef !important;
-  color: #2b2d42 !important;
 }
 
 /* Variable hover tooltip */
@@ -1435,7 +1406,6 @@ body.dark-mode .variable-tooltip {
   opacity: 0.7;
 }
 
-
 .left-sidebar .element {
   width: 100%;
   height: 50px;
@@ -1508,7 +1478,6 @@ footer {
   margin: 0;
   padding: 0;
 }
-
 
 @media (max-width: 768px) {
 
@@ -1762,7 +1731,6 @@ footer {
   }
 }
 
-
 /* Add to existing mobile styles */
 @media (max-width: 768px) {
   .editor-container {
@@ -1880,7 +1848,6 @@ footer {
   }
 }
 
-
 /* Fix mobile layout - ensure sidebars are visible */
 @media (max-width: 768px) {
   .sidebar {
@@ -1917,23 +1884,6 @@ footer {
   }
 }
 
-/* Ensure canvas elements are not affected by dark mode */
-body.dark-mode .canvas,
-body.dark-mode .element:not([data-type="menu"]) {
-  background: #ffffff !important;
-  color: #2b2d42 !important;
-  border-color: #e9ecef !important;
-}
-
-body.dark-mode .element[data-type="menu"] {
-  background: #1a1a1a !important;
-  color: white !important;
-}
-
-/* Make sure text in elements remains visible in dark mode */
-body.dark-mode .element:not([data-type="menu"]) .text-content {
-  color: inherit !important;
-}
 
 /* Ensure input elements are visible in dark mode */
 body.dark-mode .element-input {
@@ -1942,12 +1892,7 @@ body.dark-mode .element-input {
   border: 1px solid #e9ecef !important;
 }
 
-/* Add this to fix canvas background in dark mode */
-body.dark-mode .canvas {
-  background: #ffffff !important;
-  background-image: inherit !important;
-  background-size: inherit !important;
-}
+
 
 /* Improve mobile properties panel */
 @media (max-width: 768px) {
@@ -2025,7 +1970,6 @@ body.dark-mode .canvas {
   }
 }
 
-
 @media (max-width: 768px) {
 
   /* Center the properties panel */
@@ -2099,7 +2043,6 @@ body.dark-mode .canvas {
     /* Prevents zoom on iOS */
   }
 }
-
 
 /* Add these styles to fix mobile layout */
 
@@ -2236,35 +2179,7 @@ body.dark-mode .collapsed-list-select option {
   color: #e2e8f0;
 }
 
-/* Add these styles to ensure canvas elements are not affected by dark mode */
-body.dark-mode .canvas,
-body.dark-mode .element:not([data-type="menu"]) {
-  background: #ffffff !important;
-  color: #2b2d42 !important;
-  border-color: #e9ecef !important;
-  font-size: inherit !important;
-}
-
-/* Ensure text in elements remains visible in dark mode */
-body.dark-mode .element:not([data-type="menu"]) .text-content {
-  color: inherit !important;
-}
-
-/* Ensure input elements are visible in dark mode */
-body.dark-mode .element-input {
-  background: #ffffff !important;
-  color: #2b2d42 !important;
-  border: 1px solid #e9ecef !important;
-}
-
-/* Fix canvas background in dark mode */
-body.dark-mode .canvas {
-  background: #ffffff !important;
-  background-image: inherit !important;
-  background-size: inherit !important;
-}
-
-/* Add these styles to ensure dynamic list properties are visible */
+/* Add these styles for the dynamic list properties */
 .dynamic-list-properties {
   margin-top: 1rem;
   padding-top: 1rem;
@@ -2275,7 +2190,8 @@ body.dark-mode .canvas {
   margin-bottom: 0.8rem;
 }
 
-.dynamic-list-properties input {
+.dynamic-command-input,
+.dynamic-variable-selector {
   width: 100%;
   padding: 0.5rem;
   border: 1px solid var(--border);
@@ -2283,74 +2199,18 @@ body.dark-mode .canvas {
   font-size: 0.9rem;
 }
 
-/* Ensure properties panel has enough space */
-.properties-panel {
-  overflow-y: auto;
-  max-height: 70vh;
-}
-
 /* Dark mode support */
-body.dark-mode .dynamic-list-properties {
-  border-color: var(--dark-border);
-}
-
-body.dark-mode .dynamic-list-properties input {
+body.dark-mode .dynamic-command-input,
+body.dark-mode .dynamic-variable-selector {
   background: var(--dark-surface);
   color: var(--dark-text);
   border-color: var(--dark-border);
-}
-
-/* FIX: Ensure dynamic list properties are properly displayed */
-#elementPropertiesPanel .dynamic-list-properties {
-  display: block !important;
-}
-
-/* FIX: Ensure dynamic list properties labels are visible in dark mode */
-body.dark-mode .dynamic-list-properties label {
-  color: var(--dark-text) !important;
-}
-
-/* FIX: Ensure dynamic list select elements are visible in dark mode */
-body.dark-mode .dynamic-list-select {
-  background: #ffffff !important;
-  color: #2b2d42 !important;
-  border: 1px solid #e9ecef !important;
-}
-
-/* Add these styles to ensure dynamic list properties are visible */
-.dynamic-list-properties {
-  margin-top: 1rem;
-  padding-top: 1rem;
-  border-top: 1px solid var(--border);
-}
-
-.dynamic-list-properties .control-group {
-  margin-bottom: 0.8rem;
-}
-
-.dynamic-list-properties input {
-  width: 100%;
-  padding: 0.5rem;
-  border: 1px solid var(--border);
-  border-radius: var(--border-radius-sm);
-  font-size: 0.9rem;
 }
 
 /* Ensure properties panel has enough space */
 .properties-panel {
   overflow-y: auto;
   max-height: 70vh;
-}
-
-/* Dark mode support */
-body.dark-mode .dynamic-list-properties {
-  border-color: var(--dark-border);
-}
-
-body.dark-mode .dynamic-list-properties input {
-  background: var(--dark-surface);
-  color: var(--dark-text);
-  border-color: var(--dark-border);
 }
 
 /* FIX: Ensure dynamic list properties are properly displayed */
@@ -2386,28 +2246,4 @@ body.dark-mode .dynamic-list-select {
   body.element-selected #elementPropertiesPanel {
     display: block !important;
   }
-}
-
-/* Add these styles for the dynamic list properties */
-.dynamic-list-properties {
-    margin-top: 1rem;
-    padding-top: 1rem;
-    border-top: 1px solid var(--border);
-}
-
-.dynamic-command-input,
-.dynamic-variable-selector {
-    width: 100%;
-    padding: 0.5rem;
-    border: 1px solid var(--border);
-    border-radius: var(--border-radius-sm);
-    font-size: 0.9rem;
-}
-
-/* Dark mode support */
-body.dark-mode .dynamic-command-input,
-body.dark-mode .dynamic-variable-selector {
-    background: var(--dark-surface);
-    color: var(--dark-text);
-    border-color: var(--dark-border);
 }
