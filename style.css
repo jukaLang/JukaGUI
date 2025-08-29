@@ -289,48 +289,12 @@ main {
   font-weight: 900;
 }
 
-.menu-scene-buttons {
-  flex-grow: 1;
-  margin: 0 1rem;
-  display: flex;
-  gap: 4px;
-  overflow-x: auto;
-  background: #2a2a2a !important;
-}
-
-.menu-scene-button {
-  background: #404040;
-  color: #fff;
-  border: none;
-  padding: 3px 7px;
-  margin: 0 1px;
-  border-radius: 3px;
-  font-size: 13px;
-  white-space: nowrap;
-  font-family: 'Roboto', sans-serif;
-  font-weight: 900;
-}
-
-.menu-scene-button.active {
-  background: #007acc;
-  color: #fff;
-}
 
 .menu-clock {
   color: #fff;
-  font-size: 13px;
+  font-size: 18px;
   min-width: 55px;
   text-align: center;
-  font-family: 'Roboto', sans-serif;
-  font-weight: 900;
-}
-
-.menu-language {
-  background: none;
-  border: 1px solid #666;
-  color: #fff;
-  padding: 2px 5px;
-  font-size: 13px;
   font-family: 'Roboto', sans-serif;
   font-weight: 900;
 }
@@ -1065,7 +1029,7 @@ body.dark-mode .file-button {
   border: none;
   padding: 6px 15px;
   border-radius: 20px;
-  font-size: 14px;
+  font-size: 18px;
   white-space: nowrap;
   font-family: 'Roboto', sans-serif;
   font-weight: 900;
@@ -1075,27 +1039,6 @@ body.dark-mode .file-button {
 .menu-scene-button.active {
   background: #007bff;
   color: #fff;
-}
-
-.menu-clock {
-  color: #fff;
-  font-size: 14px;
-  min-width: 60px;
-  text-align: center;
-  font-family: 'Roboto', sans-serif;
-  font-weight: 900;
-}
-
-.menu-language {
-  background: none;
-  border: 1px solid #666;
-  color: #fff;
-  padding: 5px 10px;
-  font-size: 14px;
-  border-radius: 4px;
-  font-family: 'Roboto', sans-serif;
-  font-weight: 900;
-  margin-left: 10px;
 }
 
 /* Properties Panel Tabs */

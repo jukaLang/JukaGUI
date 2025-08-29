@@ -426,12 +426,13 @@ func getTextDimensions(font *ttf.Font, text string) (int32, int32) {
 }
 
 func renderMenu(renderer *sdl.Renderer, config *Config, element Element) {
-	textColor := sdl.Color{R: 255, G: 255, B: 255, A: 255}
-	highlightColor := sdl.Color{R: 0, G: 200, B: 255, A: 255}
 	bgColor := sdl.Color{R: 32, G: 32, B: 32, A: 200}
-	highlightBgColor := sdl.Color{R: 0, G: 150, B: 255, A: 255}
+	textColor := sdl.Color{R: 255, G: 255, B: 255, A: 255}
 
-	font, _ := getFontAndSize(config, "medium")
+	highlightColor := sdl.Color{R: 51, G: 51, B: 51, A: 255}
+	highlightBgColor := sdl.Color{R: 0, G: 123, B: 255, A: 255}
+
+	font, _ := getFontAndSize(config, "small")
 	if font == nil {
 		return
 	}
@@ -441,16 +442,16 @@ func renderMenu(renderer *sdl.Renderer, config *Config, element Element) {
 	renderer.SetDrawColor(bgColor.R, bgColor.G, bgColor.B, bgColor.A)
 	renderer.FillRect(&sdl.Rect{X: 0, Y: element.Y, W: 1280, H: 50})
 
-	buttonX := int32(10)
+	buttonX := int32(30)
 	menuButtonRects = make(map[int]sdl.Rect) // Reset the menu button rects
 
 	for i, scene := range config.Scenes {
 		isSelected := currentSceneIndex == i
 
 		btnColor := textColor
-		rectColor := bgColor
+		rectColor := highlightColor
 		if isSelected {
-			btnColor = highlightColor
+			btnColor = textColor
 			rectColor = highlightBgColor
 		}
 
@@ -458,7 +459,7 @@ func renderMenu(renderer *sdl.Renderer, config *Config, element Element) {
 		textWidth, textHeight := getTextDimensions(font, label)
 
 		// Calculate button dimensions with padding
-		padding := int32(20)
+		padding := int32(15)
 		width := textWidth + padding*2
 		height := int32(40) // Fixed height for menu buttons
 
@@ -468,7 +469,7 @@ func renderMenu(renderer *sdl.Renderer, config *Config, element Element) {
 			Y: element.Y + 5,
 			W: width,
 			H: height,
-		}, 10, rectColor)
+		}, 20, rectColor)
 
 		// Draw label centered in the button
 		renderText(renderer, config, font, label, btnColor,
@@ -486,7 +487,7 @@ func renderMenu(renderer *sdl.Renderer, config *Config, element Element) {
 
 	// Clock display (right side)
 	currentTime := time.Now().Format("15:04")
-	renderText(renderer, config, font, currentTime, textColor, 1200, element.Y+15)
+	renderText(renderer, config, font, currentTime, textColor, 1210, element.Y+15)
 }
 
 func renderText(renderer *sdl.Renderer, config *Config, font *ttf.Font, text string, color sdl.Color, x int32, y int32) (int32, int32) {

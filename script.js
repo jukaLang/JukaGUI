@@ -14,7 +14,6 @@ const titleSizeInput = document.getElementById('titleSize');
 const bigSizeInput = document.getElementById('bigSize');
 const mediumSizeInput = document.getElementById('mediumSize');
 const smallSizeInput = document.getElementById('smallSize');
-const dynamicListFontSizeInput = document.getElementById('dynamicListFontSize');
 const addVariableButton = document.getElementById('addVariableButton');
 const variablesList = document.getElementById('variablesList');
 const loadFileInput = document.getElementById('loadFile');
@@ -184,21 +183,23 @@ function setupFontSizeListeners() {
   bigSizeInput.addEventListener('change', updateAllFontSizes);
   mediumSizeInput.addEventListener('change', updateAllFontSizes);
   smallSizeInput.addEventListener('change', updateAllFontSizes);
-  dynamicListFontSizeInput.addEventListener('change', updateAllFontSizes);
 }
 
 // Update all font sizes when font size inputs change
 function updateAllFontSizes() {
-  document.querySelectorAll('.element').forEach(el => {
-    const fontType = el.getAttribute('data-font');
-    if (fontType) {
-      if (fontType === 'dynamiclist') {
-        el.style.fontSize = (dynamicListFontSizeInput.value || 16) + 'px';
-      } else {
-        el.style.fontSize = getFontSize(fontType) + 'px';
-      }
-    }
-  });
+    document.querySelectorAll('.element').forEach(el => {
+        const fontType = el.getAttribute('data-font');
+        if (fontType && fontType !== 'dynamiclist') {
+            el.style.fontSize = getFontSize(fontType) + 'px';
+        }
+    });
+    document.querySelectorAll('.menu-scene-button').forEach(el => {
+      el.style.fontSize = getFontSize("small") + 'px';
+    });
+
+    document.querySelectorAll('.menu-clock').forEach(el => {
+      el.style.fontSize = getFontSize("small") + 'px';
+    });
 }
 
 // Switch between tabs
@@ -752,29 +753,28 @@ function showElementProperties(el) {
     }
   }
 
-  const dynamicListProperties = document.querySelector('.dynamic-list-properties');
-  if (dynamicListProperties) {
+const dynamicListProperties = document.querySelector('.dynamic-list-properties');
+if (dynamicListProperties) {
     if (el.getAttribute('data-type') === 'dynamiclist') {
-      dynamicListProperties.style.display = 'block';
+        dynamicListProperties.style.display = 'block';
 
-      // Set command path
-      const commandInput = document.getElementById('dynamicCommand');
-      commandInput.value = el.getAttribute('data-command') || '';
-      commandInput.onchange = () => {
-        el.setAttribute('data-command', commandInput.value);
-      };
+        // Set command path
+        const commandInput = document.getElementById('dynamicCommand');
+        commandInput.value = el.getAttribute('data-command') || '';
+        commandInput.onchange = () => {
+            el.setAttribute('data-command', commandInput.value);
+        };
 
-      // Set up variable selector
-      const variableSelector = document.getElementById('dynamicVariable');
-      updateVariableSelector(variableSelector, el.getAttribute('data-variable') || '');
-      variableSelector.onchange = () => {
-        el.setAttribute('data-variable', variableSelector.value);
-      };
+        // Set up variable selector
+        const variableSelector = document.getElementById('dynamicVariable');
+        updateVariableSelector(variableSelector, el.getAttribute('data-variable') || '');
+        variableSelector.onchange = () => {
+            el.setAttribute('data-variable', variableSelector.value);
+        };
     } else {
-      dynamicListProperties.style.display = 'none';
+        dynamicListProperties.style.display = 'none';
     }
-  }
-
+}
 
 
 
