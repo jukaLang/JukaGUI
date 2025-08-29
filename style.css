@@ -2316,3 +2316,74 @@ body.dark-mode .dynamic-list-select {
   color: #2b2d42 !important;
   border: 1px solid #e9ecef !important;
 }
+
+/* Add these styles to ensure dynamic list properties are visible */
+.dynamic-list-properties {
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border);
+}
+
+.dynamic-list-properties .control-group {
+  margin-bottom: 0.8rem;
+}
+
+.dynamic-list-properties input {
+  width: 100%;
+  padding: 0.5rem;
+  border: 1px solid var(--border);
+  border-radius: var(--border-radius-sm);
+  font-size: 0.9rem;
+}
+
+/* Ensure properties panel has enough space */
+.properties-panel {
+  overflow-y: auto;
+  max-height: 70vh;
+}
+
+/* Dark mode support */
+body.dark-mode .dynamic-list-properties {
+  border-color: var(--dark-border);
+}
+
+body.dark-mode .dynamic-list-properties input {
+  background: var(--dark-surface);
+  color: var(--dark-text);
+  border-color: var(--dark-border);
+}
+
+/* FIX: Ensure dynamic list properties are properly displayed */
+#elementPropertiesPanel .dynamic-list-properties {
+  display: block !important;
+}
+
+/* FIX: Ensure dynamic list properties labels are visible in dark mode */
+body.dark-mode .dynamic-list-properties label {
+  color: var(--dark-text) !important;
+}
+
+/* FIX: Ensure dynamic list select elements are visible in dark mode */
+body.dark-mode .dynamic-list-select {
+  background: #ffffff !important;
+  color: #2b2d42 !important;
+  border: 1px solid #e9ecef !important;
+}
+
+/* Improve mobile properties panel visibility */
+@media (max-width: 768px) {
+  #elementPropertiesPanel {
+    display: block !important;
+    height: auto;
+    max-height: 60vh;
+    overflow-y: auto;
+  }
+  
+  body.element-selected #appInfoPanel {
+    display: none !important;
+  }
+  
+  body.element-selected #elementPropertiesPanel {
+    display: block !important;
+  }
+}

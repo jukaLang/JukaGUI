@@ -70,6 +70,7 @@ document.addEventListener('DOMContentLoaded', () => {
   loadDefaultConfig();
   setupMobileElementAdding()
   setupMobileCanvasClick();
+  setupMobileElementSelection();
 });
 
 // Create global tooltip element
@@ -652,21 +653,21 @@ function setupElementEvents(el) {
   // Selection
   // Update the element click event listener to properly switch panels
   // Update the element click event listener to work better on mobile
-  el.addEventListener('click', (e) => {
-    if (e.target.classList.contains('remove-button') ||
-      e.target.classList.contains('menu-scene-button') ||
-      e.target.classList.contains('menu-language') ||
-      e.target.classList.contains('element-input')) {
-      return;
-    }
+el.addEventListener('click', (e) => {
+  if (e.target.classList.contains('remove-button') ||
+    e.target.classList.contains('menu-scene-button') ||
+    e.target.classList.contains('menu-language') ||
+    e.target.classList.contains('element-input')) {
+    return;
+  }
 
-    document.querySelectorAll('.element').forEach(otherEl => {
-      otherEl.classList.remove('selected');
-    });
-    el.classList.add('selected');
-    currentElement = el;
-    document.body.classList.add('element-selected');
-    showElementProperties(el);
+  document.querySelectorAll('.element').forEach(otherEl => {
+    otherEl.classList.remove('selected');
+  });
+  el.classList.add('selected');
+  currentElement = el;
+  document.body.classList.add('element-selected');
+  showElementProperties(el);
 
     // Force the properties panel to show element properties
     document.getElementById('appInfoPanel').style.display = 'none';
@@ -751,12 +752,12 @@ function showElementProperties(el) {
     }
   }
 
-  if (el.getAttribute('data-type') === 'dynamiclist') {
-    setupDynamicListProperties(el);
-  } else {
-    // Remove any existing dynamic list properties if switching to a different element
-    document.querySelectorAll('.dynamic-list-properties').forEach(item => item.remove());
-  }
+if (el.getAttribute('data-type') === 'dynamiclist') {
+  setupDynamicListProperties(el);
+} else {
+  // Remove any existing dynamic list properties if switching to a different element
+  document.querySelectorAll('.dynamic-list-properties').forEach(item => item.remove());
+}
 
 
 
@@ -859,28 +860,28 @@ function showElementProperties(el) {
 
   // Transparency
   if (['image', 'button', 'video', 'input', 'collapsedlist'].includes(el.getAttribute('data-type'))) {
-    const opacitySlider = document.getElementById('opacitySlider');
-    const opacityValue = document.getElementById('opacityValue');
+   const opacitySlider = document.getElementById('opacitySlider');
+const opacityValue = document.getElementById('opacityValue');
 
-    // Get opacity from data attribute or style
-    let opacity = el.getAttribute('data-opacity');
-    if (!opacity) {
-      // Extract opacity from style if not in data attribute
-      const styleOpacity = parseFloat(el.style.opacity || 1);
-      opacity = Math.round(styleOpacity * 100);
-      el.setAttribute('data-opacity', opacity);
-    }
+// Get opacity from data attribute or style
+let opacity = el.getAttribute('data-opacity');
+if (!opacity) {
+  // Extract opacity from style if not in data attribute
+  const styleOpacity = parseFloat(el.style.opacity || 1);
+  opacity = Math.round(styleOpacity * 100);
+  el.setAttribute('data-opacity', opacity);
+}
 
-    opacitySlider.value = opacity;
-    opacityValue.textContent = `${opacity}%`;
-    el.style.opacity = opacity / 100;
+opacitySlider.value = opacity;
+opacityValue.textContent = `${opacity}%`;
+el.style.opacity = opacity / 100;
 
-    opacitySlider.oninput = () => {
-      const value = opacitySlider.value;
-      el.style.opacity = value / 100;
-      el.setAttribute('data-opacity', value);
-      opacityValue.textContent = `${value}%`;
-    };
+opacitySlider.oninput = () => {
+  const value = opacitySlider.value;
+  el.style.opacity = value / 100;
+  el.setAttribute('data-opacity', value);
+  opacityValue.textContent = `${value}%`;
+};
   }
 
   // Trigger controls
@@ -1809,7 +1810,7 @@ function setupDynamicListProperties(el) {
   // Create container for dynamic list properties
   const container = document.createElement('div');
   container.className = 'dynamic-list-properties';
-
+  
   // Command Path input
   const commandGroup = document.createElement('div');
   commandGroup.className = 'control-group';
@@ -1842,10 +1843,10 @@ function setupDynamicListProperties(el) {
     el.setAttribute('data-variable', variableInput.value);
   };
 
-  // Add to properties panel - insert after the trigger controls
-  const triggerControls = document.querySelector('.trigger-controls');
-  if (triggerControls) {
-    triggerControls.parentNode.insertBefore(container, triggerControls.nextSibling);
+  // Add to properties panel - insert after the style controls
+  const styleControls = document.querySelector('.style-controls');
+  if (styleControls) {
+    styleControls.parentNode.insertBefore(container, styleControls.nextSibling);
   } else {
     elementProperties.appendChild(container);
   }
@@ -1932,4 +1933,16 @@ function setupDynamicListExecution(el) {
       executeDynamicListCommand(command, variable);
     }
   });
+}
+
+function setupMobileElementSelection() {
+  if (window.innerWidth <= 768) {
+    // Ensure properties panel shows element properties when an element is selected
+    document.addEventListener('click', (e) => {
+      if (e.target.closest('.element') && !e.target.closest('.menu')) {
+        document.getElementById('appInfoPanel').style.display = 'none';
+        document.getElementById('elementPropertiesPanel').style.display = 'block';
+      }
+    });
+  }
 }
