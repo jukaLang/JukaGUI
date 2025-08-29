@@ -14,6 +14,7 @@ const titleSizeInput = document.getElementById('titleSize');
 const bigSizeInput = document.getElementById('bigSize');
 const mediumSizeInput = document.getElementById('mediumSize');
 const smallSizeInput = document.getElementById('smallSize');
+const dynamicListFontSizeInput = document.getElementById('dynamicListFontSize');
 const addVariableButton = document.getElementById('addVariableButton');
 const variablesList = document.getElementById('variablesList');
 const loadFileInput = document.getElementById('loadFile');
@@ -182,6 +183,7 @@ function setupFontSizeListeners() {
   bigSizeInput.addEventListener('change', updateAllFontSizes);
   mediumSizeInput.addEventListener('change', updateAllFontSizes);
   smallSizeInput.addEventListener('change', updateAllFontSizes);
+  dynamicListFontSizeInput.addEventListener('change', updateAllFontSizes);
 }
 
 // Update all font sizes when font size inputs change
@@ -189,7 +191,11 @@ function updateAllFontSizes() {
   document.querySelectorAll('.element').forEach(el => {
     const fontType = el.getAttribute('data-font');
     if (fontType) {
-      el.style.fontSize = getFontSize(fontType) + 'px';
+      if (fontType === 'dynamiclist') {
+        el.style.fontSize = (dynamicListFontSizeInput.value || 16) + 'px';
+      } else {
+        el.style.fontSize = getFontSize(fontType) + 'px';
+      }
     }
   });
 }
@@ -345,9 +351,6 @@ function loadScene(sceneName) {
 
 // Element Management
 function addElement(type, x, y) {
-  if (type === 'collapsedlist') {
-    type = 'dynamiclist'; // Convert old type to new type
-  }
   if (type === 'menu-element') {
     type = 'menu'; // Convert to the actual type used on canvas
   }
@@ -370,7 +373,7 @@ function addElement(type, x, y) {
     image: { width: '100px', height: '100px' },
     input: { width: '150px', height: '40px' },
     video: { width: '200px', height: '150px' },
-    collapsedlist: { width: '600px', height: '40px' }, // Added this line
+    dynamiclist: { width: '600px', height: '40px' }, // Add this line
     default: { width: 'auto', height: 'auto' }
   };
 
@@ -390,9 +393,9 @@ function addElement(type, x, y) {
 
   if (type === 'dynamiclist') {
     el.innerHTML = `
-        <span class="text-content">Dynamic List</span>
-        <span class="remove-button">✕</span>
-    `;
+      <span class="text-content">Dynamic List</span>
+      <span class="remove-button">✕</span>
+  `;
     el.setAttribute('data-command', '');
     el.setAttribute('data-variable', '');
     setupDynamicListExecution(el);
@@ -633,6 +636,16 @@ function setupElementEvents(el) {
     } else if (type === 'input') {
       const input = el.querySelector('.element-input');
       if (input) input.focus();
+    } else if (type === 'dynamiclist') {
+      const command = prompt("Enter command path:", el.getAttribute('data-command') || '');
+      if (command !== null) {
+        el.setAttribute('data-command', command);
+      }
+
+      const variable = prompt("Enter variable name:", el.getAttribute('data-variable') || '');
+      if (variable !== null) {
+        el.setAttribute('data-variable', variable);
+      }
     }
   });
 
@@ -714,6 +727,7 @@ function handleResize(el, event) {
   document.addEventListener('mouseup', onMouseUp);
 }
 
+
 function showElementProperties(el) {
   if (window.innerWidth <= 768) {
     document.getElementById('appInfoPanel').style.display = 'none';
@@ -739,7 +753,12 @@ function showElementProperties(el) {
 
   if (el.getAttribute('data-type') === 'dynamiclist') {
     setupDynamicListProperties(el);
+  } else {
+    // Remove any existing dynamic list properties if switching to a different element
+    document.querySelectorAll('.dynamic-list-properties').forEach(item => item.remove());
   }
+
+
 
   elementProperties.classList.add('visible');
 
@@ -789,7 +808,7 @@ function showElementProperties(el) {
 
 
   // Add to the element properties section
-  if (el.getAttribute('data-type') === 'collapsedlist') {
+  if (el.getAttribute('data-type') === 'dynamiclist') {
     // Add command input
     const commandInput = document.createElement('input');
     commandInput.type = 'text';
@@ -1790,28 +1809,25 @@ function setupDynamicListProperties(el) {
   // Create container for dynamic list properties
   const container = document.createElement('div');
   container.className = 'dynamic-list-properties';
-  container.style.marginTop = '1rem';
-  container.style.paddingTop = '1rem';
-  container.style.borderTop = '1px solid var(--border)';
 
   // Command Path input
   const commandGroup = document.createElement('div');
   commandGroup.className = 'control-group';
   commandGroup.innerHTML = `
-        <label for="dynamicCommand"><i class="fas fa-terminal"></i> Command Path:</label>
-        <input type="text" id="dynamicCommand" class="dynamic-command-input" 
-               placeholder="Path to executable" value="${el.getAttribute('data-command') || ''}">
-    `;
+    <label for="dynamicCommand"><i class="fas fa-terminal"></i> Command Path:</label>
+    <input type="text" id="dynamicCommand" class="dynamic-command-input" 
+           placeholder="Path to executable" value="${el.getAttribute('data-command') || ''}">
+  `;
   container.appendChild(commandGroup);
 
   // Variable input
   const variableGroup = document.createElement('div');
   variableGroup.className = 'control-group';
   variableGroup.innerHTML = `
-        <label for="dynamicVariable"><i class="fas fa-code"></i> Variable:</label>
-        <input type="text" id="dynamicVariable" class="dynamic-variable-input" 
-               placeholder="Variable to store selection" value="${el.getAttribute('data-variable') || ''}">
-    `;
+    <label for="dynamicVariable"><i class="fas fa-code"></i> Variable:</label>
+    <input type="text" id="dynamicVariable" class="dynamic-variable-input" 
+           placeholder="Variable to store selection" value="${el.getAttribute('data-variable') || ''}">
+  `;
   container.appendChild(variableGroup);
 
   // Add event listeners
@@ -1826,8 +1842,13 @@ function setupDynamicListProperties(el) {
     el.setAttribute('data-variable', variableInput.value);
   };
 
-  // Add to properties panel
-  elementProperties.appendChild(container);
+  // Add to properties panel - insert after the trigger controls
+  const triggerControls = document.querySelector('.trigger-controls');
+  if (triggerControls) {
+    triggerControls.parentNode.insertBefore(container, triggerControls.nextSibling);
+  } else {
+    elementProperties.appendChild(container);
+  }
 }
 
 function executeDynamicListCommand(command, variable) {
