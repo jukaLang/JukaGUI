@@ -68,7 +68,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   loadDefaultConfig();
   setupMobileElementAdding()
-   setupMobileCanvasClick();
+  setupMobileCanvasClick();
 });
 
 // Create global tooltip element
@@ -346,8 +346,8 @@ function loadScene(sceneName) {
 // Element Management
 function addElement(type, x, y) {
   if (type === 'collapsedlist') {
-        type = 'dynamiclist'; // Convert old type to new type
-    }
+    type = 'dynamiclist'; // Convert old type to new type
+  }
   if (type === 'menu-element') {
     type = 'menu'; // Convert to the actual type used on canvas
   }
@@ -389,10 +389,14 @@ function addElement(type, x, y) {
 
 
   if (type === 'dynamiclist') {
-        el.setAttribute('data-command', '');
-        el.setAttribute('data-variable', '');
-        setupDynamicListExecution(el);
-    } else if (type === 'menu') {
+    el.innerHTML = `
+        <span class="text-content">Dynamic List</span>
+        <span class="remove-button">✕</span>
+    `;
+    el.setAttribute('data-command', '');
+    el.setAttribute('data-variable', '');
+    setupDynamicListExecution(el);
+  } else if (type === 'menu') {
     el.style.top = `${dimensions.menu.y}px`;
     el.style.left = '0px';
     el.innerHTML = `
@@ -733,9 +737,9 @@ function showElementProperties(el) {
     }
   }
 
- if (el.getAttribute('data-type') === 'dynamiclist') {
-        setupDynamicListProperties(el);
-    }
+  if (el.getAttribute('data-type') === 'dynamiclist') {
+    setupDynamicListProperties(el);
+  }
 
   elementProperties.classList.add('visible');
 
@@ -1273,11 +1277,11 @@ function createJukaApp() {
           if (textSpan) element.text = textSpan.textContent;
         }
 
-        if (type === 'collapsedlist') {
+        if (type === 'dynamiclist') {
           element.command = el.getAttribute('data-command') || '';
-          element.listVariable = el.getAttribute('data-list-variable') || '';
-          element.selectedVariable = el.getAttribute('data-selected-variable') || '';
+          element.variable = el.getAttribute('data-variable') || '';
         }
+
 
         if (type === 'image') {
           const img = el.querySelector('.element-image');
@@ -1541,24 +1545,24 @@ function calculateTextDimensions(text, fontSize, fontFamily = 'Roboto, sans-seri
 }
 
 function createElementFromData(elementData) {
-    const el = document.createElement('div');
-    el.className = 'element';
-    el.style.position = 'absolute';
-    el.style.left = `${elementData.x}px`;
-    el.style.top = `${elementData.y}px`;
-    el.setAttribute('data-type', elementData.type);
-    el.setAttribute('data-x', elementData.x);
-    el.setAttribute('data-y', elementData.y);
+  const el = document.createElement('div');
+  el.className = 'element';
+  el.style.position = 'absolute';
+  el.style.left = `${elementData.x}px`;
+  el.style.top = `${elementData.y}px`;
+  el.setAttribute('data-type', elementData.type);
+  el.setAttribute('data-x', elementData.x);
+  el.setAttribute('data-y', elementData.y);
 
-    // Fix opacity handling
-    if (elementData.opacity !== undefined) {
-        const opacityValue = Math.round(elementData.opacity * 100);
-        el.style.opacity = elementData.opacity;
-        el.setAttribute('data-opacity', opacityValue);
-    } else {
-        el.style.opacity = 1;
-        el.setAttribute('data-opacity', '100');
-    }
+  // Fix opacity handling
+  if (elementData.opacity !== undefined) {
+    const opacityValue = Math.round(elementData.opacity * 100);
+    el.style.opacity = elementData.opacity;
+    el.setAttribute('data-opacity', opacityValue);
+  } else {
+    el.style.opacity = 1;
+    el.setAttribute('data-opacity', '100');
+  }
 
   // Handle menu element specifically
   if (elementData.type === 'menu') {
@@ -1620,6 +1624,11 @@ function createElementFromData(elementData) {
   el.appendChild(removeButton);
 
   // Set element-specific properties
+  if (elementData.type === 'dynamiclist') {
+    el.setAttribute('data-command', elementData.command || '');
+    el.setAttribute('data-variable', elementData.variable || '');
+    setupDynamicListExecution(el);
+  }
   if (elementData.type === 'button') {
     el.setAttribute('data-color', elementData.color || '#000000');
     el.style.color = elementData.color || '#000000';
@@ -1775,133 +1784,131 @@ function setupMobileDoubleTap() {
 }
 
 function setupDynamicListProperties(el) {
-    // Remove any existing dynamic list properties
-    document.querySelectorAll('.dynamic-list-properties').forEach(item => item.remove());
+  // Remove any existing dynamic list properties
+  document.querySelectorAll('.dynamic-list-properties').forEach(item => item.remove());
 
-    if (el.getAttribute('data-type') === 'dynamiclist') {
-        // Create container for dynamic list properties
-        const container = document.createElement('div');
-        container.className = 'dynamic-list-properties';
-        container.style.marginTop = '1rem';
-        container.style.paddingTop = '1rem';
-        container.style.borderTop = '1px solid var(--border)';
+  // Create container for dynamic list properties
+  const container = document.createElement('div');
+  container.className = 'dynamic-list-properties';
+  container.style.marginTop = '1rem';
+  container.style.paddingTop = '1rem';
+  container.style.borderTop = '1px solid var(--border)';
 
-        // Command Path input
-        const commandGroup = document.createElement('div');
-        commandGroup.className = 'control-group';
-        commandGroup.innerHTML = `
-            <label for="dynamicCommand"><i class="fas fa-terminal"></i> Command Path:</label>
-            <input type="text" id="dynamicCommand" class="dynamic-command-input" 
-                   placeholder="Path to executable" value="${el.getAttribute('data-command') || ''}">
-        `;
-        container.appendChild(commandGroup);
+  // Command Path input
+  const commandGroup = document.createElement('div');
+  commandGroup.className = 'control-group';
+  commandGroup.innerHTML = `
+        <label for="dynamicCommand"><i class="fas fa-terminal"></i> Command Path:</label>
+        <input type="text" id="dynamicCommand" class="dynamic-command-input" 
+               placeholder="Path to executable" value="${el.getAttribute('data-command') || ''}">
+    `;
+  container.appendChild(commandGroup);
 
-        // Variable input
-        const variableGroup = document.createElement('div');
-        variableGroup.className = 'control-group';
-        variableGroup.innerHTML = `
-            <label for="dynamicVariable"><i class="fas fa-code"></i> Variable:</label>
-            <input type="text" id="dynamicVariable" class="dynamic-variable-input" 
-                   placeholder="Variable to store selection" value="${el.getAttribute('data-variable') || ''}">
-        `;
-        container.appendChild(variableGroup);
+  // Variable input
+  const variableGroup = document.createElement('div');
+  variableGroup.className = 'control-group';
+  variableGroup.innerHTML = `
+        <label for="dynamicVariable"><i class="fas fa-code"></i> Variable:</label>
+        <input type="text" id="dynamicVariable" class="dynamic-variable-input" 
+               placeholder="Variable to store selection" value="${el.getAttribute('data-variable') || ''}">
+    `;
+  container.appendChild(variableGroup);
 
-        // Add event listeners
-        const commandInput = container.querySelector('#dynamicCommand');
-        const variableInput = container.querySelector('#dynamicVariable');
+  // Add event listeners
+  const commandInput = container.querySelector('#dynamicCommand');
+  const variableInput = container.querySelector('#dynamicVariable');
 
-        commandInput.onchange = () => {
-            el.setAttribute('data-command', commandInput.value);
-        };
+  commandInput.onchange = () => {
+    el.setAttribute('data-command', commandInput.value);
+  };
 
-        variableInput.onchange = () => {
-            el.setAttribute('data-variable', variableInput.value);
-        };
+  variableInput.onchange = () => {
+    el.setAttribute('data-variable', variableInput.value);
+  };
 
-        // Add to properties panel
-        elementProperties.appendChild(container);
-    }
+  // Add to properties panel
+  elementProperties.appendChild(container);
 }
 
 function executeDynamicListCommand(command, variable) {
-    // This would be implemented in the Juka runtime
-    console.log(`Executing command: ${command}, storing in: ${variable}`);
-    // Simulate command execution
-    const result = [{ name: "Item 1", value: "1" }, { name: "Item 2", value: "2" }];
-    showDynamicListItems(el, result, variable);
+  // This would be implemented in the Juka runtime
+  console.log(`Executing command: ${command}, storing in: ${variable}`);
+  // Simulate command execution
+  const result = [{ name: "Item 1", value: "1" }, { name: "Item 2", value: "2" }];
+  showDynamicListItems(el, result, variable);
 }
 
 function showDynamicListItems(el, items, variable) {
-    // Clear existing content
-    el.innerHTML = '';
+  // Clear existing content
+  el.innerHTML = '';
 
-    // Create dropdown/list UI
-    const select = document.createElement('select');
-    select.className = 'dynamic-list-select';
-    select.style.width = '100%';
-    select.style.height = '100%';
+  // Create dropdown/list UI
+  const select = document.createElement('select');
+  select.className = 'dynamic-list-select';
+  select.style.width = '100%';
+  select.style.height = '100%';
 
-    // Add items to select
-    items.forEach(item => {
-        const option = document.createElement('option');
-        option.value = item.value;
-        option.textContent = item.name;
-        select.appendChild(option);
-    });
+  // Add items to select
+  items.forEach(item => {
+    const option = document.createElement('option');
+    option.value = item.value;
+    option.textContent = item.name;
+    select.appendChild(option);
+  });
 
-    // Handle selection
-    select.addEventListener('change', () => {
-        if (variable) {
-            variables[variable] = select.value;
+  // Handle selection
+  select.addEventListener('change', () => {
+    if (variable) {
+      variables[variable] = select.value;
 
-            // Update all elements with variables
-            document.querySelectorAll('.text-content').forEach(textEl => {
-                processTextForVariables(textEl);
-            });
-        }
-    });
+      // Update all elements with variables
+      document.querySelectorAll('.text-content').forEach(textEl => {
+        processTextForVariables(textEl);
+      });
+    }
+  });
 
-    el.appendChild(select);
+  el.appendChild(select);
 
-    // Add remove button
-    const removeButton = document.createElement('span');
-    removeButton.textContent = '✕';
-    removeButton.className = 'remove-button';
-    removeButton.addEventListener('click', (e) => {
-        e.stopPropagation();
-        el.remove();
-    });
-    el.appendChild(removeButton);
+  // Add remove button
+  const removeButton = document.createElement('span');
+  removeButton.textContent = '✕';
+  removeButton.className = 'remove-button';
+  removeButton.addEventListener('click', (e) => {
+    e.stopPropagation();
+    el.remove();
+  });
+  el.appendChild(removeButton);
 }
 
 
 
 function setupMobileCanvasClick() {
-    canvas.addEventListener('touchstart', (e) => {
-        if (e.target === canvas) {
-            currentElement = null;
-            document.querySelectorAll('.element').forEach(el => el.classList.remove('selected'));
-            document.body.classList.remove('element-selected');
-            switchTab('app-properties');
-            
-            // Scroll to top of properties panel on mobile
-            if (window.innerWidth <= 768) {
-                document.querySelector('.right-sidebar').scrollTo(0, 0);
-            }
-        }
-    });
+  canvas.addEventListener('touchstart', (e) => {
+    if (e.target === canvas) {
+      currentElement = null;
+      document.querySelectorAll('.element').forEach(el => el.classList.remove('selected'));
+      document.body.classList.remove('element-selected');
+      switchTab('app-properties');
+
+      // Scroll to top of properties panel on mobile
+      if (window.innerWidth <= 768) {
+        document.querySelector('.right-sidebar').scrollTo(0, 0);
+      }
+    }
+  });
 }
 
 function setupDynamicListExecution(el) {
-    el.addEventListener('click', (e) => {
-        if (e.target !== el && !e.target.classList.contains('remove-button')) return;
+  el.addEventListener('click', (e) => {
+    if (e.target !== el && !e.target.classList.contains('remove-button')) return;
 
-        const command = el.getAttribute('data-command');
-        const variable = el.getAttribute('data-variable');
+    const command = el.getAttribute('data-command');
+    const variable = el.getAttribute('data-variable');
 
-        if (command && variable) {
-            // Execute command and store result
-            executeDynamicListCommand(command, variable);
-        }
-    });
+    if (command && variable) {
+      // Execute command and store result
+      executeDynamicListCommand(command, variable);
+    }
+  });
 }
