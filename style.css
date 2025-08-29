@@ -2387,3 +2387,27 @@ body.dark-mode .dynamic-list-select {
     display: block !important;
   }
 }
+
+/* Add these styles for the dynamic list properties */
+.dynamic-list-properties {
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--border);
+}
+
+.dynamic-command-input,
+.dynamic-variable-selector {
+    width: 100%;
+    padding: 0.5rem;
+    border: 1px solid var(--border);
+    border-radius: var(--border-radius-sm);
+    font-size: 0.9rem;
+}
+
+/* Dark mode support */
+body.dark-mode .dynamic-command-input,
+body.dark-mode .dynamic-variable-selector {
+    background: var(--dark-surface);
+    color: var(--dark-text);
+    border-color: var(--dark-border);
+}

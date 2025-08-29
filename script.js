@@ -653,21 +653,21 @@ function setupElementEvents(el) {
   // Selection
   // Update the element click event listener to properly switch panels
   // Update the element click event listener to work better on mobile
-el.addEventListener('click', (e) => {
-  if (e.target.classList.contains('remove-button') ||
-    e.target.classList.contains('menu-scene-button') ||
-    e.target.classList.contains('menu-language') ||
-    e.target.classList.contains('element-input')) {
-    return;
-  }
+  el.addEventListener('click', (e) => {
+    if (e.target.classList.contains('remove-button') ||
+      e.target.classList.contains('menu-scene-button') ||
+      e.target.classList.contains('menu-language') ||
+      e.target.classList.contains('element-input')) {
+      return;
+    }
 
-  document.querySelectorAll('.element').forEach(otherEl => {
-    otherEl.classList.remove('selected');
-  });
-  el.classList.add('selected');
-  currentElement = el;
-  document.body.classList.add('element-selected');
-  showElementProperties(el);
+    document.querySelectorAll('.element').forEach(otherEl => {
+      otherEl.classList.remove('selected');
+    });
+    el.classList.add('selected');
+    currentElement = el;
+    document.body.classList.add('element-selected');
+    showElementProperties(el);
 
     // Force the properties panel to show element properties
     document.getElementById('appInfoPanel').style.display = 'none';
@@ -752,12 +752,29 @@ function showElementProperties(el) {
     }
   }
 
-if (el.getAttribute('data-type') === 'dynamiclist') {
-  setupDynamicListProperties(el);
-} else {
-  // Remove any existing dynamic list properties if switching to a different element
-  document.querySelectorAll('.dynamic-list-properties').forEach(item => item.remove());
-}
+  const dynamicListProperties = document.querySelector('.dynamic-list-properties');
+  if (dynamicListProperties) {
+    if (el.getAttribute('data-type') === 'dynamiclist') {
+      dynamicListProperties.style.display = 'block';
+
+      // Set command path
+      const commandInput = document.getElementById('dynamicCommand');
+      commandInput.value = el.getAttribute('data-command') || '';
+      commandInput.onchange = () => {
+        el.setAttribute('data-command', commandInput.value);
+      };
+
+      // Set up variable selector
+      const variableSelector = document.getElementById('dynamicVariable');
+      updateVariableSelector(variableSelector, el.getAttribute('data-variable') || '');
+      variableSelector.onchange = () => {
+        el.setAttribute('data-variable', variableSelector.value);
+      };
+    } else {
+      dynamicListProperties.style.display = 'none';
+    }
+  }
+
 
 
 
@@ -860,28 +877,28 @@ if (el.getAttribute('data-type') === 'dynamiclist') {
 
   // Transparency
   if (['image', 'button', 'video', 'input', 'collapsedlist'].includes(el.getAttribute('data-type'))) {
-   const opacitySlider = document.getElementById('opacitySlider');
-const opacityValue = document.getElementById('opacityValue');
+    const opacitySlider = document.getElementById('opacitySlider');
+    const opacityValue = document.getElementById('opacityValue');
 
-// Get opacity from data attribute or style
-let opacity = el.getAttribute('data-opacity');
-if (!opacity) {
-  // Extract opacity from style if not in data attribute
-  const styleOpacity = parseFloat(el.style.opacity || 1);
-  opacity = Math.round(styleOpacity * 100);
-  el.setAttribute('data-opacity', opacity);
-}
+    // Get opacity from data attribute or style
+    let opacity = el.getAttribute('data-opacity');
+    if (!opacity) {
+      // Extract opacity from style if not in data attribute
+      const styleOpacity = parseFloat(el.style.opacity || 1);
+      opacity = Math.round(styleOpacity * 100);
+      el.setAttribute('data-opacity', opacity);
+    }
 
-opacitySlider.value = opacity;
-opacityValue.textContent = `${opacity}%`;
-el.style.opacity = opacity / 100;
+    opacitySlider.value = opacity;
+    opacityValue.textContent = `${opacity}%`;
+    el.style.opacity = opacity / 100;
 
-opacitySlider.oninput = () => {
-  const value = opacitySlider.value;
-  el.style.opacity = value / 100;
-  el.setAttribute('data-opacity', value);
-  opacityValue.textContent = `${value}%`;
-};
+    opacitySlider.oninput = () => {
+      const value = opacitySlider.value;
+      el.style.opacity = value / 100;
+      el.setAttribute('data-opacity', value);
+      opacityValue.textContent = `${value}%`;
+    };
   }
 
   // Trigger controls
@@ -1068,7 +1085,11 @@ function addVariable() {
 
     variablesList.appendChild(variableItem);
 
-    // Update variable change selector
+    document.querySelectorAll('.dynamic-variable-selector').forEach(selector => {
+      const currentValue = selector.value;
+      updateVariableSelector(selector, currentValue);
+    });
+
     updateVariableChangeSelector();
   }
 }
@@ -1101,6 +1122,11 @@ function deleteVariable(name) {
       if (item.querySelector('.variable-name').textContent === name) {
         item.remove();
       }
+    });
+
+    document.querySelectorAll('.dynamic-variable-selector').forEach(selector => {
+      const currentValue = selector.value === name ? '' : selector.value;
+      updateVariableSelector(selector, currentValue);
     });
 
     // Update variable change selector
@@ -1810,7 +1836,7 @@ function setupDynamicListProperties(el) {
   // Create container for dynamic list properties
   const container = document.createElement('div');
   container.className = 'dynamic-list-properties';
-  
+
   // Command Path input
   const commandGroup = document.createElement('div');
   commandGroup.className = 'control-group';
@@ -1945,4 +1971,25 @@ function setupMobileElementSelection() {
       }
     });
   }
+}
+
+function updateVariableSelector(selector, currentValue) {
+  selector.innerHTML = '';
+
+  // Add empty option
+  const emptyOption = document.createElement('option');
+  emptyOption.value = '';
+  emptyOption.textContent = 'Select variable';
+  selector.appendChild(emptyOption);
+
+  // Add all variables
+  Object.keys(variables).forEach(variableName => {
+    const option = document.createElement('option');
+    option.value = variableName;
+    option.textContent = variableName;
+    if (variableName === currentValue) {
+      option.selected = true;
+    }
+    selector.appendChild(option);
+  });
 }
