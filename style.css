@@ -2181,12 +2181,81 @@ body.dark-mode .dynamic-list-select {
     max-height: 60vh;
     overflow-y: auto;
   }
-  
+
   body.element-selected #appInfoPanel {
     display: none !important;
   }
-  
+
   body.element-selected #elementPropertiesPanel {
     display: block !important;
   }
+}
+
+.video-variable,
+.image-variable {
+  width: 100%;
+  padding: 0.5rem;
+  border: 1px solid var(--border);
+  border-radius: var(--border-radius-sm);
+  font-size: 0.9rem;
+  margin-bottom: 0.5rem;
+}
+
+/* Ensure dynamic list properties are properly hidden for non-dynamic list elements */
+#elementPropertiesPanel .dynamic-list-properties {
+  display: none;
+}
+
+.element[data-type="dynamiclist"]~#elementPropertiesPanel .dynamic-list-properties {
+  display: block;
+}
+
+
+.media-variable-selector {
+  width: 100%;
+  padding: 0.5rem;
+  border: 1px solid var(--border);
+  border-radius: var(--border-radius-sm);
+  font-size: 0.9rem;
+  margin-bottom: 0.5rem;
+}
+
+/* Ensure dynamic list properties are properly hidden for non-dynamic list elements */
+.dynamic-list-properties {
+    display: none;
+}
+
+/* Show only for dynamic list elements */
+.element[data-type="dynamiclist"] ~ #elementPropertiesPanel .dynamic-list-properties {
+    display: block;
+}
+
+/* Style for media variable selector */
+.media-variable-selector {
+    width: 100%;
+    padding: 0.5rem;
+    border: 1px solid var(--border);
+    border-radius: var(--border-radius-sm);
+    font-size: 0.9rem;
+    margin-bottom: 0.5rem;
+}
+
+/* Ensure dynamic list properties are properly hidden for non-dynamic list elements */
+.dynamic-list-properties {
+    display: none;
+}
+
+/* Show only for dynamic list elements */
+.element[data-type="dynamiclist"] ~ #elementPropertiesPanel .dynamic-list-properties {
+    display: block;
+}
+
+/* Style for media variable selector */
+.media-variable-selector {
+    width: 100%;
+    padding: 0.5rem;
+    border: 1px solid var(--border);
+    border-radius: var(--border-radius-sm);
+    font-size: 0.9rem;
+    margin-bottom: 0.5rem;
 }

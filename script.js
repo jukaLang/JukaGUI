@@ -187,19 +187,19 @@ function setupFontSizeListeners() {
 
 // Update all font sizes when font size inputs change
 function updateAllFontSizes() {
-    document.querySelectorAll('.element').forEach(el => {
-        const fontType = el.getAttribute('data-font');
-        if (fontType && fontType !== 'dynamiclist') {
-            el.style.fontSize = getFontSize(fontType) + 'px';
-        }
-    });
-    document.querySelectorAll('.menu-scene-button').forEach(el => {
-      el.style.fontSize = getFontSize("small") + 'px';
-    });
+  document.querySelectorAll('.element').forEach(el => {
+    const fontType = el.getAttribute('data-font');
+    if (fontType && fontType !== 'dynamiclist') {
+      el.style.fontSize = getFontSize(fontType) + 'px';
+    }
+  });
+  document.querySelectorAll('.menu-scene-button').forEach(el => {
+    el.style.fontSize = getFontSize("small") + 'px';
+  });
 
-    document.querySelectorAll('.menu-clock').forEach(el => {
-      el.style.fontSize = getFontSize("small") + 'px';
-    });
+  document.querySelectorAll('.menu-clock').forEach(el => {
+    el.style.fontSize = getFontSize("small") + 'px';
+  });
 }
 
 // Switch between tabs
@@ -731,6 +731,8 @@ function handleResize(el, event) {
 
 
 function showElementProperties(el) {
+  document.querySelectorAll('.dynamic-list-properties input').forEach(input => input.remove());
+
   if (window.innerWidth <= 768) {
     document.getElementById('appInfoPanel').style.display = 'none';
     document.getElementById('elementPropertiesPanel').style.display = 'block';
@@ -753,28 +755,33 @@ function showElementProperties(el) {
     }
   }
 
-const dynamicListProperties = document.querySelector('.dynamic-list-properties');
-if (dynamicListProperties) {
-    if (el.getAttribute('data-type') === 'dynamiclist') {
-        dynamicListProperties.style.display = 'block';
+  // Dynamic List properties - only show for dynamiclist elements
+  const dynamicListProperties = document.querySelector('.dynamic-list-properties');
+  if (el.getAttribute('data-type') === 'dynamiclist') {
+    dynamicListProperties.style.display = 'block';
 
-        // Set command path
-        const commandInput = document.getElementById('dynamicCommand');
-        commandInput.value = el.getAttribute('data-command') || '';
-        commandInput.onchange = () => {
-            el.setAttribute('data-command', commandInput.value);
-        };
+    // Set command path
+    const commandInput = document.getElementById('dynamicCommand');
+    commandInput.value = el.getAttribute('data-command') || '';
+    commandInput.onchange = () => {
+      el.setAttribute('data-command', commandInput.value);
+    };
 
-        // Set up variable selector
-        const variableSelector = document.getElementById('dynamicVariable');
-        updateVariableSelector(variableSelector, el.getAttribute('data-variable') || '');
-        variableSelector.onchange = () => {
-            el.setAttribute('data-variable', variableSelector.value);
-        };
-    } else {
-        dynamicListProperties.style.display = 'none';
-    }
-}
+    // Set up variable selector
+    const variableSelector = document.getElementById('dynamicVariable');
+    updateVariableSelector(variableSelector, el.getAttribute('data-variable') || '');
+    variableSelector.onchange = () => {
+      el.setAttribute('data-variable', variableSelector.value);
+    };
+  } else {
+    dynamicListProperties.style.display = 'none';
+  }
+
+
+  // Hide all trigger options first
+  document.querySelectorAll('#triggerOptions > *').forEach(el => {
+    el.style.display = 'none';
+  });
 
 
 
@@ -822,30 +829,6 @@ if (dynamicListProperties) {
     [datax, datay, dataWidth, dataHeight].forEach(input => {
       if (input) input.oninput = updatePositionSize;
     });
-  }
-
-
-  // Add to the element properties section
-  if (el.getAttribute('data-type') === 'dynamiclist') {
-    // Add command input
-    const commandInput = document.createElement('input');
-    commandInput.type = 'text';
-    commandInput.placeholder = 'Command to execute';
-    commandInput.value = el.getAttribute('data-command') || '';
-    commandInput.onchange = () => {
-      el.setAttribute('data-command', commandInput.value);
-    };
-    elementProperties.appendChild(commandInput);
-
-    // Add list variable input
-    const listVarInput = document.createElement('input');
-    listVarInput.type = 'text';
-    listVarInput.placeholder = 'Variable to store result';
-    listVarInput.value = el.getAttribute('data-list-variable') || '';
-    listVarInput.onchange = () => {
-      el.setAttribute('data-list-variable', listVarInput.value);
-    };
-    elementProperties.appendChild(listVarInput);
   }
 
   // Text styling
@@ -905,11 +888,6 @@ if (dynamicListProperties) {
   const triggerSelector = document.getElementById('triggerSelector');
   triggerSelector.value = el.getAttribute('data-trigger') || '';
 
-  // Hide all trigger options first
-  document.querySelectorAll('#triggerOptions > *').forEach(el => {
-    el.style.display = 'none';
-  });
-
   // Show relevant options based on selected trigger
   if (triggerSelector.value === 'change_scene') {
     document.getElementById('sceneChangeSelector').style.display = 'block';
@@ -924,12 +902,24 @@ if (dynamicListProperties) {
     document.getElementById('variableChangeSelector').value = el.getAttribute('data-variable-change') || '';
     document.getElementById('variableChangeValue').style.display = 'block';
     document.getElementById('variableChangeValue').value = el.getAttribute('data-variable-change-value') || '';
-  } else if (triggerSelector.value === 'play_video') {
-    document.getElementById('videoPath').style.display = 'block';
-    document.getElementById('videoPath').value = el.getAttribute('data-video-path') || '';
-  } else if (triggerSelector.value === 'play_image') {
-    document.getElementById('imagePath').style.display = 'block';
-    document.getElementById('imagePath').value = el.getAttribute('data-image-path') || '';
+  } else if (triggerSelector.value === 'play_video' || triggerSelector.value === 'play_image') {
+    document.getElementById('mediaVariableSelector').style.display = 'block';
+
+    // Set up media variable selector
+    const mediaVariableSelector = document.getElementById('mediaVariableSelector');
+    updateVariableSelector(mediaVariableSelector, el.getAttribute('data-media-variable') || '');
+    mediaVariableSelector.onchange = () => {
+      el.setAttribute('data-media-variable', mediaVariableSelector.value);
+    };
+  }
+
+
+  // Add this change handler to the existing ones in showElementProperties function
+  const mediaVariableSelectorEl = document.getElementById('mediaVariableSelector');
+  if (mediaVariableSelectorEl) {
+    mediaVariableSelectorEl.onchange = () => {
+      el.setAttribute('data-media-variable', mediaVariableSelectorEl.value);
+    };
   }
 
   // Update trigger change handler
@@ -951,12 +941,33 @@ if (dynamicListProperties) {
     } else if (value === 'set_variable') {
       document.getElementById('variableChangeSelector').style.display = 'block';
       document.getElementById('variableChangeValue').style.display = 'block';
-    } else if (value === 'play_video') {
-      document.getElementById('videoPath').style.display = 'block';
-    } else if (value === 'play_image') {
-      document.getElementById('imagePath').style.display = 'block';
+      // In triggerSelector.onchange, update the play_video/play_image section:
+    } else if (value === 'play_video' || value === 'play_image') {
+      document.getElementById('mediaVariableSelector').style.display = 'block';
+
+      // Set up media variable selector
+      const mediaVariableSelector = document.getElementById('mediaVariableSelector');
+      updateVariableSelector(mediaVariableSelector, el.getAttribute('data-media-variable') || '');
+      mediaVariableSelector.onchange = () => {
+        el.setAttribute('data-media-variable', mediaVariableSelector.value);
+      };
     }
+
   };
+
+  const videoVariableEl = document.getElementById('videoVariable');
+  if (videoVariableEl) {
+    videoVariableEl.onchange = () => {
+      el.setAttribute('data-video-variable', videoVariableEl.value);
+    };
+  }
+
+  const imageVariableEl = document.getElementById('imageVariable');
+  if (imageVariableEl) {
+    imageVariableEl.onchange = () => {
+      el.setAttribute('data-image-variable', imageVariableEl.value);
+    };
+  }
 
   // Set up change handlers for trigger options
   const sceneChangeSelectorEl = document.getElementById('sceneChangeSelector');
@@ -1307,10 +1318,8 @@ function createJukaApp() {
           } else if (element.trigger === 'set_variable') {
             element.variableChange = el.getAttribute('data-variable-change');
             element.variableChangeValue = el.getAttribute('data-variable-change-value');
-          } else if (element.trigger === 'play_video') {
-            element.videoPath = el.getAttribute('data-video-path');
-          } else if (element.trigger === 'play_image') {
-            element.imagePath = el.getAttribute('data-image-path');
+          } else if (element.trigger === 'play_video' || element.trigger === 'play_image') {
+            element.mediaVariable = el.getAttribute('data-media-variable') || '';
           }
         }
 
@@ -1646,6 +1655,10 @@ function createElementFromData(elementData) {
 
     if (width === null) width = dimensions.width;
     if (height === null) height = dimensions.height;
+  }
+
+  if (elementData.trigger === 'play_video' || elementData.trigger === 'play_image') {
+    el.setAttribute('data-media-variable', elementData.mediaVariable || '');
   }
 
   // Set default dimensions if still null
